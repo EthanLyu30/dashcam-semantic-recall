@@ -1,0 +1,201 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>语义检索中心 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-slate-800 antialiased font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<header class="h-16 bg-white  border-b border-slate-100/60/50  flex items-center justify-between px-8 flex-shrink-0">
+<h2 class="text-xl font-bold text-gray-800">多模态语义检索</h2>
+<div class="flex items-center gap-3">
+<span class="text-xs text-slate-400 font-mono">QueryID: QRY-20260327-009</span>
+</div>
+</header>
+<div class="flex-1 flex overflow-hidden">
+<!-- 左侧检索与结果列表 -->
+<div class="w-2/5  border-r border-slate-100/60  flex flex-col bg-white overflow-hidden">
+<!-- 搜索框 -->
+<div class="p-6  bg-white/50">
+<label class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">输入自然语言描述 (多模态检索)</label>
+<div class="relative">
+<input class="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm shadow-[0_2px_10px_rgb(0,0,0,0.02)] transition-all" placeholder="例如：查找3月27日下午14点左右，路口发生白色SUV剐蹭的画面" type="text" value="寻找白色SUV与黑色轿车在十字路口发生轻微碰撞的瞬间"/>
+<iconify-icon class="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-blue-500" icon="solar:chat-round-line-linear"></iconify-icon>
+</div>
+<div class="flex flex-wrap gap-2 mt-4">
+<span class="px-2 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded cursor-pointer hover:bg-blue-100"># 白色SUV</span>
+<span class="px-2 py-1 bg-red-50 text-red-600 text-[10px] font-bold rounded cursor-pointer hover:bg-red-100"># 剐蹭事故</span>
+<span class="px-2 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded cursor-pointer hover:bg-slate-200"># 十字路口</span>
+<span class="px-2 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded cursor-pointer hover:bg-green-100"># 晴天</span>
+</div>
+</div>
+<!-- 结果列表 -->
+<div class="flex-1 overflow-y-auto">
+<div class="p-4 bg-slate-50/50 text-[10px] font-bold text-gray-400 uppercase ">命中片段 (置信度降序)</div>
+<div class="divide-y divide-gray-100">
+<!-- 结果 1 -->
+<div class="p-4 hover:bg-blue-50/30 cursor-pointer border-l-4 border-blue-500 bg-blue-50/10">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-blue-600 uppercase">命中率 94.2%</span>
+<span class="text-[10px] text-slate-400">EVT-0822</span>
+</div>
+<h5 class="text-sm font-bold text-gray-800 line-clamp-2">白色SUV在转弯处与直行轿车发生侧切剐蹭</h5>
+<div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+<div class="flex items-center gap-1"><iconify-icon icon="solar:clock-circle-linear"></iconify-icon> 14:22:15 - 14:22:45</div>
+<div class="flex items-center gap-1 font-mono text-blue-500 font-bold">跳转回放 <iconify-icon icon="solar:play-bold"></iconify-icon></div>
+</div>
+</div>
+<!-- 结果 2 -->
+<div class="p-4 hover:bg-slate-50/50 cursor-pointer border-l-4 border-transparent">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-slate-400 uppercase">命中率 82.5%</span>
+<span class="text-[10px] text-slate-400">EVT-0823</span>
+</div>
+<h5 class="text-sm font-bold text-gray-800 line-clamp-2">类似白色SUV停靠在路边，未发生碰撞</h5>
+<div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+<div class="flex items-center gap-1"><iconify-icon icon="solar:clock-circle-linear"></iconify-icon> 14:25:00 - 14:25:30</div>
+<div class="flex items-center gap-1 font-mono text-gray-400">跳转回放 <iconify-icon icon="solar:play-bold"></iconify-icon></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 右侧播放器与证据详情 -->
+<div class="flex-1 flex flex-col bg-slate-900 overflow-hidden relative">
+<!-- 模拟播放器 -->
+<div class="flex-1 flex flex-col items-center justify-center p-6">
+<div class="w-full aspect-video bg-black rounded-2xl overflow-hidden relative group shadow-2xl">
+<!-- 视频画面占位 -->
+<div class="absolute inset-0 flex items-center justify-center">
+<iconify-icon class="text-7xl text-white/20 group-hover:text-white/40 transition-all cursor-pointer" icon="solar:play-circle-bold"></iconify-icon>
+<img class="w-full h-full object-cover opacity-60" src="images/交通场景.jpg"/>
+</div>
+<!-- 播放器控制栏 -->
+<div class="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center gap-4">
+<iconify-icon class="text-white text-xl cursor-pointer" icon="solar:play-bold"></iconify-icon>
+<div class="flex-1 h-1.5 bg-white/20 rounded-full relative overflow-hidden">
+<div class="h-full bg-blue-500 w-[45%]"></div>
+<div class="absolute left-[45%] top-0 h-full w-2 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"></div>
+</div>
+<span class="text-[10px] text-white font-mono">14:22:15 / 30:00</span>
+<iconify-icon class="text-white text-xl cursor-pointer" icon="solar:full-screen-bold"></iconify-icon>
+</div>
+<!-- 语义标签浮层 -->
+<div class="absolute top-4 left-4 flex flex-col gap-2">
+<div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-widest">检测到：剐蹭事件 (94%)</span>
+</div>
+<div class="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 flex items-center gap-2">
+<iconify-icon class="text-blue-400" icon="solar:car-bold"></iconify-icon>
+<span class="text-[10px] font-bold text-white">车牌: 沪AD8***2 (推测)</span>
+</div>
+</div>
+</div>
+<!-- 证据导出控制 -->
+<div class="w-full mt-8 grid grid-cols-3 gap-6">
+<div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+<h6 class="text-xs font-bold text-slate-400 uppercase mb-4">关键帧摘要 (Summary)</h6>
+<p class="text-xs text-white leading-relaxed">白色SUV由于未注意侧方来车，在路口右转时与一辆直行黑色轿车发生刮擦。涉及视频：VID_20260327_1400.mp4。</p>
+</div>
+<div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+<h6 class="text-xs font-bold text-slate-400 uppercase mb-4">证据链导出 (Export Id)</h6>
+<div class="space-y-3">
+<button class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2">
+<iconify-icon icon="solar:download-minimalistic-bold"></iconify-icon> 导出该片段 (.mp4)
+                                    </button>
+<button class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-[11px] font-bold transition-all flex items-center justify-center gap-2">
+<iconify-icon icon="solar:document-text-bold"></iconify-icon> 生成事故摘要 (.pdf)
+                                    </button>
+</div>
+</div>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <span class="text-[11px] font-bold text-slate-400 mt-1.5 mr-1 uppercase">快速示例 <iconify-icon icon="solar:lightbulb-bold-duotone" class="text-amber-400"></iconify-icon></span>
+                <button class="px-3 py-1.5 bg-blue-50/50 hover:bg-blue-50 text-blue-500 border border-blue-100/50 rounded-lg text-xs font-medium transition-colors border border-blue-100/50">白色SUV在十字路口剐蹭</button>
+                <button class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-medium transition-colors border border-slate-100/60">高速上出现道路障碍物</button>
+                <button class="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-medium transition-colors border border-slate-100/60">车辆违停在禁停区域</button>
+            </div>
+        
+<div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5 flex flex-col justify-between">
+<h6 class="text-xs font-bold text-slate-400 uppercase">精准时间跳转播放</h6>
+<div class="flex items-center justify-between text-white mt-4">
+<div class="text-center">
+<p class="text-[10px] text-slate-500">起始</p>
+<p class="text-sm font-mono font-bold">14:22:15</p>
+</div>
+<iconify-icon class="text-slate-600" icon="solar:arrow-right-linear"></iconify-icon>
+<div class="text-center">
+<p class="text-[10px] text-slate-500">终止</p>
+<p class="text-sm font-mono font-bold">14:22:45</p>
+</div>
+</div>
+<div class="text-[10px] text-slate-500 mt-2 text-center italic">系统已自动锚定目标帧</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>
+

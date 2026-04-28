@@ -1,0 +1,404 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>人工复核中心 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .video-container {
+            aspect-ratio: 16 / 9;
+            background: #000;
+        }
+        .timeline-marker {
+            position: absolute;
+            height: 100%;
+            width: 4px;
+            background: #ef4444;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .timeline-marker:hover {
+            width: 8px;
+            z-index: 10;
+        }
+    </style>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-slate-800 antialiased font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+<!-- 主内容区 -->
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<!-- 顶部工具栏 -->
+<header class="h-16 bg-white  border-b border-slate-100/60/50  flex items-center justify-between px-8 flex-shrink-0">
+<div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-lg">
+<iconify-icon class="text-blue-500" icon="solar:calendar-bold-duotone"></iconify-icon>
+<span class="font-medium">2026年03月27日</span>
+</div>
+<div class="flex items-center gap-3 pl-6 border-l border-slate-100/60">
+<div class="text-right">
+<p class="text-sm font-bold text-gray-800">吕霄阳</p>
+<p class="text-[10px] text-gray-400 font-medium">高级核定员 (Level 3)</p>
+</div>
+<img alt="avatar" class="w-10 h-10 rounded-xl bg-blue-100 border-2 border-white shadow-[0_2px_10px_rgb(0,0,0,0.02)]" src="images/审核员头像.svg"/>
+</div>
+</div>
+</header>
+<!-- 核心工作区 -->
+<div class="flex-1 flex overflow-hidden">
+<!-- 左侧：待复核列表 -->
+<div class="w-80  border-r border-slate-100/60  bg-white flex flex-col flex-shrink-0">
+<div class="p-4  flex items-center justify-between bg-white/50">
+<h3 class="font-bold text-gray-700 text-sm">任务队列</h3>
+<div class="flex gap-2">
+<button class="p-1.5 hover:bg-white rounded-lg border border-transparent hover:border-slate-100/60 transition-all text-gray-400">
+<iconify-icon icon="solar:filter-bold-duotone"></iconify-icon>
+</button>
+<button class="p-1.5 hover:bg-white rounded-lg border border-transparent hover:border-slate-100/60 transition-all text-gray-400">
+<iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar">
+<!-- 视频卡片 1 -->
+<div class="p-4 border-b border-gray-50 cursor-pointer transition-all bg-blue-50/50 border-l-4 border-l-blue-500" id="video-card-1" onclick="selectVideo(1)">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">VID: 7A92F...81B</span>
+<span class="px-2 py-0.5 bg-red-50 text-red-500 border border-red-100/50 text-[10px] font-black rounded font-black tracking-widest">紧急</span>
+</div>
+<h4 class="text-sm font-bold text-gray-800 mb-1 truncate">沪A·88888 疑似路口碰撞</h4>
+<p class="text-xs text-gray-500 mb-3 line-clamp-2 italic">“检测到剧烈震动及安全气囊弹出信号...”</p>
+<div class="flex items-center justify-between text-[11px]">
+<div class="flex items-center gap-1 text-amber-600 font-bold">
+<iconify-icon icon="solar:danger-bold-duotone"></iconify-icon>
+<span>置信度: 68%</span>
+</div>
+<span class="text-gray-400">03-27 10:22</span>
+</div>
+</div>
+<!-- 视频卡片 2 -->
+<div class="p-4 border-b border-gray-50 cursor-pointer transition-all hover:bg-slate-50/50 border-l-4 border-l-transparent" id="video-card-2" onclick="selectVideo(2)">
+<div class="flex justify-between items-start mb-2">
+<span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">VID: 4C12D...32A</span>
+<span class="px-2 py-0.5 bg-slate-100/50 text-slate-500 border border-slate-200/50 text-[10px] font-black rounded uppercase">普通</span>
+</div>
+<h4 class="text-sm font-bold text-gray-800 mb-1 truncate">粤B·00001 违章掉头识别</h4>
+<p class="text-xs text-gray-500 mb-3 line-clamp-2 italic">“车辆在双黄线区域完成180度转向操作...”</p>
+<div class="flex items-center justify-between text-[11px]">
+<div class="flex items-center gap-1 text-amber-600 font-bold">
+<iconify-icon icon="solar:danger-bold-duotone"></iconify-icon>
+<span>置信度: 72%</span>
+</div>
+<span class="text-gray-400">03-27 11:15</span>
+</div>
+</div>
+<!-- 更多卡片... -->
+<div class="p-4 text-center">
+<button class="text-xs text-blue-500 font-bold hover:underline">加载更多待复核项</button>
+</div>
+</div>
+</div>
+<!-- 中间：复核工作台 -->
+<div class="flex-1 flex flex-col bg-gray-100 overflow-hidden">
+<!-- 播放器区域 -->
+<div class="p-6 flex-1 flex flex-col min-h-0">
+<div class="flex-1 bg-black rounded-2xl shadow-2xl relative group overflow-hidden video-container">
+<div class="absolute inset-0 flex items-center justify-center">
+<iconify-icon class="text-white/20 text-8xl group-hover:text-white/40 transition-all cursor-pointer" icon="solar:play-circle-bold-duotone"></iconify-icon>
+</div>
+<!-- 模拟浮层：AI识别框 -->
+<div class="absolute top-1/4 left-1/3 w-32 h-24 border-2 border-red-500 rounded flex flex-col pointer-events-none">
+<span class="bg-red-500 text-white text-[10px] font-bold px-1 w-fit">碰撞主体 (89%)</span>
+</div>
+<!-- 播放器控制栏模拟 -->
+<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-all">
+<div class="flex items-center gap-4 text-white">
+<iconify-icon class="text-xl cursor-pointer" icon="solar:play-bold"></iconify-icon>
+<div class="flex-1 h-1 bg-white/30 rounded-full relative overflow-hidden cursor-pointer">
+<div class="absolute top-0 left-0 h-full bg-blue-500 w-[45%]"></div>
+</div>
+<span class="text-xs font-mono">02:14 / 05:00</span>
+<iconify-icon class="text-xl cursor-pointer" icon="solar:full-screen-bold"></iconify-icon>
+</div>
+</div>
+</div>
+<!-- 时间轴 / 关键帧 -->
+<div class="mt-6 bg-white rounded-xl p-4 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<div class="flex items-center justify-between mb-4">
+<h4 class="text-xs font-bold text-gray-500 uppercase flex items-center gap-2">
+<iconify-icon class="text-blue-500" icon="solar:history-bold-duotone"></iconify-icon>
+                                    事件时间轴 (Timeline)
+                                </h4>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-200">添加标记</button>
+<button class="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg hover:bg-slate-200">关键帧同步</button>
+</div>
+</div>
+<div class="relative h-12 bg-slate-50/50 rounded-lg flex items-center px-2">
+<!-- 刻度模拟 -->
+<div class="absolute inset-0 flex justify-between px-2 items-end pb-1 pointer-events-none opacity-20">
+<div class="w-px h-3 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-3 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-2 bg-gray-400"></div><div class="w-px h-3 bg-gray-400"></div>
+</div>
+<!-- 事件标记 -->
+<div class="timeline-marker" style="left: 20%;" title="疑似碰撞点 1"></div>
+<div class="timeline-marker" style="left: 45%;" title="主要撞击瞬间"></div>
+<div class="timeline-marker !bg-amber-400" style="left: 80%;" title="异常停车开始"></div>
+<!-- 当前进度 -->
+<div class="absolute left-[45%] top-0 bottom-0 w-0.5 bg-blue-600 z-20">
+<div class="absolute -top-1 -left-1 w-2.5 h-2.5 bg-blue-600 rounded-full ring-4 ring-blue-100"></div>
+</div>
+</div>
+<div class="grid grid-cols-6 gap-2 mt-4">
+<div class="aspect-video bg-gray-200 rounded border-2 border-blue-500 overflow-hidden relative group cursor-pointer">
+<img class="w-full h-full object-cover opacity-80" src="images/交通场景.jpg"/>
+<span class="absolute bottom-0 right-0 bg-blue-500 text-white text-[8px] px-1 font-bold">02:14</span>
+</div>
+<div class="aspect-video bg-gray-200 rounded border border-slate-100/60/50 overflow-hidden relative group cursor-pointer hover:border-blue-300">
+<img class="w-full h-full object-cover opacity-50" src="images/复核车辆_1.jpg"/>
+<span class="absolute bottom-0 right-0 bg-gray-800/80 text-white text-[8px] px-1 font-bold">02:18</span>
+</div>
+<div class="aspect-video bg-gray-200 rounded border border-slate-100/60/50 overflow-hidden relative group cursor-pointer hover:border-blue-300">
+<img class="w-full h-full object-cover opacity-50" src="images/复核车辆_2.jpg"/>
+<span class="absolute bottom-0 right-0 bg-gray-800/80 text-white text-[8px] px-1 font-bold">02:25</span>
+</div>
+<!-- 空位 -->
+<div class="aspect-video bg-white border border-dashed border-slate-100/60 rounded flex items-center justify-center text-gray-300">
+<iconify-icon icon="solar:camera-add-bold-duotone"></iconify-icon>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 右侧：复核操作区 & 历史 -->
+<div class="w-96 bg-white border-l border-slate-100/60 flex flex-col flex-shrink-0">
+<div class="p-6 flex-1 overflow-y-auto custom-scrollbar">
+<h3 class="font-bold text-gray-800 mb-6 flex items-center gap-2">
+<iconify-icon class="text-blue-500 text-xl" icon="solar:pen-new-square-bold-duotone"></iconify-icon>
+                            复核判定与标注
+                        </h3>
+<!-- 复核选项 -->
+<div class="space-y-4 mb-8">
+<label class="block p-4 border rounded-2xl cursor-pointer transition-all border-blue-100 bg-blue-50/50 hover:bg-blue-50">
+<div class="flex items-center gap-3">
+<input checked="" class="w-4 h-4 text-blue-600 focus:ring-blue-500" name="reviewStatus" type="radio"/>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-gray-800 text-sm">通过识别结果</span>
+<span class="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-bold rounded">AI准确</span>
+</div>
+<p class="text-xs text-gray-500 mt-1">确认AI生成的标签、摘要及切片时间点完全正确。</p>
+</div>
+</div>
+</label>
+<label class="block p-4 border border-slate-100/60/50 rounded-2xl cursor-pointer transition-all hover:bg-slate-50/50">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 text-red-600 focus:ring-red-500" name="reviewStatus" type="radio"/>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-gray-800 text-sm">驳回 / 误报</span>
+<span class="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded">模型误判</span>
+</div>
+<p class="text-xs text-gray-500 mt-1">AI识别结果与实际视频内容不符，标记为误报。</p>
+</div>
+</div>
+</label>
+<label class="block p-4 border border-slate-100/60/50 rounded-2xl cursor-pointer transition-all hover:bg-slate-50/50">
+<div class="flex items-center gap-3">
+<input class="w-4 h-4 text-amber-600 focus:ring-amber-500" name="reviewStatus" type="radio"/>
+<div class="flex-1">
+<div class="flex items-center justify-between">
+<span class="font-bold text-gray-800 text-sm">标记为存疑点</span>
+<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">需二次复核</span>
+</div>
+<p class="text-xs text-gray-500 mt-1">视频画面模糊或情况复杂，需转交给高级专家核定。</p>
+</div>
+</div>
+</label>
+</div>
+<!-- 意见输入 -->
+<div class="mb-8">
+<label class="block text-xs font-bold text-gray-500 uppercase mb-2">复核意见与详细备注 (Comments)</label>
+<textarea class="w-full h-32 p-4 bg-slate-50/50 border border-slate-100/60 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all placeholder:text-gray-400" placeholder="在此输入对此视频复核的详细说明，例如：AI未识别出侧方变道的遮挡车辆..."></textarea>
+</div>
+<!-- 历史记录 -->
+<div>
+<h4 class="text-xs font-bold text-gray-500 uppercase mb-4 flex items-center justify-between">
+<span>当前视频复核历史</span>
+<iconify-icon class="text-lg" icon="solar:history-linear"></iconify-icon>
+</h4>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="w-px bg-gray-200 relative">
+<div class="absolute top-1 -left-1 w-2 h-2 rounded-full bg-blue-500"></div>
+</div>
+<div class="flex-1 pb-4 border-b border-gray-50">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-gray-800">AI 系统识别</span>
+<span class="text-[10px] text-gray-400">10:22:15</span>
+</div>
+<p class="text-[11px] text-gray-500 italic">自动生成事件：交通事故（置信度 68%），标记时间戳 02:14-02:18。</p>
+</div>
+</div>
+<div class="flex gap-3 opacity-50">
+<div class="w-px bg-gray-200 relative">
+<div class="absolute top-1 -left-1 w-2 h-2 rounded-full bg-gray-300"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-bold text-gray-800">等待人工复核</span>
+<span class="text-[10px] text-gray-400">进行中...</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 操作提交 -->
+<div class="p-6 border-t border-slate-100/60 flex gap-3 bg-slate-50/50/80">
+<button class="flex-1 py-3 bg-white border border-slate-100/60 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-100 transition-all">
+                            保存草稿
+                        </button>
+<button class="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-600/20 transition-all active:scale-95" onclick="submitReview()">
+                            提交复核结果
+                        </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- 弹窗：提交成功 -->
+<div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden" id="successModal">
+<div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl text-center transform scale-90 opacity-0 transition-all duration-300" id="modalContent">
+<div class="w-20 h-20 bg-emerald-50 text-emerald-500 border border-emerald-100/50 rounded-full flex items-center justify-center mx-auto mb-6">
+<iconify-icon class="text-5xl" icon="solar:check-circle-bold-duotone"></iconify-icon>
+</div>
+<h3 class="text-xl font-bold text-gray-800 mb-2">复核提交成功</h3>
+<p class="text-gray-500 text-sm mb-8 italic">“VID: 7A92F” 已进入下一步归档流程</p>
+<button class="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm hover:bg-slate-800 transition-all" onclick="closeModal()">
+                处理下一个任务
+            </button>
+</div>
+</div>
+<script>
+        function selectVideo(id) {
+            // 清除所有选中状态
+            document.querySelectorAll('[id^="video-card-"]').forEach(el => {
+                el.classList.remove('bg-blue-50/50', 'border-l-blue-500');
+                el.classList.add('hover:bg-slate-50/50', 'border-l-transparent');
+            });
+            // 设置当前选中
+            const current = document.getElementById('video-card-' + id);
+            current.classList.add('bg-blue-50/50', 'border-l-blue-500');
+            current.classList.remove('hover:bg-slate-50/50', 'border-l-transparent');
+            
+            console.log('正在加载视频任务:', id);
+        }
+
+        function submitReview() {
+            const modal = document.getElementById('successModal');
+            const content = document.getElementById('modalContent');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('scale-90', 'opacity-0');
+            }, 10);
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('successModal');
+            const content = document.getElementById('modalContent');
+            content.classList.add('scale-90', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        }
+
+        // 模拟时间轴交互
+        document.querySelectorAll('.timeline-marker').forEach(marker => {
+            marker.addEventListener('click', () => {
+                alert('播放器跳转至: ' + marker.title);
+            });
+        });
+    </script>
+</body>
+</html>
+

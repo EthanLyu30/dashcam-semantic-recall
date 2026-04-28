@@ -1,0 +1,409 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>系统状态概览 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<script src="resources/scripts/echarts.min.5.4.3.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+        .track-dot { transition: all 0.5s ease-in-out; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+<!-- 主内容区 -->
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<!-- 头部 -->
+<header class="h-20 bg-white  flex items-center justify-between px-10 flex-shrink-0">
+<div>
+<h2 class="text-2xl font-bold tracking-tight text-slate-800 text-slate-800 tracking-tight">系统状态概览</h2>
+<p class="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">2026年03月27日 · 系统运行正常</p>
+</div>
+<div class="flex items-center gap-6">
+<!-- 系统健康度 (SRS Chap 3) -->
+<div class="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-slate-100/60">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-[10px] font-bold text-slate-500 uppercase">高可用引擎</span>
+</div>
+<div class="flex items-center gap-2 border-l border-slate-200 pl-4">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<span class="text-[10px] font-bold text-slate-500 uppercase">多模态节点: 8/8</span>
+</div>
+</div>
+</div>
+</header>
+<!-- 滚动区 -->
+<div class="flex-1 overflow-y-auto p-6 sm:p-6 space-y-10 no-scrollbar">
+<!-- 核心指标 - 优化后的间距与层次 -->
+<div class="grid grid-cols-3 gap-6">
+<div class="bg-slate-50/70 hover:bg-slate-50 rounded-3xl p-6 transition-colors border border-slate-100/60/50 hover:shadow-blue-500/5 transition-all">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+<iconify-icon class="text-2xl" icon="solar:video-library-bold-duotone"></iconify-icon>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-800">总处理视频</h4>
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Total Processed</p>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="text-4xl font-bold tracking-tight text-slate-900 text-slate-800 tracking-tighter">8,429</span>
+<span class="text-sm font-bold text-green-500 mb-1.5 flex items-center">+12% <iconify-icon icon="solar:arrow-right-up-bold"></iconify-icon></span>
+</div>
+</div>
+<div class="bg-slate-50/70 hover:bg-slate-50 rounded-3xl p-6 transition-colors border border-slate-100/60/50 hover:shadow-purple-500/5 transition-all">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600">
+<iconify-icon class="text-2xl" icon="solar:magnifer-bold-duotone"></iconify-icon>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-800">语义检索次数</h4>
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Semantic Queries</p>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="text-4xl font-bold tracking-tight text-slate-900 text-slate-800 tracking-tighter">1,204</span>
+<span class="text-sm font-bold text-blue-500 mb-1.5 flex items-center">稳定</span>
+</div>
+</div>
+<div class="bg-slate-50/70 hover:bg-slate-50 rounded-3xl p-6 transition-colors border border-slate-100/60/50 hover:shadow-amber-500/5 transition-all">
+<div class="flex items-center gap-4 mb-6">
+<div class="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+<iconify-icon class="text-2xl" icon="solar:danger-bold-duotone"></iconify-icon>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-800">识别关键事件</h4>
+<p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Identified Events</p>
+</div>
+</div>
+<div class="flex items-end gap-3">
+<span class="text-4xl font-bold tracking-tight text-slate-900 text-slate-800 tracking-tighter">342</span>
+<span class="text-sm font-bold text-red-500 mb-1.5 flex items-center">+5.4% <iconify-icon icon="solar:arrow-right-up-bold"></iconify-icon></span>
+</div>
+</div>
+</div>
+<!-- 图表部分 -->
+<div class="grid grid-cols-5 gap-6 mb-10">
+<div class="col-span-3 bg-slate-50/70 hover:bg-slate-50 rounded-3xl p-6 sm:p-6 transition-colors border border-slate-100/60/50">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-black text-slate-800 text-lg">识别趋势与并发负载 (7日)</h3>
+<select class="bg-white border-none rounded-lg text-xs font-bold text-slate-500 px-4 py-2 outline-none">
+<option>本周数据</option>
+<option>上周数据</option>
+</select>
+</div>
+<div class="w-full h-80" id="eventTrendChart"></div>
+</div>
+<div class="col-span-2 bg-slate-50/70 hover:bg-slate-50 rounded-3xl p-6 sm:p-6 transition-colors border border-slate-100/60/50">
+<h3 class="font-black text-slate-800 text-lg mb-8 text-center">多模态分类分布</h3>
+<div class="w-full h-80" id="tagDistributionChart"></div>
+</div>
+</div>
+<!-- 行驶轨迹概览 -->
+<div class="bg-white rounded-[40px] border border-slate-100/60 shadow-[0_2px_10px_rgb(0,0,0,0.02)] overflow-hidden mb-10">
+<div class="p-6 border-b border-slate-50 flex justify-between items-center">
+<h3 class="font-black text-slate-800 text-lg flex items-center gap-2">
+<iconify-icon class="text-blue-500" icon="solar:route-bold-duotone"></iconify-icon>
+                            行驶轨迹概览 (VID_20260327_1422)
+                        </h3>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-sm text-slate-500">
+<span class="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+<span>实时速度: <span class="font-mono font-bold text-blue-600" id="currentSpeed">45</span> km/h</span>
+</div>
+<div class="flex items-center gap-2 text-sm text-slate-500">
+<iconify-icon class="text-red-500" icon="solar:map-point-bold-duotone"></iconify-icon>
+<span>当前位置: 深南大道科苑段</span>
+</div>
+</div>
+</div>
+<div class="p-6 sm:p-6">
+<div class="relative w-full h-[350px] bg-white rounded-[30px] overflow-hidden mb-8 border border-slate-100/60">
+<!-- 模拟地图背景 -->
+<div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 30px 30px;"></div>
+<!-- 轨迹线 -->
+<svg class="absolute inset-0 w-full h-full" viewbox="0 0 800 350">
+<path d="M 100 280 Q 200 80 400 180 T 700 130" fill="none" id="trackPath" stroke="#f1f5f9" stroke-linecap="round" stroke-width="10"></path>
+<path d="M 100 280 Q 200 80 400 180 T 700 130" fill="none" id="progressPath" stroke="#3b82f6" stroke-dasharray="1000" stroke-dashoffset="1000" stroke-linecap="round" stroke-width="10" style="transition: stroke-dashoffset 0.1s linear;"></path>
+<!-- 标记点 -->
+<circle cx="100" cy="280" fill="#10b981" r="8"></circle> <!-- 起点 -->
+<circle cx="700" cy="130" fill="#ef4444" r="8"></circle> <!-- 终点 -->
+<!-- 关键点标记 -->
+<g transform="translate(400, 180)">
+<circle fill="#f59e0b" r="5"></circle>
+<text class="text-[10px] fill-slate-400 font-bold" text-anchor="middle" y="-15">加速点</text>
+</g>
+<!-- 车辆图标 -->
+<g id="carMarker" transform="translate(100, 280)">
+<circle class="opacity-20 animate-ping" fill="#3b82f6" r="15"></circle>
+<circle fill="#3b82f6" r="10"></circle>
+<iconify-icon class="text-white text-[10px]" icon="solar:reproduction-bold" style="position: absolute; transform: translate(-50%, -50%);"></iconify-icon>
+</g>
+</svg>
+<!-- 悬浮信息 -->
+<div class="absolute top-6 right-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-white/50 shadow-xl text-xs space-y-3">
+<div class="font-bold text-slate-800  pb-2 mb-2">轨迹详情</div>
+<div class="flex items-center gap-3 text-slate-600">
+<span class="w-2 h-2 bg-green-500 rounded-full"></span>
+<span>起始: 14:15:00 科技园站</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600">
+<span class="w-2 h-2 bg-red-500 rounded-full"></span>
+<span>预达: 14:25:30 车公庙站</span>
+</div>
+<div class="flex items-center gap-3 text-slate-600">
+<span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+<span>里程: 4.2 km</span>
+</div>
+</div>
+</div>
+<!-- 控制条 -->
+<div class="flex items-center gap-6 bg-white/70 backdrop-blur-xl p-6 rounded-2xl">
+<button class="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 group" id="playTrackBtn">
+<iconify-icon class="text-3xl group-hover:scale-110 transition-transform" icon="solar:play-bold" id="playIcon"></iconify-icon>
+</button>
+<div class="flex-1 flex flex-col gap-3">
+<input class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600" id="trackProgress" max="1000" min="0" type="range" value="0"/>
+<div class="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+<span>00:00 (起点)</span>
+<span class="text-blue-600">已行驶: <span id="timeElapsed">00:00</span></span>
+<span>05:30 (终点)</span>
+</div>
+</div>
+<div class="flex gap-3 border-l border-slate-200 pl-8">
+<button class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<iconify-icon class="text-xl" icon="solar:map-bold"></iconify-icon>
+</button>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-white rounded-xl text-slate-400 hover:text-blue-600 transition-all shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<iconify-icon class="text-xl" icon="solar:printer-minimalistic-bold"></iconify-icon>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- 简化后的最近动态 -->
+<div class="bg-white rounded-[40px] border border-slate-100/60 shadow-[0_2px_10px_rgb(0,0,0,0.02)] overflow-hidden">
+<div class="p-6 border-b border-slate-50 flex items-center justify-between">
+<h3 class="font-black text-slate-800 text-lg">待复核实时动态</h3>
+<a class="text-xs font-bold text-blue-600 hover:underline" href="#">查看全部动态 →</a>
+</div>
+<div class="divide-y divide-slate-50">
+<div class="p-6 flex items-center justify-between hover:bg-white/50 transition-all">
+<div class="flex items-center gap-6">
+<div class="w-16 h-10 rounded-lg bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover" src="images/交通场景.jpg"/>
+</div>
+<div>
+<h5 class="text-sm font-bold text-slate-800">检测到车辆侧面剐蹭事件</h5>
+<p class="text-xs text-slate-400 mt-1">来源：VID_20260327_1402.mp4 · 置信度：94%</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+</div>
+<div class="p-6 flex items-center justify-between hover:bg-white/50 transition-all">
+<div class="flex items-center gap-6">
+<div class="w-16 h-10 rounded-lg bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover opacity-50" src="images/交通场景.jpg"/>
+</div>
+<div>
+<h5 class="text-sm font-bold text-slate-800">禁停区域异常停留检测</h5>
+<p class="text-xs text-slate-400 mt-1">来源：VID_20260327_1310.mp4 · 置信度：82%</p>
+</div>
+</div>
+<div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<script>
+        // ECharts 初始化逻辑
+        const eventChart = echarts.init(document.getElementById('eventTrendChart'));
+        eventChart.setOption({
+            tooltip: { trigger: 'axis' },
+            grid: { left: '0', right: '0', bottom: '0', containLabel: true },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: ['03-21', '03-22', '03-23', '03-24', '03-25', '03-26', '03-27'],
+                axisLine: { show: false }
+            },
+            yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } },
+            series: [{
+                name: '识别事件',
+                type: 'line',
+                smooth: true,
+                symbol: 'none',
+                data: [420, 532, 401, 634, 590, 830, 910],
+                lineStyle: { width: 4, color: '#3b82f6' },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: 'rgba(59, 130, 246, 0.1)' },
+                        { offset: 1, color: 'rgba(59, 130, 246, 0)' }
+                    ])
+                }
+            }]
+        });
+
+        const tagChart = echarts.init(document.getElementById('tagDistributionChart'));
+        tagChart.setOption({
+            tooltip: { trigger: 'item' },
+            series: [{
+                type: 'pie',
+                radius: ['60%', '85%'],
+                itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 4 },
+                label: { show: false },
+                data: [
+                    { value: 45, name: '车辆移动' },
+                    { value: 25, name: '交通违章' },
+                    { value: 15, name: '突发事故' },
+                    { value: 15, name: '其他' }
+                ],
+                color: ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444']
+            }]
+        });
+
+        window.addEventListener('resize', () => {
+            eventChart.resize();
+            tagChart.resize();
+        });
+
+        // 轨迹动画逻辑
+        const playBtn = document.getElementById('playTrackBtn');
+        const playIcon = document.getElementById('playIcon');
+        const progressInput = document.getElementById('trackProgress');
+        const progressPath = document.getElementById('progressPath');
+        const carMarker = document.getElementById('carMarker');
+        const currentSpeed = document.getElementById('currentSpeed');
+        const timeElapsed = document.getElementById('timeElapsed');
+        const trackPath = document.getElementById('trackPath');
+
+        let isPlaying = false;
+        let animationFrame;
+        let progress = 0;
+
+        function updateTrack() {
+            const offset = 1000 - (progress / 1000) * 1000;
+            progressPath.style.strokeDashoffset = offset;
+
+            // 计算车辆位置 (基于简单的贝塞尔曲线模拟)
+            const point = trackPath.getPointAtLength((progress / 1000) * trackPath.getTotalLength());
+            carMarker.setAttribute('transform', `translate(${point.x}, ${point.y})`);
+
+            // 模拟速度变化
+            const speed = 40 + Math.sin(progress / 50) * 20;
+            currentSpeed.innerText = Math.round(speed);
+
+            // 模拟时间显示
+            const totalSeconds = Math.floor((progress / 1000) * 330);
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            timeElapsed.innerText = `${mins}:${secs}`;
+
+            progressInput.value = progress;
+
+            if (isPlaying && progress < 1000) {
+                progress += 2;
+                animationFrame = requestAnimationFrame(updateTrack);
+            } else if (progress >= 1000) {
+                isPlaying = false;
+                playIcon.setAttribute('icon', 'solar:play-bold');
+            }
+        }
+
+        playBtn.addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            if (isPlaying) {
+                if (progress >= 1000) progress = 0;
+                playIcon.setAttribute('icon', 'solar:pause-bold');
+                updateTrack();
+            } else {
+                playIcon.setAttribute('icon', 'solar:play-bold');
+                cancelAnimationFrame(animationFrame);
+            }
+        });
+
+        progressInput.addEventListener('input', (e) => {
+            progress = parseInt(e.target.value);
+            if (!isPlaying) updateTrack();
+        });
+    </script>
+</body>
+</html>

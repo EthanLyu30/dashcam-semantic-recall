@@ -1,0 +1,269 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>证据与日志归档 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+<!-- 主内容区 -->
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+
+
+
+
+
+
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <header class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-slate-800">证据与日志归档</h1>
+            <p class="text-slate-500 mt-2 font-medium">统一管理系统流转日志与涉案证据包</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="relative">
+                <iconify-icon icon="solar:rounded-magnifer-bold-duotone" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></iconify-icon>
+                <input type="text" placeholder="搜索案件编号、日志凭点..." class="pl-10 pr-4 py-2 bg-white/60 border border-slate-200/60 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm w-64 transition-all">
+            </div>
+            <button class="bg-indigo-600/90 hover:bg-indigo-600 backdrop-blur-md text-white px-5 py-2 rounded-xl transition-all shadow-[0_4px_20px_rgba(79,70,229,0.3)] text-sm font-bold tracking-wide flex items-center gap-2">
+                <iconify-icon icon="solar:folder-zip-bold"></iconify-icon>打包备份归档
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- 左侧: 证据包与案件存档 (宽跨度) -->
+        <div class="lg:col-span-8 flex flex-col gap-6">
+            <!-- 统计和状态总览 -->
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-white/60 backdrop-blur-xl rounded-[20px] p-5 border border-white max-h-[120px] shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-2xl shadow-inner"><iconify-icon icon="solar:folder-with-files-bold-duotone"></iconify-icon></div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 mb-1">今日新增证据</p>
+                        <p class="text-2xl font-black text-slate-800">42 <span class="text-xs font-semibold text-slate-400">卷</span></p>
+                    </div>
+                </div>
+                <div class="bg-white/60 backdrop-blur-xl rounded-[20px] p-5 border border-white max-h-[120px] shadow-sm flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 text-2xl shadow-inner"><iconify-icon icon="solar:verified-check-bold-duotone"></iconify-icon></div>
+                    <div>
+                        <p class="text-xs font-bold text-slate-500 mb-1">已签章保全</p>
+                        <p class="text-2xl font-black text-slate-800">128 <span class="text-xs font-semibold text-slate-400">卷</span></p>
+                    </div>
+                </div>
+                <div class="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-[20px] p-5 max-h-[120px] shadow-lg flex items-center gap-4 text-white relative overflow-hidden">
+                    <div class="absolute right-0 top-0 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                    <div class="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white text-2xl backdrop-blur-md border border-white/20"><iconify-icon icon="solar:server-path-bold-duotone"></iconify-icon></div>
+                    <div class="z-10">
+                        <p class="text-xs font-medium text-blue-100 mb-1">归档存储空间</p>
+                        <p class="text-2xl font-black">64% <span class="text-xs font-medium text-blue-100">已用 (12TB)</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 数据列卡片 -->
+            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex-1">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <iconify-icon icon="solar:archive-minimalistic-bold-duotone" class="text-blue-500 text-xl"></iconify-icon>
+                        近期证据保全队列
+                    </h2>
+                    <div class="text-sm font-medium text-blue-600 flex items-center gap-2 cursor-pointer hover:text-blue-700">查看更多 <iconify-icon icon="solar:alt-arrow-right-line-duotone"></iconify-icon></div>
+                </div>
+
+                <div class="space-y-3">
+                    <!-- 列表项 -->
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:border-blue-200 transition-colors group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center border border-orange-100">
+                                <iconify-icon icon="solar:video-library-bold-duotone" class="text-orange-500 text-lg"></iconify-icon>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800 mb-0.5">EVT-0822-完整证据包.zip</h4>
+                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                    <span class="flex items-center gap-1"><iconify-icon icon="solar:clock-circle-linear"></iconify-icon> 14:30 生成</span>
+                                    <span>包含: 视频源、抽帧截图、文本总结</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-xs font-bold border border-amber-100/50">正在签名审计</span>
+                            <button class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors">
+                                <iconify-icon icon="solar:download-linear" class="text-lg"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:border-blue-200 transition-colors group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center border border-blue-100">
+                                <iconify-icon icon="solar:document-text-bold-duotone" class="text-blue-500 text-lg"></iconify-icon>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800 mb-0.5">EVT-0810-快速摘要.pdf</h4>
+                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                    <span class="flex items-center gap-1"><iconify-icon icon="solar:clock-circle-linear"></iconify-icon> 11:20 生成</span>
+                                    <span>包含: AI文本描述分析、时间线</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold border border-emerald-100/50">已固证</span>
+                            <button class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors">
+                                <iconify-icon icon="solar:download-linear" class="text-lg"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-100 shadow-[0_2px_10px_rgb(0,0,0,0.02)] hover:border-blue-200 transition-colors group">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-200">
+                                <iconify-icon icon="solar:video-library-bold-duotone" class="text-slate-500 text-lg"></iconify-icon>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-800 mb-0.5">SYS-ERR-001-排错录像.zip</h4>
+                                <div class="flex items-center gap-3 text-xs text-slate-500">
+                                    <span class="flex items-center gap-1"><iconify-icon icon="solar:clock-circle-linear"></iconify-icon> 09:12 生成</span>
+                                    <span>包含: 原始接入异常视频</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-bold border border-emerald-100/50">已固证</span>
+                            <button class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors">
+                                <iconify-icon icon="solar:download-linear" class="text-lg"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧: 操作与调度日志 (毛玻璃浅色风格，符合整体格调) -->
+        <div class="lg:col-span-4 flex flex-col">
+            <div class="bg-white/60 backdrop-blur-2xl rounded-[28px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80 flex-1 flex flex-col relative overflow-hidden">
+                <!-- 装饰光晕 -->
+                <div class="absolute right-0 top-0 w-32 h-32 bg-blue-400 blur-[80px] rounded-full opacity-10 pointer-events-none"></div>
+
+                <div class="flex items-center justify-between mb-6 relative z-10">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <iconify-icon icon="solar:code-file-bold-duotone" class="text-indigo-500 text-xl"></iconify-icon>
+                        系统交互日志
+                    </h2>
+                    <button class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors">
+                        <iconify-icon icon="solar:menu-dots-bold"></iconify-icon>
+                    </button>
+                </div>
+
+                <!-- 纵向时间轴日志 -->
+                <div class="relative pl-4 space-y-6 before:absolute before:inset-y-2 before:left-[7px] before:w-[2px] before:bg-slate-100 z-10 overflow-y-auto pr-2 flex-1">
+                    
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-blue-500 ring-4 ring-white"></div>
+                        <p class="text-[10px] font-bold text-slate-400 mb-0.5">14:55:20 · 接口调度</p>
+                        <p class="text-sm font-bold text-slate-800">事件推理引擎已触发分析</p>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed bg-slate-50/50 p-2 rounded-lg border border-slate-100 mt-2">
+                            调用 GPU 节点 A 执行语义分析任务 (TSK-992)，耗时预估: 140ms。
+                        </p>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white"></div>
+                        <p class="text-[10px] font-bold text-slate-400 mb-0.5">14:50:11 · 文件写入</p>
+                        <p class="text-sm font-bold text-slate-800">落库对象存储成功</p>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed bg-slate-50/50 p-2 rounded-lg border border-slate-100 mt-2 font-mono text-[10px]">
+                            [200 OK] PUT /v/20260327/evt-0822.mp4<br>
+                            Size: 24.5 MB, Nodes: SSD-Array-01
+                        </p>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-white animate-pulse"></div>
+                        <p class="text-[10px] font-bold text-amber-500 mb-0.5">14:42:05 · 警报触发</p>
+                        <p class="text-sm font-bold text-slate-800">北区路口流量过载</p>
+                        <p class="text-xs text-amber-700/80 mt-1 leading-relaxed bg-amber-50/50 p-2 rounded-lg border border-amber-100 mt-2">
+                            接入推流触碰限流网关。阈值限制: 800路/秒。自动丢弃部分关键帧，启动熔断保护。
+                        </p>
+                    </div>
+
+                    <div class="relative">
+                        <div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-slate-400 ring-4 ring-white"></div>
+                        <p class="text-[10px] font-bold text-slate-400 mb-0.5">14:00:00 · 鉴权日志</p>
+                        <p class="text-sm font-bold text-slate-800">系统巡检作业</p>
+                        <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+                            守护进程执行自动巡检并清理三天前未保全的僵尸切片。
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</main>
+
+
+
+
+
+
+</div>
+</body>
+</html>

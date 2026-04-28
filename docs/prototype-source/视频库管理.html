@@ -1,0 +1,225 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>视频库管理 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-slate-800 antialiased font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<!-- 顶部工具 -->
+<header class="h-16 bg-white  border-b border-slate-100/60/50  flex items-center justify-between px-8 flex-shrink-0">
+<h2 class="text-xl font-bold text-gray-800">视频库管理</h2>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 border border-slate-100/60 rounded-lg text-sm font-medium hover:bg-slate-50/50 flex items-center gap-2">
+<iconify-icon icon="solar:cloud-upload-linear"></iconify-icon> 批量导入视频
+                    </button>
+<button class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 flex items-center gap-2 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<iconify-icon icon="solar:add-circle-linear"></iconify-icon> 单个视频处理
+                    </button>
+</div>
+</header>
+<!-- 业务主区 -->
+<div class="flex-1 overflow-y-auto p-6">
+<!-- 统计状态卡片 -->
+<div class="grid grid-cols-5 gap-4 mb-8">
+<div class="bg-white p-4 rounded-xl border-l-4 border-gray-300 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<p class="text-xs text-gray-500 font-bold uppercase mb-1">全部视频</p>
+<p class="text-2xl font-bold">1,428</p>
+</div>
+<div class="bg-white p-4 rounded-xl border-l-4 border-blue-400 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<p class="text-xs text-blue-600 font-bold uppercase mb-1">正在处理中</p>
+<p class="text-2xl font-bold">12</p>
+</div>
+<div class="bg-white p-4 rounded-xl border-l-4 border-yellow-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<p class="text-xs text-yellow-600 font-bold uppercase mb-1">待人工复核</p>
+<p class="text-2xl font-bold">8</p>
+</div>
+<div class="bg-white p-4 rounded-xl border-l-4 border-green-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<p class="text-xs text-green-600 font-bold uppercase mb-1">已完成结构化</p>
+<p class="text-2xl font-bold">1,398</p>
+</div>
+<div class="bg-white p-4 rounded-xl border-l-4 border-red-500 shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<p class="text-xs text-red-600 font-bold uppercase mb-1">处理失败</p>
+<p class="text-2xl font-bold">10</p>
+</div>
+</div>
+<!-- 搜索与筛选 -->
+<div class="bg-[#FAFAFA] p-6 rounded-3xl border border-slate-100/60/40 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div>
+<label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">文件名/VideoID</label>
+<input class="w-full px-4 py-2 bg-slate-50/50 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" placeholder="VID_2026..." type="text"/>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">所属车队/车辆</label>
+<select class="w-full px-4 py-2 bg-slate-50/50 border-0 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+<option>全部车辆</option>
+<option>顺丰物流-沪A8888</option>
+<option>美团专车-京B2233</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">录制日期范围</label>
+<div class="flex items-center gap-2">
+<input class="flex-1 px-3 py-2 bg-slate-50/50 border-0 rounded-lg text-sm" type="date"/>
+<span class="text-gray-400">-</span>
+<input class="flex-1 px-3 py-2 bg-slate-50/50 border-0 rounded-lg text-sm" type="date" value="2026-03-27"/>
+</div>
+</div>
+<div class="flex items-end">
+<button class="w-full h-10 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900 transition-colors">查询</button>
+</div>
+</div>
+</div>
+<!-- 视频表格 -->
+<div class="bg-white rounded-2xl border border-slate-100/60 overflow-hidden">
+<table class="w-full text-left">
+<thead>
+<tr class="text-xs font-bold text-gray-400 uppercase tracking-widest ">
+<th class="px-8 py-4">Video ID / 文件名</th>
+<th class="px-6 py-4">时长 &amp; 大小</th>
+<th class="px-6 py-4">录制时间</th>
+<th class="px-6 py-4">处理状态</th>
+<th class="px-6 py-4">识别事件数</th>
+<th class="px-6 py-4 text-right">操作</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-50">
+<!-- 模拟数据 1 -->
+<tr class="hover:bg-blue-50/20 transition-colors">
+<td class="px-8 py-5">
+<span class="text-sm font-mono font-bold text-gray-800">VID_20260327_140012</span>
+<p class="text-[10px] text-blue-500 mt-1 uppercase">front_view_camera.mp4</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-gray-800">30:00</p>
+<p class="text-[10px] text-gray-400">1.2 GB (H.264)</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-gray-800">2026-03-27</p>
+<p class="text-xs text-gray-500">14:00:12</p>
+</td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded uppercase">已完成识别</span>
+</td>
+<td class="px-6 py-5">
+<span class="text-sm font-bold text-gray-800">12 个</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="px-3 py-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 rounded transition-colors">检索</button>
+<button class="px-3 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600 rounded">更多</button>
+</td>
+</tr>
+<!-- 模拟数据 2 -->
+<tr class="hover:bg-blue-50/20 transition-colors">
+<td class="px-8 py-5">
+<span class="text-sm font-mono font-bold text-gray-800">VID_20260327_131005</span>
+<p class="text-[10px] text-gray-400 mt-1 uppercase">rear_view_camera.mp4</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-gray-800">15:00</p>
+<p class="text-[10px] text-gray-400">450 MB (H.265)</p>
+</td>
+<td class="px-6 py-5">
+<p class="text-sm font-bold text-gray-800">2026-03-27</p>
+<p class="text-xs text-gray-500">13:10:05</p>
+</td>
+<td class="px-6 py-5">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+<div class="h-full bg-blue-500 w-[65%]"></div>
+</div>
+<span class="text-[10px] font-bold text-blue-500">正在识别 65%</span>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="text-sm font-bold text-gray-400">--</span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="px-3 py-1.5 text-xs font-bold text-gray-300 cursor-not-allowed">等待</button>
+</td>
+</tr>
+<!-- 模拟数据 3 -->
+<tr class="hover:bg-blue-50/20 transition-colors">
+<td class="px-8 py-5">
+<span class="text-sm font-mono font-bold text-gray-800">VID_20260326_090012</span>
+<p class="text-[10px] text-amber-500 mt-1 uppercase">main_dash_cam.mp4</p>
+</td>
+<td class="px-6 py-5"><p class="text-sm font-bold text-gray-800">60:00</p></td>
+<td class="px-6 py-5"><p class="text-sm font-bold text-gray-800">2026-03-26</p></td>
+<td class="px-6 py-5">
+<span class="px-2 py-1 bg-yellow-50 text-yellow-600 text-[10px] font-bold rounded uppercase">待人工复核</span>
+</td>
+<td class="px-6 py-5"><span class="text-sm font-bold text-gray-800">24 个</span></td>
+<td class="px-6 py-5 text-right">
+<a class="px-3 py-1.5 text-xs font-bold text-amber-600 hover:bg-amber-50 rounded inline-block" href="#">复核</a>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>
+

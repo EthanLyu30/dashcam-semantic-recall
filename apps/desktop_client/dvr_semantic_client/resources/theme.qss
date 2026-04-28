@@ -1,0 +1,88 @@
+QWidget {
+    background: #F8FAFC;
+    color: #1E293B;
+    font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+    font-size: 13px;
+}
+
+QFrame[role="panel"], QScrollArea, QListWidget {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 18px;
+}
+
+QLabel[role="muted"] {
+    color: #64748B;
+}
+
+QLabel[role="title"] {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+QLabel[role="panelTitle"] {
+    font-size: 16px;
+    font-weight: 650;
+}
+
+QLabel[role="timecode"] {
+    color: #2563EB;
+    font-family: "Cascadia Mono", "Consolas", monospace;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QPushButton {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    color: #334155;
+    min-height: 32px;
+    padding: 6px 12px;
+}
+
+QPushButton:hover {
+    border-color: #2563EB;
+    background: #EFF6FF;
+}
+
+QPushButton[variant="primary"] {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #FFFFFF;
+    font-weight: 650;
+}
+
+QPushButton[variant="evidence"] {
+    background: #FFF7ED;
+    border-color: #F59E0B;
+    color: #B45309;
+    font-weight: 650;
+}
+
+QLineEdit, QComboBox {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 6px;
+    color: #1E293B;
+    min-height: 34px;
+    padding: 6px 10px;
+}
+
+QLineEdit:focus, QComboBox:focus {
+    border-color: #2563EB;
+}
+
+QScrollBar:vertical {
+    background: #F8FAFC;
+    width: 10px;
+}
+
+QScrollBar::handle:vertical {
+    background: #CBD5E1;
+    border-radius: 5px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}

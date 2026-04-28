@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dashcam-semantic-recall"
+version = "0.1.0"
+description = "Dashcam video semantic search and precise replay system."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "requests>=2.31",
+]
+
+[project.optional-dependencies]
+desktop = [
+  "PySide6>=6.5",
+  "python-vlc>=3.0.20123",
+]
+backend = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.7",
+]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [
+  "apps/desktop_client",
+  "apps/backend",
+]
+
+[tool.setuptools.packages.find]
+where = ["apps/desktop_client", "apps/backend"]

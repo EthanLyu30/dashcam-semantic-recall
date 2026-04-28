@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>原型总览 - DVR-Semantic</title>
+  <link rel="stylesheet" href="resources/css/package.css">
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-card">
+        <span class="kicker">课程提交包</span>
+        <h1 class="title">DVR-Semantic 桌面端交互原型</h1>
+        <p class="subtitle">
+          这是基于现有原型页面整理出的离线提交版本。目录结构参考老师附件的原型发布方式，补充了统一入口、站点地图、页面清单与本地资源，方便直接提交与演示。
+        </p>
+        <div class="button-row">
+          <a class="button button-primary" href="系统状态概览.html">打开主原型</a>
+          <a class="button button-secondary" href="打开说明.html">查看打开说明</a>
+          <a class="button button-secondary" href="plugins/sitemap/sitemap.html">查看站点地图</a>
+        </div>
+      </div>
+      <div class="meta-grid">
+        <div class="hero-card meta-item">
+          <span class="meta-label">页面数量</span>
+          <span class="meta-value" id="pageCount">11 页</span>
+        </div>
+        <div class="hero-card meta-item">
+          <span class="meta-label">资源形式</span>
+          <span class="meta-value">本地离线资源</span>
+        </div>
+        <div class="hero-card meta-item">
+          <span class="meta-label">最近整理日期</span>
+          <span class="meta-value" id="updatedAt">2026-03-30</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>提交包说明</h2>
+      <ul class="list">
+        <li>保留了你现有页面的视觉内容与主要跳转关系。</li>
+        <li>统一替换了在线脚本和网络图片，避免老师离线查看时资源失效。</li>
+        <li>新增入口页、说明页、站点地图和页面清单，让交付形式更接近老师参考附件。</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>页面目录</h2>
+      <div class="grid" id="pageGrid"></div>
+    </section>
+
+    <p class="footer-note">建议优先双击本页或 <a href="系统状态概览.html">系统状态概览</a> 进行演示。</p>
+  </div>
+
+  <script src="data/document.js"></script>
+  <script>
+    (function () {
+      var pkg = window.prototypePackage || { pages: [], updatedAt: "" };
+      document.getElementById("pageCount").textContent = pkg.pages.length + " 页";
+      document.getElementById("updatedAt").textContent = pkg.updatedAt || "";
+      var grid = document.getElementById("pageGrid");
+      pkg.pages.forEach(function (page) {
+        var card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML =
+          '<span class="tag">' + page.category + '</span>' +
+          '<h3>' + page.title + '</h3>' +
+          '<p>' + page.description + '</p>' +
+          '<a href="' + page.file + '">打开页面</a>';
+        grid.appendChild(card);
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>角色与权限管理 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-slate-800 antialiased font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+<!-- 侧边导航栏 -->
+
+
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<header class="h-16 bg-white  border-b border-slate-100/60/50  flex items-center justify-between px-8 flex-shrink-0">
+<h2 class="text-xl font-bold text-gray-800">角色与权限管理</h2>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900 transition-all flex items-center gap-2">
+<iconify-icon icon="solar:user-plus-bold-duotone"></iconify-icon> 新增管理员
+                    </button>
+</div>
+</header>
+<div class="flex-1 overflow-y-auto p-6">
+<!-- 预设角色矩阵 -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+<!-- 角色卡片 1 -->
+<div class="bg-[#FAFAFA] p-6 rounded-3xl border border-slate-100/60/40 shadow-[0_2px_10px_rgb(0,0,0,0.02)] relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<iconify-icon class="text-8xl" icon="solar:user-bold"></iconify-icon>
+</div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 bg-blue-50 text-blue-500 border border-blue-100/50 rounded-lg flex items-center justify-center font-bold text-xl">U</div>
+<div>
+<h4 class="font-bold text-gray-800 leading-tight">车主 / 驾驶员</h4>
+<span class="text-[10px] text-blue-500 font-bold uppercase tracking-widest">OWNER / DRIVER</span>
+</div>
+</div>
+<p class="text-xs text-gray-500 leading-relaxed mb-6">仅可查看及检索与其驾驶证/行驶证绑定的车辆视频。具备完整的个人证据链导出权限。</p>
+<ul class="space-y-2 mb-6">
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 视频回放与检索</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 个人证据导出</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-300"><iconify-icon class="text-slate-300" icon="solar:close-circle-bold-duotone"></iconify-icon> 跨车辆检索</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-300"><iconify-icon class="text-slate-300" icon="solar:close-circle-bold-duotone"></iconify-icon> 模型参数配置</li>
+</ul>
+<button class="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold hover:bg-white transition-all">管理用户列表 (124)</button>
+</div>
+<!-- 角色卡片 2 -->
+<div class="bg-[#FAFAFA] p-6 rounded-3xl border border-slate-100/60/40 shadow-[0_2px_10px_rgb(0,0,0,0.02)] relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<iconify-icon class="text-8xl" icon="solar:users-group-rounded-bold"></iconify-icon>
+</div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 bg-amber-50 text-amber-500 border border-amber-100/50 rounded-lg flex items-center justify-center font-bold text-xl">M</div>
+<div>
+<h4 class="font-bold text-gray-800 leading-tight">车队管理员</h4>
+<span class="text-[10px] text-amber-500 font-bold uppercase tracking-widest">FLEET MANAGER</span>
+</div>
+</div>
+<p class="text-xs text-gray-500 leading-relaxed mb-6">可管理指定车队下的所有车辆及视频资源。具备批量的违章排查、效率分析及证据上报功能。</p>
+<ul class="space-y-2 mb-6">
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 全车队视频检索</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 事件报告生成</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 人工复核任务</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-300"><iconify-icon class="text-slate-300" icon="solar:close-circle-bold-duotone"></iconify-icon> 核心密钥管理</li>
+</ul>
+<button class="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold hover:bg-white transition-all">管理用户列表 (8)</button>
+</div>
+<!-- 角色卡片 3 -->
+<div class="bg-[#FAFAFA] p-6 rounded-3xl border border-slate-100/60/40 shadow-[0_2px_10px_rgb(0,0,0,0.02)] relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<iconify-icon class="text-8xl" icon="solar:shield-check-bold"></iconify-icon>
+</div>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 bg-red-50 text-red-500 border border-red-100/50 rounded-lg flex items-center justify-center font-bold text-xl">I</div>
+<div>
+<h4 class="font-bold text-gray-800 leading-tight">交通巡查员</h4>
+<span class="text-[10px] text-red-500 font-bold uppercase tracking-widest">TRAFFIC INSPECTOR</span>
+</div>
+</div>
+<p class="text-xs text-gray-500 leading-relaxed mb-6">具备跨平台视频检索权限。主要用于事故复盘及违章证据收集。受系统审计日志监控。</p>
+<ul class="space-y-2 mb-6">
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 全库跨域语义检索</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 原始视频无损取证</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 事故责任报告签注</li>
+<li class="flex items-center gap-2 text-[10px] font-bold text-slate-600"><iconify-icon class="text-green-500" icon="solar:check-circle-bold-duotone"></iconify-icon> 数据隐私脱敏审核</li>
+</ul>
+<button class="w-full py-2 border border-slate-200 rounded-lg text-xs font-bold hover:bg-white transition-all">管理用户列表 (4)</button>
+</div>
+</div>
+<!-- 细粒度权限配置表格 -->
+<div class="bg-white rounded-2xl border border-slate-100/60 overflow-hidden shadow-[0_2px_10px_rgb(0,0,0,0.02)]">
+<div class="p-6 border-b border-gray-50 flex items-center justify-between">
+<h4 class="font-bold text-gray-800 uppercase tracking-widest text-sm">功能模块权限矩阵 (Matrix)</h4>
+<div class="flex gap-2">
+<button class="px-3 py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded">批量同步</button>
+<button class="px-3 py-1 bg-white text-slate-600 text-[10px] font-bold rounded border border-slate-200">导出记录</button>
+</div>
+</div>
+<table class="w-full text-left">
+<thead>
+<tr class="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-gray-50 bg-white/50">
+<th class="px-8 py-4">功能模块 / 权限点</th>
+<th class="px-6 py-4">车主</th>
+<th class="px-6 py-4">车队管理员</th>
+<th class="px-6 py-4">交通巡查员</th>
+<th class="px-6 py-4 text-right">风险等级</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-50 text-xs font-medium text-slate-700">
+<tr class="hover:bg-slate-50/50/50">
+<td class="px-8 py-4">语义检索 (Natural Language Query)</td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4 text-right font-bold text-green-500">LOW</td>
+</tr>
+<tr class="hover:bg-slate-50/50/50">
+<td class="px-8 py-4">原始视频文件下载 (H.264/265)</td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4 text-right font-bold text-amber-500">MED</td>
+</tr>
+<tr class="hover:bg-slate-50/50/50">
+<td class="px-8 py-4">证据链多模态摘要导出</td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4 text-right font-bold text-green-500">LOW</td>
+</tr>
+<tr class="hover:bg-slate-50/50/50">
+<td class="px-8 py-4">系统审计日志 (Audit Log) 查看</td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-green-500 text-lg" icon="solar:check-read-bold"></iconify-icon></td>
+<td class="px-6 py-4 text-right font-bold text-red-500">HIGH</td>
+</tr>
+<tr class="hover:bg-slate-50/50/50">
+<td class="px-8 py-4">多模态模型 API 参数微调</td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4"><iconify-icon class="text-slate-300 text-lg" icon="solar:forbidden-bold-duotone"></iconify-icon></td>
+<td class="px-6 py-4 text-right font-bold text-red-500">CRITICAL</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+</body>
+</html>
+

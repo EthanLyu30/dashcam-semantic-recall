@@ -1,0 +1,279 @@
+﻿<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>全天业务报告 - DVR-Semantic</title>
+<script src="resources/scripts/tailwindcss.3.4.3.js"></script>
+<script src="resources/scripts/iconify-icon.min.1.0.7.js"></script>
+<script src="resources/scripts/echarts.min.5.4.3.js"></script>
+<style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        main { overflow-y: auto; height: 100vh; }
+    </style>
+</head>
+<body class="bg-transparent font-sans text-gray-900">
+<div class="min-h-screen flex flex-col bg-transparent relative">
+    <div class="fixed inset-0 z-[-1] bg-[#F8FAFC] pointer-events-none overflow-hidden">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-400/20 blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-400/20 blur-[120px]"></div>
+        <div class="absolute top-[40%] left-[60%] w-[30%] h-[30%] rounded-full bg-cyan-400/10 blur-[100px]"></div>
+        <div class="absolute inset-0 bg-[url('resources/images/noise.svg')] opacity-[0.015] mix-blend-overlay"></div>
+    </div>
+    
+    <header class="sticky top-0 z-50 bg-[#F8FAFC]/50 backdrop-blur-2xl border-b border-slate-100/60/50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-[0_10px_40px_rgb(0,0,0,0.06)] shadow-blue-500/30">
+                        <iconify-icon class="text-2xl text-white" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                    </div>
+                    <span class="text-xl font-black tracking-widest text-slate-800 font-black tracking-widest">DVR-S</span>
+                </div>
+                
+                <!-- Nav Links -->
+                <nav class="hidden md:flex space-x-1">
+                    <a href="系统状态概览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">概览</a>
+                    <a href="语义检索中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">检索</a>
+                    <a href="视频库管理.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">视频流</a>
+                    <a href="人工复核中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">复核</a>
+                    <a href="告警管理中心.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">告警</a>
+                    <a href="事故摘要预览.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">事故</a>
+                    <a href="证据与日志归档.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 text-slate-600">证据与日志</a>
+                    <a href="全天业务报告.html" class="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-slate-100 hover:text-blue-600 bg-blue-50 text-blue-600">全天业务报告</a>
+                </nav>
+
+                <!-- Right End Profile -->
+                <div class="flex items-center gap-4">
+                    <a href="模型与安全配置.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:settings-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="角色与权限管理.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:user-bold-duotone"></iconify-icon>
+                    </a>
+                    <a href="系统登录.html" class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-colors text-slate-500">
+                        <iconify-icon class="text-xl" icon="solar:logout-2-bold-duotone"></iconify-icon>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+
+<main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <header class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-3xl font-black tracking-tight text-slate-800">全天业务报告</h1>
+            <p class="text-slate-500 mt-2 font-medium">2026年03月27日业务汇总与趋势分析</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full">报告生成时间: 2026-03-27 23:59</span>
+            <button class="bg-blue-600/90 hover:bg-blue-600 backdrop-blur-md text-white px-5 py-2 rounded-xl transition-all shadow-[0_4px_20px_rgba(37,99,235,0.3)] text-sm font-bold tracking-wide">
+                导出PDF报告
+            </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <!-- 左侧：核心指标汇总 -->
+        <div class="xl:col-span-2 space-y-6">
+            <!-- 指标卡片 -->
+            <div class="grid grid-cols-4 gap-4">
+                <div class="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                            <iconify-icon class="text-xl text-blue-500" icon="solar:videocamera-record-bold-duotone"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">处理视频数</p>
+                            <p class="text-2xl font-bold text-slate-800">127</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                            <iconify-icon class="text-xl text-amber-500" icon="solar:danger-triangle-bold-duotone"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">识别事件数</p>
+                            <p class="text-2xl font-bold text-slate-800">342</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                            <iconify-icon class="text-xl text-purple-500" icon="solar:magnifer-bold-duotone"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">检索次数</p>
+                            <p class="text-2xl font-bold text-slate-800">1,204</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                            <iconify-icon class="text-xl text-green-500" icon="solar:archive-bold-duotone"></iconify-icon>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-widest">导出证据</p>
+                            <p class="text-2xl font-bold text-slate-800">89</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 趋势图表 -->
+            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                <h3 class="text-xl font-bold text-slate-800 mb-6">事件识别趋势 (7日)</h3>
+                <div class="w-full h-64" id="trendChart"></div>
+            </div>
+
+            <!-- 事件类型分布 -->
+            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                <h3 class="text-xl font-bold text-slate-800 mb-6">事件类型分布</h3>
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-slate-700">侧向碰撞</span>
+                            <span class="text-sm font-bold text-red-500">45%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-red-500 h-2 rounded-full" style="width: 45%"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-slate-700">行人鬼探头</span>
+                            <span class="text-sm font-bold text-amber-500">30%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-amber-500 h-2 rounded-full" style="width: 30%"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-slate-700">违停</span>
+                            <span class="text-sm font-bold text-blue-500">15%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-blue-500 h-2 rounded-full" style="width: 15%"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-slate-700">其他</span>
+                            <span class="text-sm font-bold text-slate-500">10%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2">
+                            <div class="bg-slate-500 h-2 rounded-full" style="width: 10%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：区域统计与总结 -->
+        <div class="xl:col-span-1 space-y-6">
+            <div class="bg-slate-900 rounded-[28px] p-6 shadow-2xl relative overflow-hidden group border border-slate-800 text-white">
+                <div class="absolute -right-10 -top-10 w-40 h-40 bg-red-500 blur-[60px] rounded-full opacity-20"></div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">区域事件统计</h3>
+                <ul class="space-y-3">
+                    <li class="flex justify-between items-center text-sm"><span class="text-slate-400">南山区段</span> <span class="font-bold text-red-400">127起</span></li>
+                    <li class="flex justify-between items-center text-sm"><span class="text-slate-400">福田区段</span> <span class="font-bold text-amber-400">89起</span></li>
+                    <li class="flex justify-between items-center text-sm"><span class="text-slate-400">罗湖区段</span> <span class="font-bold text-blue-400">56起</span></li>
+                    <li class="flex justify-between items-center text-sm"><span class="text-slate-400">宝安区段</span> <span class="font-bold text-green-400">34起</span></li>
+                </ul>
+            </div>
+
+            <div class="bg-white/70 backdrop-blur-xl rounded-[28px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/80">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">业务总结</h3>
+                <p class="text-sm text-slate-600 leading-relaxed">
+                    今日系统处理视频127个，识别关键事件342起，检索请求1204次，证据导出89份。事件主要集中在南山区和福田区，侧向碰撞和行人鬼探头为主要类型。系统运行稳定，无重大异常。
+                </p>
+            </div>
+        </div>
+    </div>
+</main>
+    
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        var chartDom = document.getElementById('trendChart');
+        if (chartDom) {
+            var myChart = echarts.init(chartDom);
+            var option = {
+                grid: { top: 20, right: 10, bottom: 20, left: 30 },
+                tooltip: { 
+                    trigger: 'axis', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+                    borderColor: '#e2e8f0', 
+                    textStyle: { color: '#1e293b' } 
+                },
+                legend: {
+                    data: ['发现事件数', '处理视频数'],
+                    top: 0,
+                    right: 20,
+                    icon: 'circle',
+                    itemWidth: 8,
+                    itemHeight: 8,
+                },
+                xAxis: { 
+                    type: 'category', 
+                    data: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00'], 
+                    axisLine: { show: false }, 
+                    axisTick: { show: false }, 
+                    axisLabel: { color: '#64748b', fontSize: 12 } 
+                },
+                yAxis: { 
+                    type: 'value', 
+                    splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } }, 
+                    axisLabel: { color: '#64748b', fontSize: 12 } 
+                },
+                series: [
+                    { 
+                        name: '发现事件数', 
+                        type: 'line', 
+                        smooth: true, 
+                        showSymbol: false, 
+                        data: [12, 45, 87, 134, 180, 260, 342], 
+                        itemStyle: { color: '#3b82f6' }, 
+                        lineStyle: { width: 4, shadowColor: 'rgba(59, 130, 246, 0.3)', shadowBlur: 10 }, 
+                        areaStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(59, 130, 246, 0.4)' }, 
+                                { offset: 1, color: 'rgba(59, 130, 246, 0.05)' }
+                            ]) 
+                        } 
+                    },
+                    { 
+                        name: '处理视频数', 
+                        type: 'line', 
+                        smooth: true, 
+                        showSymbol: false, 
+                        data: [5, 20, 42, 68, 90, 110, 127], 
+                        itemStyle: { color: '#8b5cf6' }, 
+                        lineStyle: { width: 4, shadowColor: 'rgba(139, 92, 246, 0.3)', shadowBlur: 10 }, 
+                        areaStyle: { 
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(139, 92, 246, 0.4)' }, 
+                                { offset: 1, color: 'rgba(139, 92, 246, 0.05)' }
+                            ]) 
+                        } 
+                    }
+                ]
+            };
+            myChart.setOption(option);
+            window.addEventListener('resize', function() { myChart.resize(); });
+        }
+    });
+</script>
+</body>
+
+</html>
