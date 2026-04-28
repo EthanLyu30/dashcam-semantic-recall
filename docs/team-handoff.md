@@ -8,21 +8,22 @@ This scaffold is based on the completed requirements document, outline design do
 
 The current repository implements the client-side contribution first:
 
-- Qt6 desktop application entry point.
-- Search workspace layout: playback, query, result list, event detail, and timeline.
+- Complete DVR-Semantic prototype assets copied into `docs/prototype-source/`.
+- No-dependency prototype runner: `python apps/desktop_client/run_prototype.py`.
+- Qt WebEngine prototype shell: `python apps/desktop_client/prototype_shell.py`.
+- Qt6 semantic-search scaffold: playback, query, result list, event detail, and timeline.
 - Mock API client with deterministic videos/events/search results.
 - Result selection to playback seek flow.
 - Event export trigger against the shared API contract.
-- Design system and UI theme.
-- API/data models shared by the desktop demo.
+- Design system, prototype migration guide, and API/data models.
 
-The UI can be run against mock data immediately after installing `desktop` dependencies. It can also call a real REST server when `DVR_SEMANTIC_API_BASE` is set.
+The full prototype can run without desktop dependencies through the prototype runner. The Qt scaffold can run against mock data after installing `desktop` dependencies, and can call a real REST server when `DVR_SEMANTIC_API_BASE` is set.
 
 ## 倪羽辰 Remaining Scope
 
 Backend and AI implementation should fill the contracts without changing the client DTOs unless a contract change is agreed.
 
-Required tasks:
+Required core tasks:
 
 1. Implement video upload and task creation.
 2. Use ffmpeg for metadata extraction, transcoding, slicing, keyframe extraction, thumbnails, and clip export.
@@ -31,6 +32,8 @@ Required tasks:
 5. Implement hybrid semantic retrieval with pgvector plus keyword fallback.
 6. Implement evidence export package generation and audit records.
 7. Add backend integration tests and endpoint tests.
+
+Dashboard, report, alert, settings, user, and role pages may stay on mock data during the first backend milestone. They are not blockers for 倪羽辰's first delivery.
 
 ## Integration Contract
 
@@ -47,4 +50,3 @@ The client only requires:
 - optional `thumbnail_url`
 
 As long as those fields remain stable, backend internals can evolve independently.
-

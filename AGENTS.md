@@ -37,6 +37,9 @@ dashcam-semantic-recall/
 - `apps/desktop_client/**`
 - `docs/api-contract.md`
 - `docs/team-handoff.md`
+- `docs/prototype-source/**`
+- `docs/prototype-migration.md`
+- `docs/lv-xiaoyang-completed.md`
 - `DESIGN.md`
 
 倪羽辰 can freely edit:
@@ -45,6 +48,7 @@ dashcam-semantic-recall/
 - database migrations when added
 - video/AI/search/evidence services
 - backend tests and technical implementation docs
+- `docs/ni-yuchen-todolist.md`
 
 Shared files such as `README.md`, `AGENTS.md`, `pyproject.toml`, and API contracts should be updated deliberately because they affect both members.
 

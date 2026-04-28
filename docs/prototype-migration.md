@@ -10,6 +10,18 @@
 docs/prototype-source/
 ```
 
+可以直接运行完整原型：
+
+```bash
+python apps/desktop_client/run_prototype.py
+```
+
+如果安装了 PySide6 + QtWebEngine，也可以用 Qt 壳打开：
+
+```bash
+python apps/desktop_client/prototype_shell.py
+```
+
 ## 页面搬运映射
 
 | 原型页面 | Qt/工程目标 | 后端 API |
@@ -36,8 +48,8 @@ docs/prototype-source/
 
 ## 实现顺序
 
-1. 完成 `语义检索中心` 的 Qt 迁移和后端联调。
-2. 搬运 `视频库管理` 和上传/任务状态。
-3. 搬运 `系统状态概览` 的指标与图表。
-4. 搬运 `人工复核中心` 和 `证据与日志归档`。
-5. 搬运设置、权限、报告等辅助页面。
+1. 已完成：把 11 个原型页面完整接入仓库并提供运行入口。
+2. 已完成：提供 Qt WebEngine 原型壳，便于课程要求桌面端展示时使用。
+3. 已完成：提供 Qt 语义检索页脚手架和 mock API。
+4. 下一步：把原型按钮逐步绑定到真实后端接口。
+5. 下一步：后端完成后用 `DVR_SEMANTIC_API_BASE` 切换为真实数据。

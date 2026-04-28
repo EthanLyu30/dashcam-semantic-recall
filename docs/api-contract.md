@@ -986,4 +986,4 @@ Response:
 
 1. 先实现 `auth`、`videos`、`tasks/status`、`search`、`events`、`export` 六组接口，保证主链路可联调。
 2. 再实现 `review`、`logs`、`dashboard`，补齐复核和演示看板。
-3. 最后实现 `alerts`、`accidents`、`reports`、`settings`、`users/roles`，补齐原型剩余页面。
+3. `alerts`、`accidents`、`reports`、`settings`、`users/roles` 第一阶段允许由吕霄阳侧 mock 数据支撑页面演示；主链路稳定后再逐步真实化。

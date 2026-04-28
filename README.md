@@ -10,24 +10,27 @@ The project is derived from the completed SRS, outline design document, first-st
 
 This repository is intentionally split by the two-person team boundary from the opening report.
 
-吕霄阳 owns the desktop client and presentation layer:
+吕霄阳 owns the desktop client, prototype migration, and presentation layer:
 
-- Qt6 desktop workspace and page layout
-- VLC-compatible playback panel and timestamp seek flow
-- Semantic search results, event detail, and event timeline interaction
-- REST contract integration and final demo flow
+- Complete DVR-Semantic prototype migration under `docs/prototype-source`
+- Prototype preview runner and Qt WebEngine shell
+- Qt6 desktop scaffold, playback/seek flow, search results, event detail, and timeline
+- Mock data, REST contract integration, and final demo flow
 
-倪羽辰 owns the backend and AI implementation:
+倪羽辰 owns the real backend and AI implementation:
 
-- Video upload, transcoding, slicing, frame extraction
+- Video upload, transcoding, slicing, frame extraction, and thumbnails
 - Multimodal model API integration and structured labels
 - Semantic retrieval, event summaries, timestamp return logic
-- Database, logs, evidence export implementation, tests, and technical docs
+- Core database persistence, evidence export implementation, tests, and technical docs
 
 ## What Is Implemented Now
 
+- A complete copy of the DVR-Semantic prototype under `docs/prototype-source`
+- A no-dependency prototype runner under `apps/desktop_client/run_prototype.py`
+- A Qt WebEngine prototype shell under `apps/desktop_client/prototype_shell.py`
 - A runnable PySide6 Qt6 desktop client scaffold under `apps/desktop_client`
-- Mock API client and deterministic demo data so the UI can be demonstrated before the backend is complete
+- Mock API client and deterministic demo data so the UI can be demonstrated before the real backend is complete
 - A backend placeholder with FastAPI endpoint contracts and pure search-service logic
 - `AGENTS.md`, `开发技巧.md`, `DESIGN.md`, project skills, roadmap, and handoff docs
 - Unit tests for the completed contract/search logic
@@ -44,7 +47,19 @@ python -m venv .venv
 python -m pip install -e ".[dev,desktop,backend]"
 ```
 
-Run the desktop demo:
+Run the completed prototype pages:
+
+```bash
+python apps/desktop_client/run_prototype.py
+```
+
+Run the Qt prototype shell if PySide6/QtWebEngine is installed:
+
+```bash
+python apps/desktop_client/prototype_shell.py
+```
+
+Run the Qt semantic-search scaffold:
 
 ```bash
 python apps/desktop_client/main.py
@@ -76,3 +91,7 @@ The scaffold borrows the following ideas from the requested references:
 - Hermes Agent: explicit project guide, skills, tools/services, plans, and stable contracts.
 - Karpathy guidelines: minimal scope, surgical changes, success criteria, and verification loops.
 - DESIGN.md pattern: a root design-system document that coding agents can follow consistently.
+
+## Mock Data
+
+`mock` means fake API/data used before the real backend is finished. See `docs/mock-explained.md`.
