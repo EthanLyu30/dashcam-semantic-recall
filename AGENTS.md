@@ -71,7 +71,7 @@ Follow the Karpathy-inspired rules from `开发技巧.md`:
 
 ## Prototype Migration Rule
 
-The UI is not allowed to drift away from the completed DVR-Semantic prototype. Use `docs/prototype-migration.md` as the migration checklist and keep `docs/prototype-source/` as the visual/source reference.
+The UI is not allowed to drift away from the completed DVR-Semantic prototype. Use `docs/prototype-migration.md` as the migration checklist and keep `docs/prototype-source/` as the visual/source reference. The final client should be reproduced in the required Qt6 desktop stack; the HTML prototype is a design reference, not the final implementation.
 
 ## Current Success Criteria
 

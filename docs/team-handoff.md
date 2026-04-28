@@ -8,10 +8,11 @@ This scaffold is based on the completed requirements document, outline design do
 
 The current repository implements the client-side contribution first:
 
-- Complete DVR-Semantic prototype assets copied into `docs/prototype-source/`.
-- No-dependency prototype runner: `python apps/desktop_client/run_prototype.py`.
-- Qt WebEngine prototype shell: `python apps/desktop_client/prototype_shell.py`.
-- Qt6 semantic-search scaffold: playback, query, result list, event detail, and timeline.
+- Complete DVR-Semantic prototype assets copied into `docs/prototype-source/` as UI design reference.
+- No-dependency prototype reference viewer: `python apps/desktop_client/run_prototype.py`.
+- Qt WebEngine prototype reference shell: `python apps/desktop_client/prototype_shell.py`.
+- Qt6 native multi-page reproduction for the prototype navigation and major pages.
+- Qt6 semantic-search page: playback, query, result list, event detail, and timeline.
 - Mock API client with deterministic videos/events/search results.
 - Result selection to playback seek flow.
 - Event export trigger against the shared API contract.

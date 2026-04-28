@@ -6,10 +6,11 @@
 
 客户端、展示层、原型搬运和联调体验。
 
-- 完整接入 `DVR-Semantic` 原型源文件。
-- 维护 `docs/prototype-source/` 中的 11 个页面。
-- 提供原型运行入口：`apps/desktop_client/run_prototype.py`。
-- 提供 Qt WebEngine 原型壳：`apps/desktop_client/prototype_shell.py`。
+- 将 `DVR-Semantic` 原型作为 UI 设计稿接入仓库。
+- 维护 `docs/prototype-source/` 中的 11 个页面作为视觉/交互参考。
+- 提供原型参考运行入口：`apps/desktop_client/run_prototype.py`。
+- 提供 Qt WebEngine 原型参考壳：`apps/desktop_client/prototype_shell.py`。
+- 用 Qt6 原生组件复现原型页面，而不是直接把 HTML 当成最终客户端。
 - 维护客户端 mock 数据和 mock API client。
 - 维护 Qt 客户端语义检索页脚手架。
 - 负责 `语义检索中心`、`视频库管理`、`系统状态概览`、`证据与日志归档` 的客户端展示和交互。
@@ -41,5 +42,4 @@
 
 ## 为什么这样更均衡
 
-原分工里倪羽辰同时背了视频处理、AI、检索、数据库、日志、导出和大量展示接口，风险太集中。调整后，展示型页面、原型搬运、mock 数据、交互联调由吕霄阳承担；倪羽辰只需要优先打通真实后端主链路。
-
+原分工里倪羽辰同时背了视频处理、AI、检索、数据库、日志、导出和大量展示接口，风险太集中。调整后，展示型页面的 Qt 复现、mock 数据、交互联调由吕霄阳承担；倪羽辰只需要优先打通真实后端主链路。

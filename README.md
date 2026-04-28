@@ -12,9 +12,9 @@ This repository is intentionally split by the two-person team boundary from the 
 
 吕霄阳 owns the desktop client, prototype migration, and presentation layer:
 
-- Complete DVR-Semantic prototype migration under `docs/prototype-source`
-- Prototype preview runner and Qt WebEngine shell
-- Qt6 desktop scaffold, playback/seek flow, search results, event detail, and timeline
+- Reproduce the completed DVR-Semantic prototype inside the Qt6 desktop stack
+- Keep `docs/prototype-source` as the UI design reference, not as the final implementation
+- Qt6 desktop multi-page scaffold, playback/seek flow, search results, event detail, and timeline
 - Mock data, REST contract integration, and final demo flow
 
 倪羽辰 owns the real backend and AI implementation:
@@ -26,16 +26,16 @@ This repository is intentionally split by the two-person team boundary from the 
 
 ## What Is Implemented Now
 
-- A complete copy of the DVR-Semantic prototype under `docs/prototype-source`
-- A no-dependency prototype runner under `apps/desktop_client/run_prototype.py`
-- A Qt WebEngine prototype shell under `apps/desktop_client/prototype_shell.py`
-- A runnable PySide6 Qt6 desktop client scaffold under `apps/desktop_client`
+- A complete copy of the DVR-Semantic prototype under `docs/prototype-source` as UI reference
+- A no-dependency prototype reference viewer under `apps/desktop_client/run_prototype.py`
+- A Qt WebEngine reference shell under `apps/desktop_client/prototype_shell.py`
+- A runnable PySide6 Qt6 desktop client scaffold under `apps/desktop_client` that reproduces the prototype as native Qt pages
 - Mock API client and deterministic demo data so the UI can be demonstrated before the real backend is complete
 - A backend placeholder with FastAPI endpoint contracts and pure search-service logic
 - `AGENTS.md`, `开发技巧.md`, `DESIGN.md`, project skills, roadmap, and handoff docs
 - Unit tests for the completed contract/search logic
 
-Important design note: the desktop client must migrate the completed DVR-Semantic prototype rather than inventing a new UI. The source prototype is copied under `docs/prototype-source/`, and the page/API mapping is documented in `docs/prototype-migration.md`.
+Important design note: the desktop client must reproduce the completed DVR-Semantic prototype in the required Qt6 desktop stack rather than directly ship the HTML prototype. The source prototype is copied under `docs/prototype-source/` as the UI design reference, and the page/API mapping is documented in `docs/prototype-migration.md`.
 
 ## Quick Start
 
@@ -47,19 +47,19 @@ python -m venv .venv
 python -m pip install -e ".[dev,desktop,backend]"
 ```
 
-Run the completed prototype pages:
+Open the original prototype reference pages:
 
 ```bash
 python apps/desktop_client/run_prototype.py
 ```
 
-Run the Qt prototype shell if PySide6/QtWebEngine is installed:
+Open the original prototype inside a Qt WebEngine reference shell if PySide6/QtWebEngine is installed:
 
 ```bash
 python apps/desktop_client/prototype_shell.py
 ```
 
-Run the Qt semantic-search scaffold:
+Run the native Qt multi-page reproduction:
 
 ```bash
 python apps/desktop_client/main.py

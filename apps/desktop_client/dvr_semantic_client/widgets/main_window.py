@@ -7,7 +7,9 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
+    QPushButton,
     QSplitter,
+    QStackedWidget,
     QStatusBar,
     QVBoxLayout,
     QWidget,
@@ -16,6 +18,18 @@ from PySide6.QtWidgets import (
 from ..api import ApiClient
 from ..models import SemanticEvent, VideoRecord
 from .event_detail import EventDetailPanel
+from .pages import (
+    accidents_page,
+    alerts_page,
+    daily_report_page,
+    evidence_page,
+    login_page,
+    overview_page,
+    review_page,
+    roles_page,
+    settings_page,
+    video_library_page,
+)
 from .search_panel import SearchPanel
 from .timeline import EventTimeline
 from .video_player import VideoPlayerPanel
@@ -35,6 +49,8 @@ class MainWindow(QMainWindow):
         self.search_panel = SearchPanel()
         self.timeline = EventTimeline()
         self.detail = EventDetailPanel()
+        self.stack = QStackedWidget()
+        self.nav_buttons: list[QPushButton] = []
 
         self.search_panel.search_requested.connect(self.run_search)
         self.search_panel.event_selected.connect(self.select_event)
@@ -47,21 +63,8 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(14, 14, 14, 14)
         root.setSpacing(12)
         root.addWidget(self._build_header())
-
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self.player)
-        splitter.addWidget(self.search_panel)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-        root.addWidget(splitter, 1)
-
-        bottom = QSplitter(Qt.Orientation.Horizontal)
-        bottom.addWidget(self._wrap_timeline())
-        bottom.addWidget(self.detail)
-        bottom.setStretchFactor(0, 3)
-        bottom.setStretchFactor(1, 2)
-        bottom.setMaximumHeight(230)
-        root.addWidget(bottom)
+        self._build_pages()
+        root.addWidget(self.stack, 1)
 
         self.setCentralWidget(central)
         self._load_initial_state()
@@ -76,23 +79,78 @@ class MainWindow(QMainWindow):
         title.setProperty("role", "title")
         subtitle = QLabel("多模态行车记录仪视频语义检索与精准回放")
         subtitle.setProperty("role", "muted")
-        nav = QLabel("概览   检索   视频流   复核   告警   事故   证据与日志   全天业务报告")
-        nav.setStyleSheet("color: #2563EB; font-weight: 650;")
-
         text_stack = QVBoxLayout()
         text_stack.addWidget(title)
         text_stack.addWidget(subtitle)
-        text_stack.addWidget(nav)
 
-        state = QLabel("原型搬运中 · 当前页：语义检索中心")
+        state = QLabel("Qt6 复现原型 · 当前数据源：mock")
         state.setStyleSheet(
             "color: #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE; "
             "border-radius: 12px; padding: 8px 12px;"
         )
 
         layout.addLayout(text_stack, 1)
+        for index, label in enumerate(
+            ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告"]
+        ):
+            button = QPushButton(label)
+            button.clicked.connect(lambda _checked=False, idx=index: self.show_page(idx))
+            self.nav_buttons.append(button)
+            layout.addWidget(button)
+        for offset, label in enumerate(["模型配置", "权限", "登录"], start=8):
+            button = QPushButton(label)
+            button.clicked.connect(lambda _checked=False, idx=offset: self.show_page(idx))
+            self.nav_buttons.append(button)
+            layout.addWidget(button)
         layout.addWidget(state)
         return frame
+
+    def _build_pages(self) -> None:
+        self.stack.addWidget(overview_page())
+        self.stack.addWidget(self._build_search_workspace())
+        self.stack.addWidget(video_library_page())
+        self.stack.addWidget(review_page())
+        self.stack.addWidget(alerts_page())
+        self.stack.addWidget(accidents_page())
+        self.stack.addWidget(evidence_page())
+        self.stack.addWidget(daily_report_page())
+        self.stack.addWidget(settings_page())
+        self.stack.addWidget(roles_page())
+        self.stack.addWidget(login_page())
+        self.show_page(1)
+
+    def _build_search_workspace(self) -> QWidget:
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(12)
+
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(self.search_panel)
+        splitter.addWidget(self.player)
+        splitter.setStretchFactor(0, 2)
+        splitter.setStretchFactor(1, 3)
+        layout.addWidget(splitter, 1)
+
+        bottom = QSplitter(Qt.Orientation.Horizontal)
+        bottom.addWidget(self._wrap_timeline())
+        bottom.addWidget(self.detail)
+        bottom.setStretchFactor(0, 3)
+        bottom.setStretchFactor(1, 2)
+        bottom.setMaximumHeight(230)
+        layout.addWidget(bottom)
+        return page
+
+    def show_page(self, index: int) -> None:
+        self.stack.setCurrentIndex(index)
+        for button_index, button in enumerate(self.nav_buttons):
+            active = button_index == index
+            button.setProperty("variant", "primary" if active else "")
+            button.style().unpolish(button)
+            button.style().polish(button)
+        names = ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告", "模型配置", "权限", "登录"]
+        if 0 <= index < len(names):
+            self.statusBar().showMessage(f"当前页面：{names[index]}")
 
     def _wrap_timeline(self) -> QFrame:
         frame = QFrame()

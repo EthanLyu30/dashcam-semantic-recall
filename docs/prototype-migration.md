@@ -2,7 +2,7 @@
 
 ## 当前状态说明
 
-上一版脚手架不是严格搬运原型，而是按需求文档重新搭了一个 Qt6 客户端框架。现在已调整为“原型优先”策略：视觉、页面、导航、接口和 TODO 都以你完成的 `DVR-Semantic` 原型为准。
+上一版脚手架不是严格复现原型，而是按需求文档重新搭了一个 Qt6 客户端框架。现在已调整为“原型作为 UI 设计稿”的策略：视觉、页面、导航、接口和 TODO 都以你完成的 `DVR-Semantic` 原型为准，但最终实现必须在 Qt6 桌面端技术栈里完成。
 
 原型源文件已复制到：
 
@@ -10,13 +10,13 @@
 docs/prototype-source/
 ```
 
-可以直接运行完整原型：
+可以打开原始原型作为设计参考：
 
 ```bash
 python apps/desktop_client/run_prototype.py
 ```
 
-如果安装了 PySide6 + QtWebEngine，也可以用 Qt 壳打开：
+如果安装了 PySide6 + QtWebEngine，也可以用 Qt 壳打开原型参考：
 
 ```bash
 python apps/desktop_client/prototype_shell.py
@@ -45,11 +45,13 @@ python apps/desktop_client/prototype_shell.py
 - 卡片、面板、指标块保留原型的大圆角和浅色玻璃感。
 - `语义检索中心` 保留左侧查询/结果、右侧视频/证据、深色视频区域的结构。
 - 原型中的演示文案、查询样例、状态标签优先保留，后续接真实接口替换数据。
+- 不把 HTML 原型作为最终客户端交付；HTML 只用于对照视觉和交互。
+- Qt6 实现优先使用 `QWidget`、`QStackedWidget`、`QTableWidget`、`QFrame`、`QPushButton` 等原生组件复现。
 
 ## 实现顺序
 
-1. 已完成：把 11 个原型页面完整接入仓库并提供运行入口。
-2. 已完成：提供 Qt WebEngine 原型壳，便于课程要求桌面端展示时使用。
-3. 已完成：提供 Qt 语义检索页脚手架和 mock API。
+1. 已完成：把 11 个原型页面完整接入仓库作为 UI 参考。
+2. 已完成：提供原型参考运行入口，方便开发时对照。
+3. 已完成：提供 Qt6 多页面工作台，按原型复现概览、检索、视频流、复核、告警、事故、证据日志、报告、配置、权限、登录页面。
 4. 下一步：把原型按钮逐步绑定到真实后端接口。
 5. 下一步：后端完成后用 `DVR_SEMANTIC_API_BASE` 切换为真实数据。
