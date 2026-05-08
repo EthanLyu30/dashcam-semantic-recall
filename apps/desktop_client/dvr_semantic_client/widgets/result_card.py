@@ -29,6 +29,8 @@ class ResultCard(QFrame):
         confidence.setAlignment(Qt.AlignmentFlag.AlignCenter)
         confidence.setFixedWidth(54)
         confidence.setStyleSheet(self._confidence_style(event.confidence))
+        relevance = QLabel(f"相关度 {event.similarity_percent}" if event.similarity_score else "相关度 -")
+        relevance.setProperty("role", "muted")
 
         summary = QLabel(event.summary)
         summary.setWordWrap(True)
@@ -47,6 +49,7 @@ class ResultCard(QFrame):
 
         bottom = QHBoxLayout()
         bottom.addWidget(time_label)
+        bottom.addWidget(relevance)
         bottom.addStretch()
         bottom.addWidget(seek_button)
 

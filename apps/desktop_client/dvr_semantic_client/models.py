@@ -46,6 +46,7 @@ class SemanticEvent:
     tags: tuple[str, ...] = field(default_factory=tuple)
     thumbnail_url: str = ""
     review_status: str = "pending"
+    similarity_score: float = 0.0
 
     @property
     def time_range(self) -> str:
@@ -54,6 +55,10 @@ class SemanticEvent:
     @property
     def confidence_percent(self) -> str:
         return f"{round(self.confidence * 100):d}%"
+
+    @property
+    def similarity_percent(self) -> str:
+        return f"{round(self.similarity_score * 100):d}%"
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "SemanticEvent":
@@ -72,11 +77,13 @@ class SemanticEvent:
             tags=tuple(str(tag) for tag in tags),
             thumbnail_url=str(data.get("thumbnail_url", "")),
             review_status=str(data.get("review_status", "pending")),
+            similarity_score=float(data.get("similarity_score", 0.0)),
         )
 
 
 @dataclass(frozen=True)
 class SearchResponse:
+    query_id: str
     query: str
     video_id: str
     elapsed_ms: int
@@ -85,6 +92,7 @@ class SearchResponse:
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "SearchResponse":
         return cls(
+            query_id=str(data.get("query_id", "")),
             query=str(data.get("query", "")),
             video_id=str(data.get("video_id", "")),
             elapsed_ms=int(data.get("elapsed_ms", 0)),
@@ -111,4 +119,3 @@ class ExportResponse:
             status=str(data.get("status", "queued")),
             export_path=str(data.get("export_path", "")),
         )
-

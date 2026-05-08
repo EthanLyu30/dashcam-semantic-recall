@@ -87,8 +87,9 @@ class SearchPanel(QFrame):
 
     def set_response(self, response: SearchResponse) -> None:
         self._clear_results()
+        query_id = f" · {response.query_id}" if response.query_id else ""
         self.status.setText(
-            f"{len(response.results)} 条命中 · {response.elapsed_ms} ms · {response.query}"
+            f"{len(response.results)} 条命中 · {response.elapsed_ms} ms{query_id} · {response.query}"
         )
         for event in response.results:
             card = ResultCard(event)
@@ -113,4 +114,3 @@ class SearchPanel(QFrame):
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
-

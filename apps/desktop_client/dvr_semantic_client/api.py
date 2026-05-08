@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import Protocol
 
 import requests
@@ -71,12 +71,18 @@ class MockApiClient:
         results = tuple(event for score, event in ranked if score >= 0.25)
         if not results:
             results = tuple(event for _, event in ranked[:3])
+        scored_results = tuple(
+            replace(event, similarity_score=score)
+            for score, event in ranked
+            if event in results
+        )
         elapsed_ms = int((time.perf_counter() - started) * 1000)
         return SearchResponse(
+            query_id=f"mock-{int(started * 1000)}",
             query=query,
             video_id=video_id,
             elapsed_ms=max(12, elapsed_ms),
-            results=results,
+            results=scored_results,
         )
 
     def get_event(self, event_id: str) -> SemanticEvent:
@@ -102,7 +108,13 @@ class RestApiClient:
     def list_videos(self) -> tuple[VideoRecord, ...]:
         response = requests.get(f"{self.base_url}/api/videos", timeout=self.timeout_sec)
         response.raise_for_status()
-        return tuple(VideoRecord.from_json(item) for item in response.json())
+        payload = response.json()
+        items = payload.get("items", ()) if isinstance(payload, dict) else payload
+        return tuple(
+            VideoRecord.from_json(item)
+            for item in items
+            if isinstance(item, dict)
+        )
 
     def search(self, video_id: str, query: str, mode: str = "hybrid") -> SearchResponse:
         response = requests.post(
@@ -150,4 +162,3 @@ def create_api_client(base_url: str = "") -> ApiClient:
     if base_url:
         return RestApiClient(base_url)
     return MockApiClient()
-

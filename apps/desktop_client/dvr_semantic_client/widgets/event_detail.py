@@ -52,11 +52,10 @@ class EventDetailPanel(QFrame):
         self.summary.setText(event.summary)
         self.tags.setText("  ".join(f"#{tag}" for tag in event.tags))
         self.confidence.setText(
-            f"confidence {event.confidence_percent} · review {event.review_status}"
+            f"confidence {event.confidence_percent} · relevance {event.similarity_percent} · review {event.review_status}"
         )
         self.export_button.setEnabled(True)
 
     def _emit_export(self) -> None:
         if self._event is not None:
             self.export_requested.emit(self._event)
-
