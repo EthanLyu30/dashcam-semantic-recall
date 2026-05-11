@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Any
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QComboBox,
+    QFileDialog,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -10,6 +14,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QMessageBox,
     QPushButton,
     QProgressBar,
     QTableWidget,
@@ -127,38 +132,154 @@ def overview_page() -> QWidget:
     return page
 
 
-def video_library_page() -> QWidget:
-    page, root = page_shell("视频库管理", "上传、处理状态、缩略图封面和任务进度管理")
-    upload = panel()
-    upload_layout = QHBoxLayout(upload)
-    upload_layout.setContentsMargins(16, 14, 16, 14)
-    upload_layout.addWidget(title("导入行车记录仪视频"))
-    upload_layout.addWidget(action_button("选择文件", "primary"))
-    upload_layout.addWidget(action_button("开始分析"))
-    upload_layout.addWidget(action_button("重试失败任务"))
-    root.addWidget(upload)
+class VideoLibraryPage(QWidget):
+    """Video library tab: upload, process and list videos via api_client."""
 
-    progress = panel()
-    progress_layout = QVBoxLayout(progress)
-    progress_layout.addWidget(title("处理任务"))
-    bar = QProgressBar()
-    bar.setValue(68)
-    progress_layout.addWidget(bar)
-    progress_layout.addWidget(muted("VID_20260327_1422 · 正在抽取关键帧 · 68%"))
-    root.addWidget(progress)
+    def __init__(self, api_client: Any, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._api_client = api_client
 
-    root.addWidget(
-        table(
-            ["视频", "时长", "状态", "事件数", "更新时间"],
-            [
-                ["VID_20260327_1422 南山区巡查", "30:30", "可检索", "3", "14:35"],
-                ["VID_20260328_0908 滨河大道早高峰", "36:00", "可检索", "2", "09:18"],
-                ["VID_20260329_1810 高架入口", "22:45", "分析中", "-", "18:12"],
-            ],
-        ),
-        1,
-    )
-    return page
+        root = QVBoxLayout(self)
+        root.setContentsMargins(18, 18, 18, 18)
+        root.setSpacing(14)
+
+        header = panel()
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(18, 14, 18, 14)
+        page_title = QLabel("视频库管理")
+        page_title.setProperty("role", "title")
+        header_layout.addWidget(page_title)
+        header_layout.addWidget(muted("上传、处理状态、缩略图封面和任务进度管理"))
+        root.addWidget(header)
+
+        upload = panel()
+        upload_layout = QHBoxLayout(upload)
+        upload_layout.setContentsMargins(16, 14, 16, 14)
+        upload_layout.addWidget(title("导入行车记录仪视频"))
+        self.upload_button = action_button("上传视频", "primary")
+        self.upload_button.clicked.connect(self._on_upload_clicked)
+        self.refresh_button = action_button("刷新列表")
+        self.refresh_button.clicked.connect(self.refresh)
+        upload_layout.addWidget(self.upload_button)
+        upload_layout.addWidget(self.refresh_button)
+        root.addWidget(upload)
+
+        progress = panel()
+        progress_layout = QVBoxLayout(progress)
+        progress_layout.addWidget(title("处理任务"))
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.setVisible(False)
+        self.progress_label = muted("空闲")
+        progress_layout.addWidget(self.progress_bar)
+        progress_layout.addWidget(self.progress_label)
+        root.addWidget(progress)
+
+        self.video_table = QTableWidget(0, 5)
+        self.video_table.setHorizontalHeaderLabels(
+            ["视频", "时长", "状态", "ID", "失败原因"]
+        )
+        self.video_table.verticalHeader().setVisible(False)
+        self.video_table.setAlternatingRowColors(True)
+        self.video_table.setSelectionBehavior(
+            QTableWidget.SelectionBehavior.SelectRows
+        )
+        self.video_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        root.addWidget(self.video_table, 1)
+
+        self.refresh()
+
+    # --- helpers ------------------------------------------------------------
+    def _set_busy(self, busy: bool, message: str = "") -> None:
+        self.progress_bar.setVisible(busy)
+        self.progress_label.setText(message or "空闲")
+        self.upload_button.setDisabled(busy)
+        self.refresh_button.setDisabled(busy)
+
+    def refresh(self) -> None:
+        try:
+            videos = self._api_client.list_videos()
+        except Exception as exc:
+            QMessageBox.warning(self, "加载失败", f"无法读取视频列表：\n{exc}")
+            return
+
+        self.video_table.setRowCount(len(videos))
+        for row, video in enumerate(videos):
+            mm, ss = divmod(int(getattr(video, "duration_sec", 0) or 0), 60)
+            duration = f"{mm:02d}:{ss:02d}"
+            cells = [
+                str(getattr(video, "title", "")),
+                duration,
+                str(getattr(video, "status", "")),
+                str(getattr(video, "id", "")),
+                str(getattr(video, "fail_reason", "")),
+            ]
+            for col, value in enumerate(cells):
+                self.video_table.setItem(row, col, QTableWidgetItem(value))
+        self.video_table.resizeColumnsToContents()
+
+    def _on_upload_clicked(self) -> None:
+        path_str, _ = QFileDialog.getOpenFileName(
+            self,
+            "选择要上传的视频",
+            "",
+            "Video files (*.mp4 *.mov *.mkv *.avi *.m4v);;All files (*.*)",
+        )
+        if not path_str:
+            return
+        path = Path(path_str)
+        title_text = path.stem or path.name
+
+        self._set_busy(True, f"上传中：{path.name}")
+        try:
+            upload_result = self._api_client.upload_video(path, title=title_text)
+        except Exception as exc:
+            self._set_busy(False)
+            QMessageBox.critical(self, "上传失败", f"上传 {path.name} 失败：\n{exc}")
+            return
+
+        video_id = ""
+        if isinstance(upload_result, dict):
+            video_id = str(upload_result.get("video_id", ""))
+
+        if not video_id:
+            self._set_busy(False)
+            QMessageBox.warning(self, "上传异常", "服务端未返回 video_id。")
+            self.refresh()
+            return
+
+        self._set_busy(True, f"处理中：{video_id}")
+        try:
+            self._api_client.process_video(video_id)
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                "处理失败",
+                f"上传成功但处理失败（video_id={video_id}）：\n{exc}",
+            )
+        finally:
+            self._set_busy(False)
+            self.refresh()
+
+
+def video_library_page(api_client: Any | None = None) -> QWidget:
+    """Factory kept for compatibility; api_client is required for live data."""
+    if api_client is None:
+        # Fallback static rendering for environments without an api client.
+        page, root = page_shell("视频库管理", "上传、处理状态、缩略图封面和任务进度管理")
+        root.addWidget(
+            table(
+                ["视频", "时长", "状态", "事件数", "更新时间"],
+                [
+                    ["VID_20260327_1422 南山区巡查", "30:30", "可检索", "3", "14:35"],
+                    ["VID_20260328_0908 滨河大道早高峰", "36:00", "可检索", "2", "09:18"],
+                    ["VID_20260329_1810 高架入口", "22:45", "分析中", "-", "18:12"],
+                ],
+            ),
+            1,
+        )
+        return page
+    return VideoLibraryPage(api_client)
 
 
 def review_page() -> QWidget:

@@ -15,9 +15,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..api import ApiClient
+from ..api import ApiClient, RestApiClient
 from ..models import SemanticEvent, VideoRecord
 from .event_detail import EventDetailPanel
+from .login_dialog import LoginContext
 from .pages import (
     accidents_page,
     alerts_page,
@@ -36,9 +37,16 @@ from .video_player import VideoPlayerPanel
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, api_client: ApiClient) -> None:
+    def __init__(
+        self,
+        api_client: ApiClient,
+        login_ctx: LoginContext | None = None,
+        base_url: str = "",
+    ) -> None:
         super().__init__()
         self.api_client = api_client
+        self.login_ctx = login_ctx
+        self.base_url = base_url.rstrip("/") if base_url else ""
         self.videos: tuple[VideoRecord, ...] = ()
         self.current_events: tuple[SemanticEvent, ...] = ()
 
@@ -83,7 +91,14 @@ class MainWindow(QMainWindow):
         text_stack.addWidget(title)
         text_stack.addWidget(subtitle)
 
-        state = QLabel("Qt6 复现原型 · 当前数据源：mock")
+        if self.login_ctx is not None:
+            who = self.login_ctx.display_name or self.login_ctx.username
+            role = self.login_ctx.role or "guest"
+            source = "REST" if self.base_url else "mock"
+            state_text = f"用户 {who} · {role} · 数据源 {source}"
+        else:
+            state_text = "Qt6 复现原型 · 当前数据源：mock"
+        state = QLabel(state_text)
         state.setStyleSheet(
             "color: #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE; "
             "border-radius: 12px; padding: 8px 12px;"
@@ -108,7 +123,7 @@ class MainWindow(QMainWindow):
     def _build_pages(self) -> None:
         self.stack.addWidget(overview_page())
         self.stack.addWidget(self._build_search_workspace())
-        self.stack.addWidget(video_library_page())
+        self.stack.addWidget(video_library_page(self.api_client))
         self.stack.addWidget(review_page())
         self.stack.addWidget(alerts_page())
         self.stack.addWidget(accidents_page())
@@ -171,6 +186,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.timeline)
         return frame
 
+    def _load_video_into_player(self, video: VideoRecord) -> None:
+        """Hand the video to the player, using the streaming URL if available."""
+        if isinstance(self.api_client, RestApiClient) and video.id:
+            url = self.api_client.stream_url(video.id)
+            self.player.load_video_url(url, video.duration_sec, video.title)
+        else:
+            self.player.load_video(video)
+
     def _load_initial_state(self) -> None:
         try:
             self.videos = self.api_client.list_videos()
@@ -180,7 +203,7 @@ class MainWindow(QMainWindow):
 
         self.search_panel.set_videos(self.videos)
         if self.videos:
-            self.player.load_video(self.videos[0])
+            self._load_video_into_player(self.videos[0])
             self.timeline.set_video(self.videos[0])
             self.run_search(self.videos[0].id, "帮我找出疑似剐蹭的时间段")
 
@@ -193,7 +216,7 @@ class MainWindow(QMainWindow):
 
         selected_video = next((video for video in self.videos if video.id == video_id), None)
         if selected_video is not None:
-            self.player.load_video(selected_video)
+            self._load_video_into_player(selected_video)
             self.timeline.set_video(selected_video)
 
         self.current_events = response.results
