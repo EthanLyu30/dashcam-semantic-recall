@@ -48,9 +48,14 @@ class VideoPlayerPanel(QFrame):
             "#videoSurface { background: #020617; border-radius: 18px; "
             "border: 1px solid #1E293B; }"
         )
-        # disable Qt's own painting so VLC can hand-draw the frame
-        self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
-        self.video_frame.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
+        # Only request a native window when VLC is actually around — otherwise
+        # offscreen platforms (e.g. CI / docs screenshots) crash because there
+        # is no underlying window system to hand a HWND to.
+        if self._vlc_available:
+            self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
+            self.video_frame.setAttribute(
+                Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True
+            )
 
         # placeholder label shown when no video / no VLC available
         self.surface_label = QLabel("No video selected")
@@ -127,6 +132,10 @@ class VideoPlayerPanel(QFrame):
     # --- vlc bootstrap ----------------------------------------------------
     @staticmethod
     def _probe_vlc() -> Any:
+        # Honour an explicit opt-out for offscreen rendering / CI.
+        import os as _os
+        if _os.environ.get("DVR_DISABLE_VLC", "").strip() in ("1", "true", "yes"):
+            return None
         try:
             import vlc  # type: ignore
         except Exception:

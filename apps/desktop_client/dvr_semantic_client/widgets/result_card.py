@@ -13,12 +13,22 @@ class ResultCard(QFrame):
         super().__init__(parent)
         self.event = event
         self.setObjectName("resultCard")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet(
-            "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
-            "border-radius: 14px; }"
-            "#resultCard:hover { border-color: #2563EB; background: #EFF6FF; }"
-        )
+        # Honour an offscreen-rendering escape hatch: skip pointer cursor and
+        # the :hover selector when running headless, since both have triggered
+        # segfaults inside Qt's offscreen platform plugin.
+        import os as _os
+        if _os.environ.get("QT_QPA_PLATFORM", "").lower() != "offscreen":
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.setStyleSheet(
+                "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
+                "border-radius: 14px; }"
+                "#resultCard:hover { border-color: #2563EB; background: #EFF6FF; }"
+            )
+        else:
+            self.setStyleSheet(
+                "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
+                "border-radius: 14px; }"
+            )
 
         title = QLabel(event.title)
         title.setStyleSheet("font-size: 15px; font-weight: 700;")
