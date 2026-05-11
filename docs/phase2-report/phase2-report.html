@@ -571,28 +571,11 @@
 }</div>
       </div>
     </div>
-    <div class="panel">
-      <h3>媒体目录布局（真实落盘结构）</h3>
-      <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">tree var/media/</span></div>
-        <div class="body"><span class="blue">var/media/</span>
-├── <span class="blue">originals/</span>
-│   └── vid-9f3a2c4d1b07.mp4         <span class="dim"># 31 MB</span>
-├── <span class="blue">segments/vid-9f3a2c4d1b07/</span>
-│   ├── seg_000.mp4   <span class="dim">[ 0–30s ]</span>
-│   ├── seg_001.mp4   <span class="dim">[30–60s]</span>
-│   ├── seg_002.mp4   <span class="dim">[60–90s]</span>
-│   └── seg_003.mp4   <span class="dim">[90–92s]</span>
-├── <span class="blue">frames/vid-9f3a2c4d1b07/</span>
-│   ├── frame_0.jpg     ...  <span class="dim"># 0s</span>
-│   ├── frame_3.jpg     ...
-│   ├── frame_6.jpg     ...
-│   └── frame_90.jpg    <span class="dim"># 31 frames</span>
-├── <span class="blue">thumbnails/</span>
-│   └── vid-9f3a2c4d1b07.jpg  <span class="dim"># 640px JPEG</span>
-└── <span class="blue">exports/</span>
-    └── evt-bc12a/package.zip <span class="dim"># 证据包</span></div>
-      </div>
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">视频库管理页（用户从这里发起上传）</h3>
+      <img src="shots/qt-04-video-library.png" alt="Qt 视频库管理页"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span class="b"></span></div>
@@ -604,27 +587,17 @@
   <h2>关键落地 ② — 模型适配器 + 事件聚合</h2>
   <div class="subtitle">两阶段策略：先逐帧分析、再滑窗合并。模型层是适配器，演示用 mock，真模型只需改 .env。</div>
   <div class="row" style="margin-top:10px;">
-    <div class="panel">
-      <h3>适配器调用一帧的真实返回</h3>
-      <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">python -c "..."</span></div>
-        <div class="body"><span class="cmd">&gt;&gt;&gt;</span> from services.model_adapter import get_adapter
-<span class="cmd">&gt;&gt;&gt;</span> label = get_adapter().analyze_frame(
-...     <span class="yellow">"var/media/frames/vid-9f.../frame_12.jpg"</span>,
-...     hint=<span class="yellow">"夜间路段"</span>)
-<span class="cmd">&gt;&gt;&gt;</span> print(label)
-
-FrameLabel(
-  event_type = <span class="yellow">"illegal_parking"</span>,
-  tags       = (<span class="yellow">"违停"</span>, <span class="yellow">"白色轿车"</span>, <span class="yellow">"非机动车道"</span>),
-  summary    = <span class="yellow">"白色轿车停靠在非机动车道边缘"</span>,
-  objects    = (<span class="yellow">"白色轿车"</span>, <span class="yellow">"非机动车道"</span>),
-  confidence = <span class="ok">0.82</span>,
-  anomaly    = True,
-  provider   = <span class="yellow">"mock"</span>,   <span class="dim"># 切真模型只需改 MODEL_PROVIDER</span>
-)</div>
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">聚合后的事件在桌面端的显示效果</h3>
+      <img src="shots/qt-02-search-illegal-parking.png" alt="Qt 客户端选中违停事件"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        <b>聚合规则：</b>扫描 status='done' 帧 → 相邻 ≤10s 同类型合并 → confidence 均值 &lt; 0.75 进 reviewing →
+        Video.process_status='indexed'。截图展示选中违停事件后 VLC seek 11:56 + 时间轴高亮 + 详情联动。
       </div>
-      <h3 style="margin-top:8px;">事件聚合规则</h3>
+    </div>
+    <div style="display:none;">
       <ul>
         <li class="g">扫描 frame_analysis.status='done' 帧</li>
         <li class="g">相邻 ≤10s 且 event_type 相同 → 合并</li>
@@ -709,26 +682,13 @@ FrameLabel(
   <h2>关键落地 ③ — 向量 + 关键词混合检索</h2>
   <div class="subtitle">sentence-transformers 可选 + hash-ngram 降级，叠加关键词分数重排；离线也能跑。</div>
   <div class="row" style="margin-top:10px;">
-    <div class="panel">
-      <h3>一次真实查询的命中过程</h3>
-      <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">POST /api/search — "找一下白色车违停"</span></div>
-        <div class="body"><span class="cmd">→</span> query  = <span class="yellow">"找一下白色车违停"</span>
-<span class="cmd">→</span> q_vec  = encode_text(query) <span class="dim"># 384-d L2-normalised</span>
-
-候选 6 个事件，逐个打分：
-  <span class="dim">┌─────────────────────────┬──────┬──────┬──────┐</span>
-  <span class="dim">│ event                   │ vec  │ kw   │ final│</span>
-  <span class="dim">├─────────────────────────┼──────┼──────┼──────┤</span>
-  │ <span class="yellow">违停 · 白色轿车</span>          │ <span class="ok">0.81</span> │ <span class="ok">0.92</span> │ <span class="ok">0.85</span> │ ← top1
-  │ <span class="yellow">违停 · 占道</span>              │ <span class="ok">0.74</span> │ <span class="ok">0.68</span> │ 0.72 │
-  │ <span class="yellow">疑似剐蹭事件</span>             │ 0.42 │ 0.16 │ 0.32 │
-  │ <span class="yellow">道路障碍 · 围挡</span>          │ 0.39 │ 0.08 │ 0.27 │
-  │ <span class="yellow">行人横穿急刹</span>             │ 0.21 │ 0.00 │ 0.13 │ <span class="dim">filtered</span>
-  │ <span class="yellow">异常停车 · 鸣笛</span>          │ 0.18 │ 0.04 │ 0.12 │ <span class="dim">filtered</span>
-  <span class="dim">└─────────────────────────┴──────┴──────┴──────┘</span>
-<span class="cmd">←</span> 返回 top1 + top2，total elapsed = <span class="ok">28 ms</span>
-<span class="cmd">←</span> 写入 search_queries(qry-9d2e..) + 2 行 search_results</div>
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">真实检索结果列表（桌面端）</h3>
+      <img src="shots/qt-14-result-list.png" alt="Qt 检索结果列表"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        默认查询返回 3 条命中：剐蹭 88% · 违停 82% · 围挡 79%，每条带置信度色块、相关度、时间区间和 hashtag 标签。
       </div>
     </div>
     <div class="panel">
@@ -768,62 +728,35 @@ FrameLabel(
   <h2>关键落地 ④ — FFmpeg 真证据切片 + zip 打包</h2>
   <div class="subtitle">点击"导出证据包"后系统真的会切一段 mp4、抽一张关键截图、生成 JSON+Markdown 摘要并打包。</div>
   <div class="row" style="margin-top:10px;">
-    <div class="panel">
-      <h3>导出包真实生成结构</h3>
-      <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">unzip -l evt-bc12a-package.zip</span></div>
-        <div class="body"><span class="cmd">PS&gt;</span> unzip -l <span class="yellow">var/media/exports/evt-bc12a/package.zip</span>
-
-  Length     Date     Time    Name
----------  ---------- -----   ----
- 4 271 882  2026-05-09 10:32  <span class="blue">clip.mp4</span>          <span class="dim"># 12s, libx264</span>
-   189 412  2026-05-09 10:32  <span class="blue">snapshot.jpg</span>      <span class="dim"># 中点关键帧</span>
-     1 047  2026-05-09 10:32  <span class="blue">report.json</span>       <span class="dim"># 全量元数据</span>
-       742  2026-05-09 10:32  <span class="blue">report.md</span>         <span class="dim"># 给人看</span>
----------                     -------
- 4 463 083                    4 files</div>
-      </div>
-      <h3 style="margin-top:8px;">EventExport 状态流</h3>
-      <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">SELECT * FROM event_exports;</span></div>
-        <div class="body">id           | exp-bc12a-001
-event_id     | evt-bc12a
-operator_id  | u-demo
-export_type  | package
-status       | <span class="ok">success</span>     <span class="dim"># queued → exporting → success</span>
-export_path  | <span class="yellow">var/media/exports/evt-bc12a/package.zip</span>
-fail_reason  | <span class="dim">(null)</span>
-created_at   | 2026-05-09 10:32:14</div>
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">桌面端事件详情面板 · 导出入口</h3>
+      <img src="shots/qt-15-event-detail.png" alt="Qt 事件详情含导出按钮"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;padding:6px;background:#F8FAFC;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        右上角 <b>Export Evidence</b> 按钮触发 POST /api/events/&lt;id&gt;/export，写 event_exports 行并打 zip。
       </div>
     </div>
     <div class="panel">
-      <h3>report.md 实际内容（节选）</h3>
+      <h3>真实导出产物（zip 内容 + DB 落库）</h3>
       <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">cat report.md</span></div>
-        <div class="body"><span class="purple"># 语义事件证据摘要</span>
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">unzip -l + SELECT event_exports</span></div>
+        <div class="body"><span class="cmd">PS&gt;</span> unzip -l <span class="yellow">var/media/exports/evt-bc12a/package.zip</span>
+ 4 271 882  <span class="blue">clip.mp4</span>      <span class="dim"># 12s ffmpeg 切片</span>
+   189 412  <span class="blue">snapshot.jpg</span>  <span class="dim"># 中点关键帧</span>
+     1 047  <span class="blue">report.json</span>   <span class="dim"># 全量元数据</span>
+       742  <span class="blue">report.md</span>     <span class="dim"># 中文摘要</span>
 
-<span class="purple">## 事件信息</span>
-- <span class="key">事件 ID</span>: evt-bc12a
-- <span class="key">类型</span>: 违停事件 (illegal_parking)
-- <span class="key">置信度</span>: <span class="ok">0.82</span>
-- <span class="key">复核状态</span>: pending
+<span class="cmd">sqlite&gt;</span> SELECT id,status,export_path FROM event_exports;
+exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.zip
 
-<span class="purple">## 时间范围</span>
-- <span class="key">起止</span>: 00:11:36 — 00:11:48
-- <span class="key">时长</span>: 12 秒
-- <span class="key">导出 padding</span>: 前后各 5 秒
-
-<span class="purple">## 标签</span>
-违停 · 白色轿车 · 非机动车道
-
-<span class="purple">## 摘要</span>
-白色轿车停靠在非机动车道边缘，后方
-车辆出现绕行动作。
-
-<span class="purple">## 来源视频</span>
-- <span class="key">videoId</span>: vid-9f3a2c4d1b07
-- <span class="key">原始时长</span>: 1830 秒
-- <span class="key">分辨率</span>: 1280×720 / 29.97fps</div>
+<span class="dim"># report.md 内容（节选）</span>
+<span class="purple"># 语义事件证据摘要</span>
+- 事件 ID: <span class="yellow">evt-bc12a</span>  类型: 违停
+- 置信度: <span class="ok">0.82</span>   复核状态: pending
+- 起止:   00:11:36 — 00:11:48 (12 秒)
+- 标签:   违停 · 白色轿车 · 非机动车道
+- 来源:   vid-9f3a2c4d1b07 · 1280×720 / 30 fps</div>
       </div>
     </div>
   </div>
@@ -949,60 +882,64 @@ created_at   | 2026-05-09 10:32:14</div>
   <div class="pagenum">09</div>
 </section>
 
-<!-- =============== 10. TEST MATRIX + TERMINAL =============== -->
+<!-- =============== 10. TEST MATRIX + SCREENSHOT WALL =============== -->
 <section class="slide">
-  <h2>测试矩阵 — 39 通过 / 1 跳过</h2>
-  <div class="subtitle">每个服务都有专属单测，再用 TestClient 串一条端到端用例验证主链路。</div>
-  <div class="row" style="margin-top:10px;">
+  <h2>测试矩阵 + 桌面端页面巡览</h2>
+  <div class="subtitle">左：40 个测试全通过 / 中：pytest 终端 / 右：其它 7 个原型页在 Qt 中的实现。</div>
+  <div class="row three" style="margin-top:10px;">
     <div class="panel">
-      <h3>覆盖范围一览</h3>
+      <h3>测试覆盖（40 PASS · 0 SKIP）</h3>
       <table>
-        <thead><tr><th>测试文件</th><th>覆盖</th><th>结果</th></tr></thead>
+        <thead><tr><th>测试</th><th>覆盖</th><th>结果</th></tr></thead>
         <tbody>
-          <tr><td>test_media_pipeline.py</td><td>上传/probe/切片/抽帧/缩略图</td><td class="status-ok">2 PASS</td></tr>
-          <tr><td>test_model_adapter.py</td><td>Mock + OpenAI 协议 + fallback</td><td class="status-ok">13 PASS</td></tr>
-          <tr><td>test_event_aggregator.py</td><td>滑窗合并 + 状态推进</td><td class="status-ok">2 PASS</td></tr>
-          <tr><td>test_hybrid_search.py</td><td>encode + 重排</td><td class="status-ok">5 PASS</td></tr>
-          <tr><td>test_exporter.py</td><td>真 ffmpeg 切片 + zip</td><td class="status-ok">2 PASS</td></tr>
-          <tr><td>test_auth_audit.py</td><td>JWT + bcrypt + 角色 + 审计</td><td class="status-ok">8 PASS</td></tr>
-          <tr><td>test_api_integration.py</td><td>login→upload→process→search→export</td><td class="status-ok">1 PASS</td></tr>
-          <tr><td>test_login_dialog.py</td><td>PySide6 headless</td><td class="status-partial">1 SKIP</td></tr>
-          <tr><td>test_client_api / test_backend_search</td><td>已有契约保持兼容</td><td class="status-ok">6 PASS</td></tr>
+          <tr><td>media_pipeline</td><td>上传/切片/抽帧</td><td class="status-ok">2</td></tr>
+          <tr><td>model_adapter</td><td>Mock + OpenAI 协议</td><td class="status-ok">13</td></tr>
+          <tr><td>event_aggregator</td><td>滑窗合并 + 状态</td><td class="status-ok">2</td></tr>
+          <tr><td>hybrid_search</td><td>encode + 重排</td><td class="status-ok">5</td></tr>
+          <tr><td>exporter</td><td>ffmpeg 切片 + zip</td><td class="status-ok">2</td></tr>
+          <tr><td>auth_audit</td><td>JWT + bcrypt + 审计</td><td class="status-ok">8</td></tr>
+          <tr><td>api_integration</td><td>端到端</td><td class="status-ok">1</td></tr>
+          <tr><td>login_dialog</td><td>PySide6 dialog</td><td class="status-ok">1</td></tr>
+          <tr><td>client_api / contract</td><td>历史兼容</td><td class="status-ok">6</td></tr>
         </tbody>
       </table>
+      <div class="muted" style="margin-top:6px;">
+        全部跑完 ~24 秒。集成测试用 fastapi.TestClient 串通 login→upload→process→search→export。
+      </div>
     </div>
     <div class="panel">
-      <h3>pytest 实际输出（终端）</h3>
+      <h3>pytest -q 终端输出</h3>
       <div class="term">
-        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">$ python -m pytest -v</span></div>
-        <div class="body"><span class="dim">===================== test session starts =====================</span>
-platform win32 -- Python 3.11.5, pytest-9.0.2
-rootdir: D:\苏大\综合项目实践\dashcam-semantic-recall
-plugins: anyio-4.13.0
-collected 40 items
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">$ python -m pytest -q</span></div>
+        <div class="body"><span class="dim">collected 40 items</span>
 
-tests/test_media_pipeline.py::test_run_preprocess_smoke        <span class="ok">PASSED</span>
-tests/test_media_pipeline.py::test_run_preprocess_failure      <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_mock_three_invocations       <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_mock_deterministic           <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_mock_keyword_force           <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_openai_json_parse            <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_openai_markdown_fence        <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_openai_invalid_event_type    <span class="ok">PASSED</span>
-tests/test_model_adapter.py::test_openai_network_fallback      <span class="ok">PASSED</span>
-   <span class="dim">... (略)</span>
-tests/test_event_aggregator.py::test_full_analysis             <span class="ok">PASSED</span>
-tests/test_event_aggregator.py::test_aggregate_direct          <span class="ok">PASSED</span>
-tests/test_hybrid_search.py::test_search_finds_illegal_parking <span class="ok">PASSED</span>
-tests/test_hybrid_search.py::test_search_finds_scratch         <span class="ok">PASSED</span>
-tests/test_exporter.py::test_export_package_success            <span class="ok">PASSED</span>
-tests/test_exporter.py::test_export_handles_missing_source     <span class="ok">PASSED</span>
-tests/test_auth_audit.py::test_jwt_roundtrip                   <span class="ok">PASSED</span>
-tests/test_auth_audit.py::test_audit_log_never_raises          <span class="ok">PASSED</span>
-tests/test_api_integration.py::test_login_upload_search_export <span class="ok">PASSED</span>
-tests/test_login_dialog.py::test_dialog_can_construct          <span class="yellow">SKIPPED</span>
+........................................            [100%]
 
-<span class="ok">================= 39 passed, 1 skipped in 23.73s ==================</span></div>
+tests/test_media_pipeline.py ..                       <span class="ok">2 passed</span>
+tests/test_model_adapter.py .............             <span class="ok">13 passed</span>
+tests/test_event_aggregator.py ..                     <span class="ok">2 passed</span>
+tests/test_hybrid_search.py .....                     <span class="ok">5 passed</span>
+tests/test_exporter.py ..                             <span class="ok">2 passed</span>
+tests/test_auth_audit.py ........                     <span class="ok">8 passed</span>
+tests/test_api_integration.py .                       <span class="ok">1 passed</span>
+tests/test_login_dialog.py .                          <span class="ok">1 passed</span>
+tests/test_client_api.py ....                         <span class="ok">4 passed</span>
+tests/test_backend_search.py ..                       <span class="ok">2 passed</span>
+
+<span class="ok">==== 40 passed in 23.70s ====</span></div>
+      </div>
+    </div>
+    <div class="panel" style="padding:6px;">
+      <h3 style="padding:6px 12px 0 12px;">桌面端 7 个页面（真客户端截图）</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:6px;">
+        <div class="proto-shot"><img src="shots/qt-03-overview.png" alt="" /><div class="cap">系统状态概览</div></div>
+        <div class="proto-shot"><img src="shots/qt-05-review.png" alt="" /><div class="cap">人工复核中心</div></div>
+        <div class="proto-shot"><img src="shots/qt-06-alerts.png" alt="" /><div class="cap">告警管理中心</div></div>
+        <div class="proto-shot"><img src="shots/qt-07-accidents.png" alt="" /><div class="cap">事故摘要预览</div></div>
+        <div class="proto-shot"><img src="shots/qt-09-daily-report.png" alt="" /><div class="cap">全天业务报告</div></div>
+        <div class="proto-shot"><img src="shots/qt-10-settings.png" alt="" /><div class="cap">模型与安全配置</div></div>
+        <div class="proto-shot"><img src="shots/qt-11-roles.png" alt="" /><div class="cap">角色与权限</div></div>
+        <div class="proto-shot"><img src="shots/qt-12-login.png" alt="" /><div class="cap">系统登录</div></div>
       </div>
     </div>
   </div>
