@@ -79,10 +79,11 @@ def main() -> int:
             layout.setContentsMargins(10, 10, 10, 10)
             layout.addWidget(l)
 
-    # ---- Patch and import ---------------------------------------------------
-    from dvr_semantic_client.widgets import search_panel as sp_module
-    sp_module.ResultCard = CaptureCard
-    print(">>> ResultCard patched", flush=True)
+    # Production ResultCard is now stable (the `self.event = event` line is
+    # assigned AFTER the layout is wired, which sidesteps a PySide6 6.x bug).
+    # Keep the CaptureCard class above defined in case we ever need to swap
+    # back in for a clean-room screenshot pass.
+    _ = CaptureCard  # silence unused warning
 
     from dvr_semantic_client.widgets.main_window import MainWindow
     from dvr_semantic_client.api import MockApiClient

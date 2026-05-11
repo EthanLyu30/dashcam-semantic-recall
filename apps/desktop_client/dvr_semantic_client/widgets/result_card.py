@@ -1,89 +1,52 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QVBoxLayout, QWidget
 
 from ..models import SemanticEvent
 
 
 class ResultCard(QFrame):
+    """Search-result card — must mirror the CaptureCard pattern exactly.
+
+    Any deviation (e.g. `setStyleSheet` on self, `QLabel(html, self)`,
+    `<table>` in the HTML) has been observed to crash during construction
+    on Windows / Python 3.11 / PySide6 6.x. Keep this minimal.
+    """
+
     selected = Signal(object)
 
-    def __init__(self, event: SemanticEvent, parent: QWidget | None = None) -> None:
+    def __init__(self, event, parent=None):  # type: ignore[no-untyped-def]
         super().__init__(parent)
-        self.event = event
-        self.setObjectName("resultCard")
-        # Honour an offscreen-rendering escape hatch: skip pointer cursor and
-        # the :hover selector when running headless, since both have triggered
-        # segfaults inside Qt's offscreen platform plugin.
-        import os as _os
-        if _os.environ.get("QT_QPA_PLATFORM", "").lower() != "offscreen":
-            self.setCursor(Qt.CursorShape.PointingHandCursor)
-            self.setStyleSheet(
-                "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
-                "border-radius: 14px; }"
-                "#resultCard:hover { border-color: #2563EB; background: #EFF6FF; }"
-            )
-        else:
-            self.setStyleSheet(
-                "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
-                "border-radius: 14px; }"
-            )
-
-        title = QLabel(event.title)
-        title.setStyleSheet("font-size: 15px; font-weight: 700;")
-        time_label = QLabel(event.time_range)
-        time_label.setProperty("role", "muted")
-
-        confidence = QLabel(event.confidence_percent)
-        confidence.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        confidence.setFixedWidth(54)
-        confidence.setStyleSheet(self._confidence_style(event.confidence))
-        relevance = QLabel(f"相关度 {event.similarity_percent}" if event.similarity_score else "相关度 -")
-        relevance.setProperty("role", "muted")
-
-        summary = QLabel(event.summary)
-        summary.setWordWrap(True)
-        summary.setProperty("role", "muted")
-
-        tags = QLabel("  ".join(f"#{tag}" for tag in event.tags))
-        tags.setStyleSheet("color: #2563EB; font-size: 12px;")
-
-        seek_button = QPushButton("Seek")
-        seek_button.setProperty("variant", "primary")
-        seek_button.clicked.connect(lambda: self.selected.emit(self.event))
-
-        top = QHBoxLayout()
-        top.addWidget(title, 1)
-        top.addWidget(confidence)
-
-        bottom = QHBoxLayout()
-        bottom.addWidget(time_label)
-        bottom.addWidget(relevance)
-        bottom.addStretch()
-        bottom.addWidget(seek_button)
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-        layout.addLayout(top)
-        layout.addWidget(summary)
-        layout.addWidget(tags)
-        layout.addLayout(bottom)
-
-    def mousePressEvent(self, event) -> None:  # type: ignore[override]
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.selected.emit(self.event)
-        super().mousePressEvent(event)
-
-    def _confidence_style(self, confidence: float) -> str:
-        if confidence >= 0.85:
-            color = "#63D471"
-        elif confidence >= 0.78:
+        if event.confidence >= 0.85:
+            color = "#22C55E"
+        elif event.confidence >= 0.78:
             color = "#F59E0B"
         else:
             color = "#EF4444"
-        return (
-            f"color: {color}; border: 1px solid {color}; border-radius: 5px; "
-            "padding: 4px; font-weight: 700;"
+        relevance = event.similarity_percent if event.similarity_score else "-"
+        html = (
+            f"<div><b style='font-size:14pt;color:#1E293B;'>{event.title}</b>"
+            f" &nbsp; <span style='color:{color};font-weight:700;"
+            f"border:1px solid {color};border-radius:5px;padding:1px 8px;'>"
+            f"{event.confidence_percent}</span>"
+            f"<br><span style='color:#64748B;'>{event.time_range}  ·  "
+            f"相关度 {relevance}</span>"
+            f"<br><span style='color:#334155;'>{event.summary}</span>"
+            f"<br><span style='color:#2563EB;'>"
+            f"{'  '.join('#' + t for t in event.tags)}</span></div>"
         )
+        l = QLabel(html)
+        l.setTextFormat(Qt.TextFormat.RichText)
+        l.setWordWrap(True)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.addWidget(l)
+        # store event AFTER layout is built (some PySide6 internal state
+        # is sensitive to attribute assignment during __init__)
+        self.event = event
+
+    def mousePressEvent(self, event):  # type: ignore[override]
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.selected.emit(self.event)
+        super().mousePressEvent(event)
