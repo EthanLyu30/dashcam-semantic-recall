@@ -276,8 +276,72 @@
 请生成一个完整的 HTML 文件，包含 12 个 1280×720 的 <section class="slide"> 单页 PPT，共用一份 <style> 内联样式。视觉风格与作答规则严格按照"通用风格约束"。每页末尾放页码圆点（当前页对应颜色高亮）和右下角两位数字页码。文件应在浏览器中直接打开就能浏览，按 Cmd/Ctrl+P 打印导出 PDF 时每页占一张 A4 横向。
 ```
 
+## 视觉素材生成提示词（HTML/SVG/CSS mockup）
+
+如果某一页需要重新生成可视化素材而不是整页，可以单独提示：
+
+### 重新生成"系统架构 SVG"（slide 4）
+```
+用 SVG 画一张 1180×320 的系统架构图：
+- 左边 Qt6 桌面端 → 中间 FastAPI 路由（蓝色渐变填充）→ 右边 5 个服务方块
+- 每个服务方块用不同色（media=蓝/model=紫/aggregator=绿/search=黄/export=红）
+- FastAPI 下方延伸一个青色"auth+audit"方块表示横切关注点（虚线连回上方）
+- 右侧再画 4 个白卡：媒体存储、SQLite 9 表、外部模型 API、ffmpeg/VLC
+- 全部用细灰色箭头连接，箭头用 marker 三角
+- 右下角放一个"跨层稳定标识"图例：videoId/eventId/queryId/exportId
+- 不要任何渐变以外的特效，遵循 SRS 颜色 token
+```
+
+### 重新生成"frame_analysis → events 时间轴"SVG（slide 6）
+```
+画一张 540×220 SVG，分两层：
+- 上层：14 个 6px 圆点代表帧分析结果，按 event_type 着色（灰=normal、红=scratch、黄=illegal_parking、绿=pedestrian），横坐标 0~60s
+- 下层：聚合后的 3 个事件矩形，宽度 = 时间跨度，配标签和置信度
+- 中间用虚线箭头从聚合中心往下指
+- 底部画 0/15/30/45/60 秒刻度
+- 配文字"灰点 = normal，被跳过"
+```
+
+### 重新生成"桌面端运行 mockup"（slide 9）
+```
+用纯 HTML + CSS 画一张高保真桌面客户端检索页 mockup：
+- 顶部导航栏：紫蓝渐变 logo "DVR" + 8 个导航项（"概览"到"证据与日志"），当前页"检索"加下划线蓝色高亮 + 右侧用户胶囊"demo · user · http://..."
+- 主体两栏：左栏 1.2fr 是搜索结果，右栏 1.6fr 是视频 + 时间轴 + 详情
+- 搜索栏：白色圆角输入框 + 蓝色"搜索"按钮
+- 4 张结果卡片：左侧置信度圆角徽章（高=绿/中=蓝/低=黄），右侧标题 + 元信息 + 圆角 tag 列表，当前选中卡片描 3px 蓝色阴影
+- 视频区：深色背景 + CSS 渐变模拟夜间公路场景（用 linear-gradient + radial-gradient + 中间黄色虚线车道线模拟透视）+ 左上红色 LIVE 胶囊 + 右上黑色时间戳 + 底部黑色半透明控制条带进度条 marker
+- 时间轴：白色面板里横向灰色 rail，4 个彩色事件块按比例摆放，当前位置一根蓝色竖线，左右两端 monospace 0:00 / 30:30
+- 详情面板：标题 + 命中理由 + 来源 + 标签 + 3 个按钮（"导出证据包" primary 蓝，其余 ghost 灰）
+- 整体不要 emoji 装饰，保持工业控制台美学
+```
+
+### 重新生成"模拟终端"块（多页通用）
+```
+HTML 写一个 macOS 风格终端：
+- 外框 .term 黑色 #020617，圆角 12px
+- 标题栏 #1E293B，左侧三个 11px 圆点（红/黄/绿 #FF5F57/#FEBC2E/#28C840），右侧灰色 11px 文件名
+- 内容区 monospace 11.5px 行高 1.55
+- 颜色语义：命令提示符 .cmd 绿、关键字 .key 黄、JSON 字符串 .yellow、注释 .dim 灰、URL .blue 蓝、状态 .ok 绿粗 / .err 红粗
+- 内容用 <span class="..."> 着色
+- 不要打字机动画，纯静态展示
+```
+
+### 重新生成"阶段对比柱状图"SVG/HTML（slide 2）
+```
+用 flexbox CSS 画一张柱状图：
+- 5 组数据：业务表 0→9 / 服务模块 2→11 / 路由 2→14 / 测试 9→39 / 端到端 0→1
+- 每组两根 22px 宽的圆角柱子（顶部圆角 4px），阶段一灰色渐变 #CBD5E1→#94A3B8，阶段二蓝青渐变 #3B82F6→#06B6D4
+- 柱子顶端绝对定位一个 10px 黑色数字 label
+- 底部组标签 10px 灰色
+- 下方居中一个 legend，两个 10px 色块说明阶段一/阶段二
+```
+
 ## 想转成真 PPTX 怎么做
 
 - 浏览器打开 `phase2-report.html` → 打印 → 另存为 PDF（A4 横向 / 边距 0）
 - 用 [pptxgenjs](https://github.com/gitbrent/PPTXGenJS) 或 [pdf2pptx](https://www.ilovepdf.com/pdf_to_powerpoint) 转 .pptx
 - 也可以让 Claude 把上面每页提示词直接生成 `python-pptx` 代码，需要的话再来一轮即可
+
+## 配合 screenshot-checklist.md
+
+PPT 里有大量 HTML/CSS mockup 和模拟终端是为了"看起来不空"。汇报当天**强烈建议把 mockup 替换成真截图**——按 `screenshot-checklist.md` 录一遍，截图扔进 `shots/` 目录后改 `<img src="shots/06-search-result.png">` 即可。
