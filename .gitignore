@@ -12,4 +12,8 @@ media/originals/
 media/segments/
 media/frames/
 media/exports/
+var/
+*.db
+*.db-journal
+.claude/
 
