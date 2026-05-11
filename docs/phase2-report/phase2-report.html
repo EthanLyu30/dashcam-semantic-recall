@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>阶段二进度汇报 · DVR-Semantic</title>
+<style>
+  :root {
+    --blue:#2563EB; --red:#EF4444; --yellow:#F59E0B; --green:#22C55E;
+    --indigo:#4F46E5; --cyan:#06B6D4;
+    --bg:#F8FAFC; --panel:#FFFFFF; --soft:#F1F5F9;
+    --text:#1E293B; --muted:#64748B; --border:#E2E8F0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  body{background:#E2E8F0;padding:32px 16px;color:var(--text);}
+  .slide{
+    position:relative;width:1280px;height:720px;margin:0 auto 32px auto;
+    background:var(--bg);border-radius:18px;overflow:hidden;
+    box-shadow:0 10px 30px rgba(15,23,42,.12);
+    padding:56px 64px 60px 64px;
+    display:flex;flex-direction:column;
+  }
+  .slide::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:8px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+  }
+  .slide::after{
+    content:"";position:absolute;bottom:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+    opacity:.85;
+  }
+  .pagenum{position:absolute;right:24px;bottom:18px;color:var(--muted);font-size:13px;font-weight:600;}
+  .dots{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:10px;}
+  .dots span{width:8px;height:8px;border-radius:50%;background:var(--border);}
+  .dots span.b{background:var(--blue)} .dots span.r{background:var(--red)}
+  .dots span.y{background:var(--yellow)} .dots span.g{background:var(--green)}
+  h1{font-size:44px;font-weight:800;color:var(--text);line-height:1.18;}
+  h1 .accent{color:var(--blue);}
+  h2{font-size:34px;font-weight:800;color:var(--blue);margin-bottom:18px;}
+  h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px;}
+  .badge{display:inline-block;padding:8px 14px;border-radius:14px;background:#EFF6FF;color:var(--blue);font-weight:600;font-size:14px;border:1px solid #BFDBFE;}
+  .subtitle{background:#EEF2FF;color:var(--indigo);border:1px solid #C7D2FE;padding:10px 16px;border-radius:14px;font-size:15px;line-height:1.55;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:6px;}
+  .cards.three{grid-template-columns:repeat(3,1fr);}
+  .cards.two{grid-template-columns:repeat(2,1fr);}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:20px 22px;box-shadow:0 1px 0 rgba(15,23,42,.02);}
+  .card .label{color:var(--muted);font-size:13px;}
+  .card .value{font-size:34px;font-weight:800;line-height:1.1;margin-top:8px;}
+  .card .pill{display:inline-block;margin-top:10px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:600;}
+  .pill.b{background:#DBEAFE;color:#1D4ED8;}
+  .pill.r{background:#FEE2E2;color:#B91C1C;}
+  .pill.y{background:#FEF3C7;color:#B45309;}
+  .pill.g{background:#DCFCE7;color:#15803D;}
+  .pill.i{background:#E0E7FF;color:#4338CA;}
+  .pill.c{background:#CFFAFE;color:#0E7490;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:22px 24px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px;flex:1 1 auto;min-height:0;}
+  .row.three{grid-template-columns:1fr 1fr 1fr;}
+  .row .panel{height:100%;}
+  ul{list-style:none;}
+  li{position:relative;padding-left:18px;font-size:15px;line-height:1.85;color:#0f172a;}
+  li::before{content:"";position:absolute;left:0;top:11px;width:7px;height:7px;border-radius:50%;background:var(--blue);}
+  li.r::before{background:var(--red);} li.y::before{background:var(--yellow);} li.g::before{background:var(--green);} li.i::before{background:var(--indigo);}
+  .muted{color:var(--muted);font-size:14px;line-height:1.7;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:8px;gap:24px;}
+  .topbar .title-block{flex:1;}
+  .center-card{
+    background:var(--panel);border-radius:30px;padding:54px 60px;
+    box-shadow:0 20px 50px rgba(37,99,235,.08);
+    max-width:880px;margin:auto;
+    border:1px solid var(--border);
+  }
+  .arrow-flow{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px;}
+  .arrow-flow .step{
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:14px 14px;text-align:center;position:relative;
+  }
+  .arrow-flow .step .head{font-weight:800;font-size:14px;color:var(--text);}
+  .arrow-flow .step .sub{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .arrow-flow .step::after{
+    content:"▶";position:absolute;right:-10px;top:50%;transform:translateY(-50%);
+    color:var(--muted);font-size:12px;
+  }
+  .arrow-flow .step:last-child::after{content:"";}
+  .arrow-flow .step.b{border-left:4px solid var(--blue);}
+  .arrow-flow .step.i{border-left:4px solid var(--indigo);}
+  .arrow-flow .step.g{border-left:4px solid var(--green);}
+  .arrow-flow .step.y{border-left:4px solid var(--yellow);}
+  .arrow-flow .step.r{border-left:4px solid var(--red);}
+  .arrow-flow .step.c{border-left:4px solid var(--cyan);}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;}
+  tr:last-child td{border-bottom:none;}
+  .status-ok{color:#15803D;font-weight:700;}
+  .status-partial{color:#B45309;font-weight:700;}
+  .status-todo{color:#B91C1C;font-weight:700;}
+  pre{background:#0F172A;color:#E2E8F0;border-radius:14px;padding:18px 22px;font-size:13px;font-family:"JetBrains Mono","Consolas",monospace;line-height:1.6;overflow:hidden;}
+  .progress{height:10px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:8px;}
+  .progress > div{height:100%;background:linear-gradient(90deg,var(--blue),var(--cyan));}
+</style>
+</head>
+<body>
+
+<!-- 1. 封面 -->
+<section class="slide">
+  <div style="margin:auto;text-align:center;">
+    <div class="center-card">
+      <div class="badge" style="margin-bottom:18px;">综合项目实践 · 阶段二进度汇报</div>
+      <h1>基于多模态大模型的<br/><span class="accent">行车记录仪视频语义检索与精准回放系统</span></h1>
+      <p class="muted" style="margin-top:18px;font-size:17px;">从原型复刻到端到端服务落地 · 主链路真实跑通</p>
+      <hr style="margin:32px auto;border:none;height:3px;width:280px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);border-radius:2px;" />
+      <p style="font-size:20px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (本期贡献 70%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (30%) </span></p>
+      <p class="muted" style="margin-top:10px;">苏州大学 · 综合项目实践 · 2026 年 5 月</p>
+    </div>
+  </div>
+  <div class="dots"><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span><span class="b"></span></div>
+  <div class="pagenum">01</div>
+</section>
+
+<!-- 2. 阶段成果总览 -->
+<section class="slide">
+  <h2>阶段二已形成可运行的端到端主链路</h2>
+  <div class="subtitle">本阶段已完成"上传 → 预处理 → 分析 → 检索 → 回放 → 导出"全链路落地，下阶段进入真模型接入和性能打磨。</div>
+  <div class="cards" style="margin-top:22px;">
+    <div class="card">
+      <div class="label">📦 后端服务模块</div>
+      <div class="value">7</div>
+      <span class="pill b">media / model / search / export / auth / audit / aggregator</span>
+    </div>
+    <div class="card">
+      <div class="label">🗄️ 业务数据表</div>
+      <div class="value">9</div>
+      <span class="pill g">对齐概要设计 V4.0</span>
+    </div>
+    <div class="card">
+      <div class="label">🧪 自动化测试</div>
+      <div class="value">39<span style="font-size:18px;color:var(--muted);"> +1 skip</span></div>
+      <span class="pill y">含端到端集成</span>
+    </div>
+    <div class="card">
+      <div class="label">⚙️ 真实组件</div>
+      <div class="value">5</div>
+      <span class="pill r">ffmpeg / VLC / JWT / SQLAlchemy / 模型适配</span>
+    </div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>阶段结论</h3>
+      <ul>
+        <li>主业务链全部用真实组件跑通，不再是 mock 拼接。</li>
+        <li class="g">单测覆盖每个服务，端到端测试串通 5 个关键端点。</li>
+        <li class="y">模型层为适配器模式，默认走 mock，可一键切 DeepSeek/千问。</li>
+        <li class="r">部分能力（pgvector、HLS、异步任务队列）暂以等价方案替代。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>当前进展判断</h3>
+      <div style="margin-top:10px;">
+        <div class="muted">需求实现 (FR-01 ~ FR-07)</div>
+        <div class="progress"><div style="width:92%;"></div></div>
+        <div class="muted" style="margin-top:14px;">数据持久化 + 鉴权</div>
+        <div class="progress"><div style="width:95%;"></div></div>
+        <div class="muted" style="margin-top:14px;">真模型 + 向量库 + 异步</div>
+        <div class="progress"><div style="width:55%;"></div></div>
+        <div class="muted" style="margin-top:14px;">辅助页面（告警/报告/权限）</div>
+        <div class="progress"><div style="width:45%;"></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span></div>
+  <div class="pagenum">02</div>
+</section>
+
+<!-- 3. 与阶段一对比 -->
+<section class="slide">
+  <h2>从"原型复刻"走到"主链路落地"</h2>
+  <div class="subtitle">阶段一交付了需求、原型和技术预研；阶段二把这些"图纸"翻译成可运行的代码。</div>
+  <div class="row">
+    <div class="panel">
+      <h3 style="color:var(--muted);">阶段一（已完成）</h3>
+      <ul>
+        <li>SRS V3.0、概要设计 V4.0、关键技术预研</li>
+        <li>11 张原型页面已用 Qt 复刻</li>
+        <li>Mock API 客户端 + 静态 demo 数据</li>
+        <li>FastAPI 端点契约（仅返回固定 JSON）</li>
+        <li class="r">语义检索是关键词匹配；视频播放是 QLabel 占位；导出返回假路径</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--blue);">阶段二（本期新增）</h3>
+      <ul>
+        <li class="g">SQLAlchemy + SQLite 9 张业务表，对齐概要设计</li>
+        <li class="g">ffmpeg 真预处理：转码 / 切片 / 抽帧 / 缩略图</li>
+        <li class="g">多模态模型适配层：mock + DeepSeek + 千问</li>
+        <li class="g">语义事件聚合 + 向量+关键词混合检索</li>
+        <li class="g">ffmpeg 真证据切片 + 截图 + 摘要 + zip 打包</li>
+        <li class="g">JWT 鉴权 + 角色权限 + 审计日志</li>
+        <li class="g">python-vlc 真播放 + 真上传 + 真登录</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span class="b"></span><span class="r"></span><span class="y"></span></div>
+  <div class="pagenum">03</div>
+</section>
+
+<!-- 4. 系统架构落地 -->
+<section class="slide">
+  <h2>后端服务层架构（7 个服务 + FastAPI 编排）</h2>
+  <div class="subtitle">每个服务都对应概要设计 V4.0 中的一个业务模块，按 videoId / eventId / queryId / exportId 串联。</div>
+  <div style="margin-top:20px;">
+    <div class="arrow-flow">
+      <div class="step b"><div class="head">media_pipeline</div><div class="sub">FFmpeg 转码/切片/抽帧</div></div>
+      <div class="step i"><div class="head">model_adapter</div><div class="sub">Mock / DeepSeek / 千问</div></div>
+      <div class="step g"><div class="head">event_aggregator</div><div class="sub">滑窗合并候选事件</div></div>
+      <div class="step y"><div class="head">hybrid_search</div><div class="sub">向量召回 + 关键词重排</div></div>
+      <div class="step r"><div class="head">exporter</div><div class="sub">切片 + 截图 + zip</div></div>
+      <div class="step c"><div class="head">auth + audit</div><div class="sub">JWT + 操作留痕</div></div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:24px;">
+    <div class="panel">
+      <h3>调用链路（用户视角）</h3>
+      <pre>1. POST /api/auth/login           → token
+2. POST /api/videos/upload        → video_id
+3. POST /api/videos/{id}/process  → indexed
+4. POST /api/search               → events[]
+5. GET  /api/videos/{id}/stream   → VLC
+6. POST /api/events/{id}/export   → zip</pre>
+    </div>
+    <div class="panel">
+      <h3>分层职责</h3>
+      <ul>
+        <li class="b">桌面交互层：PySide6 + python-vlc 真播放</li>
+        <li class="i">接口契约层：FastAPI + Pydantic + X-Request-Id</li>
+        <li class="g">业务编排层：services/* 单一职责服务</li>
+        <li class="y">媒体处理层：ffmpeg-python + Pillow</li>
+        <li class="r">数据存储层：SQLAlchemy + SQLite（可切 PostgreSQL）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span class="b"></span><span class="r"></span></div>
+  <div class="pagenum">04</div>
+</section>
+
+<!-- 5. 关键落地 1：媒体流水线 -->
+<section class="slide">
+  <h2>关键落地 ① — FFmpeg 真媒体流水线</h2>
+  <div class="subtitle">用户上传一个 mp4，系统自动产生切片、关键帧和缩略图，并写入 video_segments / frame_analysis。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>处理顺序</h3>
+      <ul>
+        <li class="b">save_upload — SHA-256 校验 + 文件落 originals/</li>
+        <li class="b">probe_metadata — ffprobe 拿 duration/fps/分辨率</li>
+        <li class="b">slice_video — 30s 一段，写 video_segments</li>
+        <li class="b">extract_frames — 1 帧/3 秒，写 frame_analysis（pending）</li>
+        <li class="b">generate_thumbnail — Pillow 缩到 640px</li>
+      </ul>
+      <div class="muted" style="margin-top:12px;">非 mp4 上传自动 H.264/AAC 转码，保证下游能播。</div>
+    </div>
+    <div class="panel">
+      <h3>关键代码片段</h3>
+      <pre>def run_preprocess(video_id, segment_sec=30,
+                   frame_interval_sec=3) -&gt; dict:
+    probe_metadata(video_id)
+    slice_video(video_id, segment_sec)
+    extract_frames(video_id, frame_interval_sec)
+    generate_thumbnail(video_id)
+    # process_status: preprocessing -&gt; analyzing
+    return {"segments": N, "frames": M, ...}</pre>
+      <div class="muted" style="margin-top:12px;">失败路径走 _mark_failed，写 fail_reason 到 videos.fail_reason 后 raise。</div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span class="b"></span></div>
+  <div class="pagenum">05</div>
+</section>
+
+<!-- 6. 关键落地 2：模型适配 + 事件聚合 -->
+<section class="slide">
+  <h2>关键落地 ② — 模型适配器 + 语义事件聚合</h2>
+  <div class="subtitle">两阶段策略：先逐帧分析、再滑窗合并。模型层走适配器，演示用 mock，真模型只需改环境变量。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>三套适配器</h3>
+      <ul>
+        <li class="b"><b>MockAdapter</b> — 基于文件名 + SHA-256 散列，确定性输出，演示稳定不抖。</li>
+        <li class="i"><b>OpenAICompatibleAdapter</b> — 同时跑 DeepSeek-VL 和 Qwen-VL，因为两家都暴露 OpenAI 兼容 messages 协议。base64 图 + 强约束 JSON 提示词。</li>
+        <li class="r">网络/解析失败 → 静默 fallback 到 confidence=0、event_type=normal，不抛错。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>事件聚合规则</h3>
+      <ul>
+        <li class="g">扫描 frame_analysis.status='done' 的帧</li>
+        <li class="g">相邻 ≤10 秒且 event_type 相同 → 合并为一个 SemanticEvent</li>
+        <li class="g">confidence 取参与帧的均值</li>
+        <li class="y">均值 &lt; 0.75 → review_status='reviewing'（进复核队列）</li>
+        <li class="b">最终 Video.process_status 推进到 'indexed'</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span class="i"></span></div>
+  <div class="pagenum">06</div>
+</section>
+
+<!-- 7. 关键落地 3：混合检索 -->
+<section class="slide">
+  <h2>关键落地 ③ — 向量 + 关键词混合检索</h2>
+  <div class="subtitle">用 sentence-transformers 把事件文本变向量做余弦召回，再叠加关键词分数重排；首次运行无需下载模型也能跑。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>计算管线</h3>
+      <pre>final = 0.6 * cosine(q_vec, ev_vec)
+      + 0.4 * keyword_score(query, event)
+
+# 启用真 embedding 时：
+#   paraphrase-multilingual-MiniLM-L12-v2 (384d)
+# 未启用时：
+#   字符 1/2-gram → hash → 384 维 → L2 归一</pre>
+    </div>
+    <div class="panel">
+      <h3>关键词词典（行业语义对齐）</h3>
+      <ul>
+        <li class="r"><b>scratch</b> ← 剐蹭 / 刮蹭 / 碰撞 / 擦碰</li>
+        <li class="y"><b>illegal_parking</b> ← 违停 / 停车 / 占道</li>
+        <li class="b"><b>road_obstacle</b> ← 障碍 / 施工 / 围挡 / 路障</li>
+        <li class="i"><b>abnormal_stop</b> ← 急停 / 急刹 / 鸣笛</li>
+        <li class="g"><b>pedestrian_risk</b> ← 行人 / 横穿 / 鬼探头</li>
+      </ul>
+      <div class="muted" style="margin-top:10px;">每次查询同时落 search_queries + search_results 表，留 query_id 便于日志排障。</div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span class="y"></span></div>
+  <div class="pagenum">07</div>
+</section>
+
+<!-- 8. 关键落地 4：证据导出 -->
+<section class="slide">
+  <h2>关键落地 ④ — FFmpeg 真证据切片 + zip 打包</h2>
+  <div class="subtitle">点击"导出证据包"后系统真的会切一段 mp4、抽一张关键截图、生成 JSON+Markdown 摘要并打包，不再是假路径。</div>
+  <div class="row three">
+    <div class="panel">
+      <h3 style="color:var(--blue);">📹 clip.mp4</h3>
+      <ul>
+        <li class="b">按 start-5s ~ end+5s 切片</li>
+        <li class="b">优先 -c copy（关键帧对齐时极快）</li>
+        <li class="b">失败回退到 libx264/aac 重编码</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--green);">📸 snapshot.jpg</h3>
+      <ul>
+        <li class="g">事件中点 ffmpeg -ss 抓帧</li>
+        <li class="g">Pillow JPEG 保存</li>
+        <li class="g">作为证据的封面图</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--yellow);">📝 report.json + report.md</h3>
+      <ul>
+        <li class="y">event 全字段 + 源视频元数据</li>
+        <li class="y">中文 Markdown 给人看</li>
+        <li class="y">JSON 给下游程序消费</li>
+      </ul>
+    </div>
+  </div>
+  <div class="panel" style="margin-top:18px;">
+    <h3>落地状态</h3>
+    <pre>EventExport.status:  queued → exporting → success
+                                       ↘ failed (fail_reason 留底)
+zip 路径：  media/exports/{event_id}/package.zip
+审计：    每次导出写 audit_logs，包含 operator_id / export_type</pre>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
+  <div class="pagenum">08</div>
+</section>
+
+<!-- 9. 桌面端 -->
+<section class="slide">
+  <h2>桌面端落地 — 真 VLC 播放 + 上传 + 登录</h2>
+  <div class="subtitle">原型在阶段一已经搬到 Qt6，本期把"看得见的占位"换成"真的能跑"。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>VideoPlayerPanel</h3>
+      <ul>
+        <li class="b">vlc.MediaPlayer 嵌入 QFrame</li>
+        <li class="b">Win set_hwnd / X11 set_xwindow / mac set_nsobject 一键多平台</li>
+        <li class="b">seek(sec) 调 player.set_time(ms)</li>
+        <li class="b">QTimer 500ms 同步进度条</li>
+        <li class="r">python-vlc 未装 → 降级 QLabel 占位 + 虚拟游标，不崩</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>视频库管理页 + 登录</h3>
+      <ul>
+        <li class="g">"上传视频"按钮 → QFileDialog → multipart 上传</li>
+        <li class="g">上传成功自动 process，状态变 indexed 后入库</li>
+        <li class="g">列表从 GET /api/videos 实时拉</li>
+        <li class="i">LoginDialog：username + password → POST /api/auth/login → 存 token</li>
+        <li class="i">Mock 模式跳过登录（demo 仍可演示）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
+  <div class="pagenum">09</div>
+</section>
+
+<!-- 10. 测试矩阵 -->
+<section class="slide">
+  <h2>测试矩阵 — 39 通过 / 1 跳过</h2>
+  <div class="subtitle">每个服务有专属单测，再用 TestClient 串一条端到端用例验证主链路。</div>
+  <div class="panel" style="margin-top:22px;">
+    <table>
+      <thead><tr><th>测试文件</th><th>覆盖范围</th><th>结果</th></tr></thead>
+      <tbody>
+        <tr><td>test_media_pipeline.py</td><td>上传 / probe / 切片 / 抽帧 / 缩略图 / 失败路径</td><td class="status-ok">2 PASS</td></tr>
+        <tr><td>test_model_adapter.py</td><td>Mock 决定性 + 关键词强制 + OpenAI 协议 JSON 解析 + fallback</td><td class="status-ok">13 PASS</td></tr>
+        <tr><td>test_event_aggregator.py</td><td>逐帧分析 + 滑窗合并 + 状态推进</td><td class="status-ok">2 PASS</td></tr>
+        <tr><td>test_hybrid_search.py</td><td>encode / ensure_embeddings / 关键词 + 向量重排</td><td class="status-ok">5 PASS</td></tr>
+        <tr><td>test_exporter.py</td><td>真 ffmpeg 切片 + zip 内容校验 + 失败 fail_reason</td><td class="status-ok">2 PASS</td></tr>
+        <tr><td>test_auth_audit.py</td><td>JWT 闭环 + bcrypt 校验 + 角色 + 审计写读</td><td class="status-ok">8 PASS</td></tr>
+        <tr><td>test_api_integration.py</td><td>login → upload → process → search → export</td><td class="status-ok">1 PASS</td></tr>
+        <tr><td>test_login_dialog.py</td><td>PySide6 LoginDialog 构造（headless 跳过）</td><td class="status-partial">1 SKIP</td></tr>
+        <tr><td>test_client_api.py / test_backend_search.py</td><td>已有契约保持兼容</td><td class="status-ok">6 PASS</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="b"></span></div>
+  <div class="pagenum">10</div>
+</section>
+
+<!-- 11. 未实现 / 风险 -->
+<section class="slide">
+  <h2>诚实清单 — 这周没做完的部分</h2>
+  <div class="subtitle">下周阶段汇报时主动说明，避免老师追问时被动。</div>
+  <div class="row">
+    <div class="panel">
+      <h3 style="color:var(--red);">技术性未实现</h3>
+      <ul>
+        <li class="r">真多模态模型调用：演示走 mock；接 DeepSeek/千问只需填 .env 中的 KEY</li>
+        <li class="r">pgvector / PostgreSQL：用 SQLite + 内存余弦等价替代</li>
+        <li class="r">sentence-transformers 真 embedding：默认未装，hash-ngram 兜底</li>
+        <li class="r">HLS 点播 / 异步任务队列：当前同步 FileResponse，长视频会阻塞</li>
+        <li class="r">PDF 摘要：导出包里目前是 Markdown + JSON</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--yellow);">辅助页面未接</h3>
+      <ul>
+        <li class="y">告警管理中心：静态展示，未接 audit_logs</li>
+        <li class="y">全天业务报告 / 模型与安全配置：仍是阶段一的页面雏形</li>
+        <li class="y">权限管理 UI：后端 users.role 字段就绪，前端编辑界面未做</li>
+        <li class="y">复核中心：API 已经支持 review_status 改写，但页面未把它接上</li>
+      </ul>
+      <h3 style="margin-top:18px;color:var(--blue);">已知风险</h3>
+      <ul>
+        <li class="b">Mock 模型输出有随机性，演示前建议先固定一段视频跑一次</li>
+        <li class="b">长视频首次 process 偏慢，建议演示用 30–90s 素材</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
+  <div class="pagenum">11</div>
+</section>
+
+<!-- 12. 演示路径 + 下一步 -->
+<section class="slide">
+  <h2>下一步路线图与演示路径</h2>
+  <div class="subtitle">下周可直接演示完整链路；阶段三聚焦真模型接入、性能与辅助页面闭环。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>下周可演示路径</h3>
+      <pre># 1. 起后端
+uvicorn apps.backend.main:app --reload --port 8000
+
+# 2. 起客户端（指向后端）
+$env:DVR_SEMANTIC_API_BASE="http://127.0.0.1:8000"
+python apps/desktop_client/main.py
+
+# 3. 演示步骤
+登录 demo / demo123
+→ 视频库 → 上传 30–60s 测试视频 → 等 status=indexed
+→ 检索"找一下违停" → 选中事件
+→ 真 VLC seek 到事件起点
+→ 右下角"导出证据包" → 弹出 zip 路径</pre>
+    </div>
+    <div class="panel">
+      <h3>阶段三计划</h3>
+      <ul>
+        <li class="b">接真模型：填入 DeepSeek 或千问 API KEY，比较两家精度</li>
+        <li class="b">向量库：SQLite-vector / pgvector 二选一，正式上 embedding</li>
+        <li class="g">异步任务队列：长视频处理走后台 + WebSocket 进度推</li>
+        <li class="g">辅助页面：告警/报告/复核/权限 全部接真数据</li>
+        <li class="y">指标埋点：检索响应时间、模型成本、导出耗时</li>
+        <li class="r">压力测试：单服务 ≤10 客户端并发的非功能性指标</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
+  <div class="pagenum">12</div>
+</section>
+
+</body>
+</html>
