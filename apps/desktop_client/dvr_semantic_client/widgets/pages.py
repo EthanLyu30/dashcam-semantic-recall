@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -23,6 +24,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from .charts import BarPoint, CategoryPieChart, PieSlice, TrendBarChart
 
 
 def panel() -> QFrame:
@@ -96,14 +99,36 @@ def table(headers: list[str], rows: list[list[str]]) -> QTableWidget:
     for row_idx, row in enumerate(rows):
         for col_idx, value in enumerate(row):
             widget.setItem(row_idx, col_idx, QTableWidgetItem(value))
-    widget.resizeColumnsToContents()
+    header = widget.horizontalHeader()
+    header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+    widget.setMinimumHeight(160)
     return widget
+
+
+_STATUS_PALETTE = {
+    "high": ("#FEE2E2", "#B91C1C"),
+    "mid": ("#FEF3C7", "#92400E"),
+    "low": ("#DCFCE7", "#15803D"),
+    "info": ("#DBEAFE", "#1D4ED8"),
+    "muted": ("#E2E8F0", "#475569"),
+}
+
+
+def status_chip(text: str, kind: str = "info") -> QLabel:
+    bg, fg = _STATUS_PALETTE.get(kind, _STATUS_PALETTE["info"])
+    label = QLabel(text)
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.setStyleSheet(
+        f"QLabel {{ background: {bg}; color: {fg}; border-radius: 999px; "
+        f"padding: 4px 12px; font-size: 11px; font-weight: 700; }}"
+    )
+    return label
 
 
 def overview_page() -> QWidget:
     page, root = page_shell("系统状态概览", "2026年03月27日 · 系统运行正常 · 多模态节点 8/8")
     metrics = QGridLayout()
-    metrics.setSpacing(12)
+    metrics.setSpacing(14)
     metrics.addWidget(metric_card("总处理视频", "8,429", "+12% 本周增长"), 0, 0)
     metrics.addWidget(metric_card("语义检索次数", "1,204", "响应稳定", "#4F46E5"), 0, 1)
     metrics.addWidget(metric_card("识别关键事件", "342", "+5.4% 今日新增", "#F59E0B"), 0, 2)
@@ -111,22 +136,45 @@ def overview_page() -> QWidget:
     root.addLayout(metrics)
 
     lower = QHBoxLayout()
+    lower.setSpacing(14)
+
     trend = panel()
     trend_layout = QVBoxLayout(trend)
-    trend_layout.addWidget(title("识别趋势与并发负载 (7日)"))
-    trend_layout.addWidget(muted("这里在 Qt 版中预留 ECharts/QtCharts 图表区域，先用可读数据列表承接原型图表。"))
-    trend_layout.addWidget(
-        table(
-            ["日期", "事件数", "查询数", "负载"],
-            [["03-21", "28", "120", "42%"], ["03-22", "34", "146", "58%"], ["03-23", "31", "132", "51%"]],
-        )
-    )
+    trend_layout.setContentsMargins(22, 20, 22, 20)
+    trend_layout.setSpacing(10)
+    trend_header = QHBoxLayout()
+    trend_header.addWidget(title("识别趋势与并发负载 (7日)"))
+    trend_header.addStretch()
+    trend_header.addWidget(muted("点击柱体可查看明细"))
+    trend_layout.addLayout(trend_header)
+    bar_chart = TrendBarChart()
+    bar_chart.set_points([
+        BarPoint("03-21", 28, 120, 42),
+        BarPoint("03-22", 34, 146, 58),
+        BarPoint("03-23", 31, 132, 51),
+        BarPoint("03-24", 39, 158, 66),
+        BarPoint("03-25", 42, 167, 71),
+        BarPoint("03-26", 37, 152, 63),
+        BarPoint("03-27", 48, 184, 82),
+    ])
+    trend_layout.addWidget(bar_chart, 1)
     lower.addWidget(trend, 3)
 
     distribution = panel()
     dist_layout = QVBoxLayout(distribution)
+    dist_layout.setContentsMargins(22, 20, 22, 20)
+    dist_layout.setSpacing(10)
     dist_layout.addWidget(title("多模态分类分布"))
-    dist_layout.addWidget(table(["类型", "数量"], [["剐蹭", "86"], ["违停", "74"], ["道路障碍", "58"], ["异常停车", "41"]]))
+    dist_layout.addWidget(muted("近 7 天识别到的事件类型占比"))
+    pie = CategoryPieChart()
+    pie.set_slices([
+        PieSlice("剐蹭", 86, "#2563EB"),
+        PieSlice("违停", 74, "#F59E0B"),
+        PieSlice("道路障碍", 58, "#EF4444"),
+        PieSlice("异常停车", 41, "#22C55E"),
+        PieSlice("其它", 23, "#A855F7"),
+    ])
+    dist_layout.addWidget(pie, 1)
     lower.addWidget(distribution, 2)
     root.addLayout(lower, 1)
     return page
@@ -284,26 +332,61 @@ def video_library_page(api_client: Any | None = None) -> QWidget:
 
 def review_page() -> QWidget:
     page, root = page_shell("人工复核中心", "低置信事件确认、修正标签和复核提交")
+
+    metrics = QGridLayout()
+    metrics.setSpacing(14)
+    metrics.addWidget(metric_card("待复核", "12", "低置信事件队列", "#EF4444"), 0, 0)
+    metrics.addWidget(metric_card("今日已复核", "27", "确认 21 · 驳回 6", "#22C55E"), 0, 1)
+    metrics.addWidget(metric_card("平均耗时", "1.2 min", "单事件均值", "#2563EB"), 0, 2)
+    metrics.addWidget(metric_card("复核同意率", "78%", "近 7 日", "#4F46E5"), 0, 3)
+    root.addLayout(metrics)
+
     body = QHBoxLayout()
+    body.setSpacing(14)
+
     queue = panel()
     queue_layout = QVBoxLayout(queue)
-    queue_layout.addWidget(title("任务队列"))
+    queue_layout.setContentsMargins(22, 20, 22, 20)
+    queue_layout.setSpacing(10)
+    queue_header = QHBoxLayout()
+    queue_header.addWidget(title("任务队列"))
+    queue_header.addStretch()
+    queue_header.addWidget(status_chip("剩余 12", "high"))
+    queue_layout.addLayout(queue_header)
+    queue_layout.addWidget(muted("置信度 < 80% 自动入队，按时间倒序"))
     tasks = QListWidget()
-    for item in ["施工围挡占道 · 79%", "异常停车与连续鸣笛 · 74%", "疑似路口擦碰 · 68%"]:
+    for item in [
+        "施工围挡占道 · 79%  ·  14:22 - 14:23",
+        "异常停车与连续鸣笛 · 74%  ·  09:15 - 09:16",
+        "疑似路口擦碰 · 68%  ·  18:33 - 18:34",
+        "夜间逆行 · 71%  ·  21:08 - 21:09",
+        "环岛违停 · 73%  ·  11:42 - 11:43",
+    ]:
         tasks.addItem(QListWidgetItem(item))
-    queue_layout.addWidget(tasks)
+    queue_layout.addWidget(tasks, 1)
     body.addWidget(queue, 2)
 
     form = panel()
     form_layout = QVBoxLayout(form)
-    form_layout.addWidget(title("复核判定与标注"))
+    form_layout.setContentsMargins(22, 20, 22, 20)
+    form_layout.setSpacing(10)
+    form_header = QHBoxLayout()
+    form_header.addWidget(title("复核判定与标注"))
+    form_header.addStretch()
+    form_header.addWidget(status_chip("当前: 施工围挡占道", "info"))
+    form_layout.addLayout(form_header)
+    form_layout.addWidget(muted("修正标题、调整事件类型、补充复核备注，提交后写入审计日志"))
     form_layout.addWidget(QLineEdit("施工围挡占用右侧车道"))
     event_type = QComboBox()
     event_type.addItems(["road_obstacle", "scratch", "illegal_parking", "abnormal_stop"])
     form_layout.addWidget(event_type)
-    note = QTextEdit("画面清晰，确认属于道路障碍事件。")
+    note = QTextEdit("画面清晰，确认属于道路障碍事件。建议导出 13s 片段。")
     form_layout.addWidget(note, 1)
-    form_layout.addWidget(action_button("提交复核", "primary"))
+    action_row = QHBoxLayout()
+    action_row.addWidget(action_button("驳回"))
+    action_row.addStretch()
+    action_row.addWidget(action_button("提交复核", "primary"))
+    form_layout.addLayout(action_row)
     body.addWidget(form, 3)
     root.addLayout(body, 1)
     return page
@@ -312,35 +395,135 @@ def review_page() -> QWidget:
 def alerts_page() -> QWidget:
     page, root = page_shell("告警管理中心", "高风险事件告警、确认、关闭和处置备注")
     metrics = QGridLayout()
-    metrics.addWidget(metric_card("未处理告警", "12", "open", "#EF4444"), 0, 0)
-    metrics.addWidget(metric_card("今日告警", "45", "today", "#F59E0B"), 0, 1)
-    metrics.addWidget(metric_card("已关闭", "128", "resolved", "#22C55E"), 0, 2)
-    metrics.addWidget(metric_card("平均响应", "1.5 min", "response", "#2563EB"), 0, 3)
+    metrics.setSpacing(14)
+    metrics.addWidget(metric_card("未处理告警", "12", "高优先级 5 条", "#EF4444"), 0, 0)
+    metrics.addWidget(metric_card("今日告警", "45", "+8 较昨日", "#F59E0B"), 0, 1)
+    metrics.addWidget(metric_card("已关闭", "128", "本周累计", "#22C55E"), 0, 2)
+    metrics.addWidget(metric_card("平均响应", "1.5 min", "高优先级 <2 min", "#2563EB"), 0, 3)
     root.addLayout(metrics)
-    root.addWidget(table(["告警", "等级", "状态", "操作"], [["高置信剐蹭事件", "高", "open", "确认"], ["道路障碍风险", "中", "acknowledged", "关闭"]]), 1)
+
+    list_panel = panel()
+    list_layout = QVBoxLayout(list_panel)
+    list_layout.setContentsMargins(22, 20, 22, 20)
+    list_layout.setSpacing(10)
+    list_header = QHBoxLayout()
+    list_header.addWidget(title("告警事件列表"))
+    list_header.addStretch()
+    list_header.addWidget(status_chip("12 待确认", "high"))
+    list_header.addWidget(status_chip("33 处置中", "mid"))
+    list_header.addWidget(status_chip("128 已关闭", "low"))
+    list_layout.addLayout(list_header)
+    list_layout.addWidget(
+        table(
+            ["告警ID", "事件", "等级", "状态", "触发时间", "负责人"],
+            [
+                ["ALT-2026-0431", "高置信剐蹭事件 · 南山区", "高", "待确认", "14:22:18", "—"],
+                ["ALT-2026-0430", "道路障碍风险 · 滨河大道", "中", "处置中", "13:55:02", "reviewer01"],
+                ["ALT-2026-0429", "异常停车 · 高架入口", "中", "处置中", "13:11:46", "reviewer02"],
+                ["ALT-2026-0428", "夜间逆行 · 福田",       "高", "待确认", "12:48:33", "—"],
+                ["ALT-2026-0427", "环岛违停 · 龙岗",       "低", "已关闭", "11:42:11", "admin"],
+                ["ALT-2026-0426", "施工围挡占道 · 罗湖",   "中", "已关闭", "10:30:09", "reviewer01"],
+            ],
+        )
+    )
+    root.addWidget(list_panel, 1)
     return page
 
 
 def accidents_page() -> QWidget:
     page, root = page_shell("事故摘要预览", "事故与风险发现面板，支持摘要生成和证据联动")
     grid = QGridLayout()
-    grid.addWidget(metric_card("南山区深南大道科苑立交段侧向碰撞", "高风险", "疑似侧向剐蹭，建议导出片段与关键帧", "#EF4444"), 0, 0)
-    grid.addWidget(metric_card("滨河大道行人横穿导致急刹", "中风险", "行人快速横穿，车辆明显减速", "#F59E0B"), 0, 1)
+    grid.setSpacing(14)
+    grid.addWidget(
+        metric_card("侧向碰撞 · 南山", "高风险",
+                    "深南大道科苑立交段，疑似侧向剐蹭，建议导出 15s 片段与关键帧", "#EF4444"),
+        0, 0,
+    )
+    grid.addWidget(
+        metric_card("行人横穿 · 滨河", "中风险",
+                    "滨河大道，行人快速横穿，车辆明显减速但未碰撞", "#F59E0B"),
+        0, 1,
+    )
+    grid.addWidget(
+        metric_card("夜间逆行 · 福田", "高风险",
+                    "深南中路夜间发现逆行车辆，建议通知交管联动处置", "#EF4444"),
+        0, 2,
+    )
     root.addLayout(grid)
-    root.addWidget(table(["事故", "时间段", "状态"], [["侧向碰撞", "14:22:15-14:22:45", "待归档"], ["行人横穿", "09:15:34-09:15:58", "已复核"]]), 1)
+
+    list_panel = panel()
+    list_layout = QVBoxLayout(list_panel)
+    list_layout.setContentsMargins(22, 20, 22, 20)
+    list_layout.setSpacing(10)
+    list_layout.addWidget(title("事故归档队列"))
+    list_layout.addWidget(muted("综合识别 + 人工复核结果，按风险等级排序"))
+    list_layout.addWidget(
+        table(
+            ["事故ID", "类型", "时间段", "地点", "风险", "状态"],
+            [
+                ["ACC-0327-001", "侧向碰撞", "14:22:15-14:22:45", "南山区", "高", "待归档"],
+                ["ACC-0327-002", "行人横穿", "09:15:34-09:15:58", "滨河大道", "中", "已复核"],
+                ["ACC-0327-003", "夜间逆行", "21:08:11-21:09:02", "福田", "高", "待归档"],
+                ["ACC-0327-004", "施工围挡占道", "11:42:30-11:43:11", "龙岗", "中", "已归档"],
+            ],
+        )
+    )
+    root.addWidget(list_panel, 1)
     return page
 
 
 def evidence_page() -> QWidget:
     page, root = page_shell("证据与日志归档", "证据包导出、下载和系统交互日志")
+
     controls = panel()
     controls_layout = QHBoxLayout(controls)
+    controls_layout.setContentsMargins(22, 16, 22, 16)
+    controls_layout.setSpacing(10)
     controls_layout.addWidget(title("近期证据保全队列"))
-    controls_layout.addWidget(action_button("导出证据包", "evidence"))
+    controls_layout.addStretch()
+    controls_layout.addWidget(status_chip("队列 14", "info"))
     controls_layout.addWidget(action_button("下载选中项"))
+    controls_layout.addWidget(action_button("导出证据包", "evidence"))
     root.addWidget(controls)
-    root.addWidget(table(["导出ID", "事件", "类型", "状态", "路径"], [["exp-evt-scratch-001", "疑似侧向剐蹭", "package", "success", "media/exports/evt-scratch-001.zip"], ["exp-report-20260327", "全天业务报告", "pdf", "queued", "-"]]), 1)
-    root.addWidget(table(["时间", "用户", "动作", "说明"], [["09:00", "admin", "event.export", "导出证据包"], ["09:02", "reviewer", "event.review", "确认道路障碍事件"]]))
+
+    exp_panel = panel()
+    exp_layout = QVBoxLayout(exp_panel)
+    exp_layout.setContentsMargins(22, 16, 22, 20)
+    exp_layout.setSpacing(8)
+    exp_layout.addWidget(title("证据导出记录"))
+    exp_layout.addWidget(
+        table(
+            ["导出ID", "事件", "类型", "状态", "路径"],
+            [
+                ["exp-evt-scratch-001", "疑似侧向剐蹭", "package", "success",
+                 "media/exports/evt-scratch-001.zip"],
+                ["exp-report-20260327", "全天业务报告", "pdf", "queued", "-"],
+                ["exp-evt-obstacle-014", "施工围挡占道", "package", "success",
+                 "media/exports/evt-obstacle-014.zip"],
+                ["exp-evt-parking-009", "异常停车", "package", "processing", "-"],
+            ],
+        )
+    )
+    root.addWidget(exp_panel, 1)
+
+    log_panel = panel()
+    log_layout = QVBoxLayout(log_panel)
+    log_layout.setContentsMargins(22, 16, 22, 20)
+    log_layout.setSpacing(8)
+    log_layout.addWidget(title("审计日志"))
+    log_layout.addWidget(
+        table(
+            ["时间", "用户", "动作", "说明"],
+            [
+                ["09:00:21", "admin", "event.export", "导出证据包 evt-scratch-001"],
+                ["09:02:48", "reviewer01", "event.review", "确认道路障碍事件"],
+                ["09:14:09", "user01", "search.create", "查询：疑似剐蹭的时间段"],
+                ["10:30:12", "reviewer02", "event.review", "驳回低置信告警 ALT-0427"],
+                ["11:08:44", "admin", "video.upload", "上传 VID_20260327_1422"],
+            ],
+        )
+    )
+    root.addWidget(log_panel, 1)
     return page
 
 

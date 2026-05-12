@@ -30,7 +30,11 @@ class VideoPlayerPanel(QFrame):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setProperty("role", "panel")
+        self.setProperty("role", "panel-dark")
+        self.setStyleSheet(
+            "QFrame[role='panel-dark'] { background: #0B1220; "
+            "border: 1px solid #1E293B; border-radius: 22px; }"
+        )
         self._video: VideoRecord | None = None
         self._current_sec = 0
         self._duration_sec = 0
@@ -39,6 +43,7 @@ class VideoPlayerPanel(QFrame):
         self._vlc_player: Any = None
         self._vlc_module: Any = self._probe_vlc()
         self._vlc_available = self._vlc_module is not None
+        self._timeline_slot: QVBoxLayout | None = None
 
         # 视频画面承载面板（VLC 可以将 surface 直接绑到原生窗口）
         self.video_frame = QFrame()
@@ -74,26 +79,55 @@ class VideoPlayerPanel(QFrame):
         self.surface = self.surface_label  # 兼容旧引用
 
         self.title = QLabel("视频回放")
-        self.title.setProperty("role", "panelTitle")
+        self.title.setStyleSheet(
+            "QLabel { color: #F8FAFC; font-size: 16px; font-weight: 700; "
+            "background: transparent; }"
+        )
         self.timecode = QLabel("00:00")
-        self.timecode.setProperty("role", "timecode")
-        self.status = QLabel(
+        self.timecode.setStyleSheet(
+            "QLabel { color: #60A5FA; "
+            "font-family: 'Cascadia Mono', 'Consolas', monospace; "
+            "font-size: 18px; font-weight: 700; letter-spacing: 1px; "
+            "background: transparent; }"
+        )
+        status_text = (
             "VLC 已就绪 · 等待视频流"
             if self._vlc_available
             else "未检测到 VLC · 进入占位模式"
         )
-        self.status.setProperty("role", "muted")
+        self.status = QLabel(status_text)
+        self.status.setStyleSheet(
+            "QLabel { color: #94A3B8; font-size: 12px; background: transparent; }"
+        )
 
+        dark_button_qss = (
+            "QPushButton { background: #1E293B; border: 1px solid #334155; "
+            "color: #E2E8F0; border-radius: 10px; padding: 6px 14px; }"
+            "QPushButton:hover { background: #2563EB; border-color: #2563EB; "
+            "color: #FFFFFF; }"
+            "QPushButton:pressed { background: #1D4ED8; }"
+        )
         self.play_button = QPushButton("播放")
+        self.play_button.setStyleSheet(dark_button_qss)
         self.play_button.clicked.connect(self.toggle_playback)
         self.back_button = QPushButton("-5 秒")
+        self.back_button.setStyleSheet(dark_button_qss)
         self.back_button.clicked.connect(lambda: self.seek(max(0, self._current_sec - 5)))
         self.forward_button = QPushButton("+5 秒")
+        self.forward_button.setStyleSheet(dark_button_qss)
         self.forward_button.clicked.connect(lambda: self.seek(self._current_sec + 5))
 
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(0, 1)
         self.slider.sliderMoved.connect(self.seek)
+        self.slider.setStyleSheet(
+            "QSlider::groove:horizontal { background: #1E293B; height: 6px; "
+            "border-radius: 3px; }"
+            "QSlider::sub-page:horizontal { background: #2563EB; height: 6px; "
+            "border-radius: 3px; }"
+            "QSlider::handle:horizontal { background: #60A5FA; width: 14px; "
+            "margin: -4px 0; border-radius: 7px; }"
+        )
 
         header = QHBoxLayout()
         header.addWidget(self.title)
@@ -106,12 +140,19 @@ class VideoPlayerPanel(QFrame):
         controls.addWidget(self.forward_button)
         controls.addWidget(self.slider, 1)
 
+        # 时间轴 slot：默认空，主窗口可调用 attach_timeline 注入
+        self._timeline_host = QWidget()
+        self._timeline_slot = QVBoxLayout(self._timeline_host)
+        self._timeline_slot.setContentsMargins(0, 6, 0, 0)
+        self._timeline_slot.setSpacing(4)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
-        layout.setSpacing(14)
+        layout.setSpacing(12)
         layout.addLayout(header)
         layout.addWidget(self.surface_container, 1)
         layout.addLayout(controls)
+        layout.addWidget(self._timeline_host)
         layout.addWidget(self.status)
 
         self.timer = QTimer(self)
@@ -127,6 +168,16 @@ class VideoPlayerPanel(QFrame):
                 self._vlc_instance = None
                 self._vlc_player = None
                 self.status.setText(f"VLC 初始化失败：{exc}")
+
+    def attach_timeline(self, timeline_widget: QWidget) -> None:
+        """主窗口把全局 EventTimeline 嵌进来。深色 palette 与卡片融合。"""
+        if hasattr(timeline_widget, "set_dark"):
+            timeline_widget.set_dark(True)
+        timeline_widget.setStyleSheet("background: transparent;")
+        timeline_widget.setMinimumHeight(96)
+        timeline_widget.setMaximumHeight(110)
+        if self._timeline_slot is not None:
+            self._timeline_slot.addWidget(timeline_widget)
 
     # --- vlc bootstrap ----------------------------------------------------
     @staticmethod

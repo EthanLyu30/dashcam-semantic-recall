@@ -56,6 +56,7 @@ class MainWindow(QMainWindow):
         self.player = VideoPlayerPanel()
         self.search_panel = SearchPanel()
         self.timeline = EventTimeline()
+        self.player.attach_timeline(self.timeline)
         self.detail = EventDetailPanel()
         self.stack = QStackedWidget()
         self.nav_buttons: list[QPushButton] = []
@@ -191,22 +192,18 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
 
+        # 上：检索结果 | 视频回放（时间轴已经在 player 内部）
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setHandleWidth(16)
         splitter.addWidget(self.search_panel)
         splitter.addWidget(self.player)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 3)
-        layout.addWidget(splitter, 1)
+        layout.addWidget(splitter, 3)
 
-        bottom = QSplitter(Qt.Orientation.Horizontal)
-        bottom.setHandleWidth(16)
-        bottom.addWidget(self._wrap_timeline())
-        bottom.addWidget(self.detail)
-        bottom.setStretchFactor(0, 3)
-        bottom.setStretchFactor(1, 2)
-        bottom.setMaximumHeight(260)
-        layout.addWidget(bottom)
+        # 下：事件详情独占一行
+        self.detail.setMaximumHeight(320)
+        layout.addWidget(self.detail, 1)
         return page
 
     def show_page(self, index: int) -> None:
@@ -219,26 +216,6 @@ class MainWindow(QMainWindow):
         names = ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告", "模型配置", "权限", "登录"]
         if 0 <= index < len(names):
             self.statusBar().showMessage(f"当前页面：{names[index]}")
-
-    def _wrap_timeline(self) -> QFrame:
-        frame = QFrame()
-        frame.setProperty("role", "panel")
-        title = QLabel("事件时间轴")
-        title.setProperty("role", "panelTitle")
-        hint = QLabel("点击彩色事件区段，可跳转到对应时刻播放")
-        hint.setProperty("role", "muted")
-
-        header = QHBoxLayout()
-        header.addWidget(title)
-        header.addStretch()
-        header.addWidget(hint)
-
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(22, 20, 22, 20)
-        layout.setSpacing(8)
-        layout.addLayout(header)
-        layout.addWidget(self.timeline)
-        return frame
 
     def _load_video_into_player(self, video: VideoRecord) -> None:
         """Hand the video to the player, using the streaming URL if available."""
