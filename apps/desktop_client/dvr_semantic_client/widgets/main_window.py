@@ -68,8 +68,8 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         root = QVBoxLayout(central)
-        root.setContentsMargins(14, 14, 14, 14)
-        root.setSpacing(12)
+        root.setContentsMargins(24, 22, 24, 22)
+        root.setSpacing(18)
         root.addWidget(self._build_header())
         self._build_pages()
         root.addWidget(self.stack, 1)
@@ -81,54 +81,72 @@ class MainWindow(QMainWindow):
         frame = QFrame()
         frame.setProperty("role", "panel")
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(20, 12, 16, 12)
-        layout.setSpacing(16)
+        layout.setContentsMargins(26, 16, 22, 16)
+        layout.setSpacing(18)
 
-        # 左：品牌 logo + 副标题
-        brand_logo = QLabel("DVR-S")
-        brand_logo.setStyleSheet(
-            "QLabel { color: #2563EB; font-size: 22px; font-weight: 800; "
+        # 左：品牌 logo 块（圆角彩色方块 + 文字标题）
+        logo_chip = QLabel("DVR")
+        logo_chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_chip.setFixedSize(38, 38)
+        logo_chip.setStyleSheet(
+            "QLabel { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
+            "stop:0 #4F46E5, stop:1 #2563EB); color: #FFFFFF; "
+            "border-radius: 10px; font-weight: 800; font-size: 11px; "
             "letter-spacing: 0.5px; }"
+        )
+
+        brand_name = QLabel("DVR-Semantic")
+        brand_name.setStyleSheet(
+            "QLabel { color: #0F172A; font-size: 17px; font-weight: 800; "
+            "letter-spacing: 0.2px; }"
         )
         brand_subtitle = QLabel("行车记录仪视频语义检索与精准回放")
         brand_subtitle.setStyleSheet("color: #64748B; font-size: 11px;")
-        brand_stack = QVBoxLayout()
-        brand_stack.setContentsMargins(0, 0, 0, 0)
-        brand_stack.setSpacing(0)
-        brand_stack.addWidget(brand_logo)
-        brand_stack.addWidget(brand_subtitle)
+        brand_text = QVBoxLayout()
+        brand_text.setContentsMargins(0, 0, 0, 0)
+        brand_text.setSpacing(1)
+        brand_text.addWidget(brand_name)
+        brand_text.addWidget(brand_subtitle)
+
+        brand_row = QHBoxLayout()
+        brand_row.setContentsMargins(0, 0, 0, 0)
+        brand_row.setSpacing(10)
+        brand_row.addWidget(logo_chip)
+        brand_row.addLayout(brand_text)
         brand_container = QWidget()
-        brand_container.setLayout(brand_stack)
-        brand_container.setFixedWidth(220)
+        brand_container.setLayout(brand_row)
 
         layout.addWidget(brand_container)
+        layout.addSpacing(12)
 
-        # 中：主导航（8 个常用页 + 视觉分隔 + 3 个右侧管理项）
+        # 中：导航（flat nav 风格，由 theme.qss 控制 variant=nav / nav-active）
         nav_row = QHBoxLayout()
         nav_row.setContentsMargins(0, 0, 0, 0)
-        nav_row.setSpacing(4)
+        nav_row.setSpacing(2)
 
         primary_labels = ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告"]
         for index, label in enumerate(primary_labels):
             button = QPushButton(label)
-            button.setMinimumHeight(34)
+            button.setProperty("variant", "nav")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda _checked=False, idx=index: self.show_page(idx))
             self.nav_buttons.append(button)
             nav_row.addWidget(button)
 
-        # 视觉分隔条（细竖线）
+        # 视觉分隔（细竖线）
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.VLine)
         separator.setStyleSheet("color: #E2E8F0;")
-        separator.setFixedHeight(20)
-        nav_row.addSpacing(6)
+        separator.setFixedHeight(18)
+        nav_row.addSpacing(8)
         nav_row.addWidget(separator)
-        nav_row.addSpacing(6)
+        nav_row.addSpacing(8)
 
         secondary_labels = ["模型配置", "权限", "登录"]
         for offset, label in enumerate(secondary_labels, start=8):
             button = QPushButton(label)
-            button.setMinimumHeight(34)
+            button.setProperty("variant", "nav")
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
             button.clicked.connect(lambda _checked=False, idx=offset: self.show_page(idx))
             self.nav_buttons.append(button)
             nav_row.addWidget(button)
@@ -141,14 +159,14 @@ class MainWindow(QMainWindow):
             role_map = {"admin": "管理员", "reviewer": "审核员", "user": "普通用户"}
             role = role_map.get(self.login_ctx.role, self.login_ctx.role or "访客")
             source = "已连接后端" if self.base_url else "演示数据"
-            state_text = f"👤 {who} · {role}  |  {source}"
+            state_text = f"  {who} · {role}  ·  {source}  "
         else:
-            state_text = "演示数据 · Qt6 复现原型"
+            state_text = "  演示数据 · Qt6 复现原型  "
         state = QLabel(state_text)
         state.setStyleSheet(
-            "QLabel { color: #2563EB; background: #EFF6FF; "
-            "border: 1px solid #BFDBFE; border-radius: 10px; "
-            "padding: 6px 11px; font-size: 11px; font-weight: 600; }"
+            "QLabel { color: #4338CA; background: #EEF2FF; "
+            "border: 1px solid #C7D2FE; border-radius: 999px; "
+            "padding: 5px 14px; font-size: 11px; font-weight: 600; }"
         )
         layout.addWidget(state)
         return frame
@@ -171,9 +189,10 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(12)
+        layout.setSpacing(16)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setHandleWidth(16)
         splitter.addWidget(self.search_panel)
         splitter.addWidget(self.player)
         splitter.setStretchFactor(0, 2)
@@ -181,19 +200,20 @@ class MainWindow(QMainWindow):
         layout.addWidget(splitter, 1)
 
         bottom = QSplitter(Qt.Orientation.Horizontal)
+        bottom.setHandleWidth(16)
         bottom.addWidget(self._wrap_timeline())
         bottom.addWidget(self.detail)
         bottom.setStretchFactor(0, 3)
         bottom.setStretchFactor(1, 2)
-        bottom.setMaximumHeight(230)
+        bottom.setMaximumHeight(260)
         layout.addWidget(bottom)
         return page
 
     def show_page(self, index: int) -> None:
         self.stack.setCurrentIndex(index)
         for button_index, button in enumerate(self.nav_buttons):
-            active = button_index == index
-            button.setProperty("variant", "primary" if active else "")
+            variant = "nav-active" if button_index == index else "nav"
+            button.setProperty("variant", variant)
             button.style().unpolish(button)
             button.style().polish(button)
         names = ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告", "模型配置", "权限", "登录"]
@@ -214,7 +234,8 @@ class MainWindow(QMainWindow):
         header.addWidget(hint)
 
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setContentsMargins(22, 20, 22, 20)
+        layout.setSpacing(8)
         layout.addLayout(header)
         layout.addWidget(self.timeline)
         return frame

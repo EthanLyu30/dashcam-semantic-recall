@@ -111,8 +111,8 @@ class EventDetailPanel(QFrame):
         header.addWidget(self.export_button)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(8)
+        layout.setContentsMargins(22, 20, 22, 20)
+        layout.setSpacing(12)
         layout.addLayout(header)
         layout.addWidget(self.subtitle)
         layout.addWidget(self._metrics_container)

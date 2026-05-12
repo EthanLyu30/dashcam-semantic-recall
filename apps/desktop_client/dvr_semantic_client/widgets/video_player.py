@@ -107,8 +107,8 @@ class VideoPlayerPanel(QFrame):
         controls.addWidget(self.slider, 1)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(22, 20, 22, 20)
+        layout.setSpacing(14)
         layout.addLayout(header)
         layout.addWidget(self.surface_container, 1)
         layout.addLayout(controls)

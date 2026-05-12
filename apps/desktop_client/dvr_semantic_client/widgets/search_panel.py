@@ -86,8 +86,8 @@ class SearchPanel(QFrame):
         self.scroll.setMinimumWidth(440)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(14)
         layout.addWidget(title)
         layout.addWidget(self.video_select)
         layout.addLayout(query_row)
