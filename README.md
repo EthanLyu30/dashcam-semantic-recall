@@ -12,19 +12,19 @@
 
 ## 项目分工
 
-按开题报告中的两人团队边界拆分：
+> 详细任务清单见 [`docs/ni-yuchen-todolist.md`](docs/ni-yuchen-todolist.md) 和 [`docs/lv-xiaoyang-completed.md`](docs/lv-xiaoyang-completed.md)。
 
-**吕霄阳** —— 桌面客户端、原型迁移、演示层
-- 在 Qt6 桌面端复刻已完成的 DVR-Semantic 交互原型
-- 把 `docs/prototype-source/` 作为 UI 设计参考（不作为最终实现）
-- Qt6 多页面框架、回放/seek 流程、搜索结果、事件详情、时间轴
+**吕霄阳** —— 桌面客户端、完整后端服务、原型迁移、演示层
+- Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）
+- 完整后端服务层：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
+- SQLite 核心数据库（9 张业务表）+ 40 个自动化测试
 - Mock 数据、REST 契约对接、最终演示流程
 
-**倪羽辰** —— 真实后端与 AI 实现
-- 视频上传、转码、切片、关键帧抽取、缩略图
-- 多模态模型 API 接入与结构化标签
-- 语义检索、事件摘要、时间戳返回逻辑
-- 核心数据库持久化、证据导出实现、测试与技术文档
+**倪羽辰** —— 真实链路验证、数据库升级、复核接口
+- **必做**：用真实行车视频 + 真实模型 API Key 跑通完整演示链路
+- **必做**：将 SQLite 升级为 PostgreSQL + pgvector（真实向量检索）
+- **必做**：补全人工复核 API（`POST /review/tasks/{id}/decision` 真实写库）
+- **建议做**：后端技术实现说明文档、Docker Compose 一键启动
 
 ---
 
@@ -45,6 +45,9 @@
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 |
 | 测试 | 40 个测试全部通过，含端到端 `test_api_integration.py` 串通 login → upload → process → search → export |
+| UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 |
+| 登录流程规范化 | 登录已从顶部导航栏移除；启动时若设置 `DVR_SEMANTIC_API_BASE` 则弹登录对话框，⏻ 按钮改为退出确认 |
+| 按钮响应 | 所有展示型按钮接入 `_wip_button()`，点击弹"功能开发中"提示，不再静默无响应 |
 
 详细进度与剩余事项见 `plans/IMPL_PLAN.md`，需求实现状态见 `docs/requirements-trace.md`。
 
@@ -311,6 +314,9 @@ A：mock 是基于文件名 + SHA-256 散列的伪标签，**对同一段视频�
 
 **Q：想关闭真 VLC，只看占位界面？**
 A：`$env:DVR_DISABLE_VLC="1"` 启动客户端。
+
+**Q：顶部导航找不到"登录"按钮？**
+A：登录入口已从导航栏移除。设置 `DVR_SEMANTIC_API_BASE` 后启动客户端，程序启动时会自动弹出登录对话框。不设置则直接以演示用户进入 mock 模式。右上角 ⏻ 按钮现在是退出登录确认对话框。
 
 ---
 
