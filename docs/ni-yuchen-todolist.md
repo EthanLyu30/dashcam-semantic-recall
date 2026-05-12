@@ -1,113 +1,88 @@
-# 倪羽辰后端与 AI 部分 TODO List
+# 倪羽辰后端与 AI 部分 TODO List（更新版）
 
-本清单是重新平衡后的版本。倪羽辰不再承担原型页面、展示看板、报告页、权限页等前端展示工作；这些由吕霄阳先用原型和 mock 数据完成。倪羽辰聚焦真实后端主链路：视频处理、模型分析、检索、数据持久化和证据导出。
+> **背景说明**：lxy 分支在开发过程中已将原分工中大部分后端基础设施实现完毕（auth、db、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator、audit、40 个测试）。倪羽辰不需要重复实现这些，直接在此基础上承担以下任务即可。
 
-## 0. 接口契约对齐
+---
 
-- [ ] 阅读 `docs/api-contract.md`，确认核心字段和状态枚举。
-- [ ] 不随意改 `video_id`、`event_id`、`start_sec`、`end_sec`、`confidence`、`thumbnail_url`。
-- [ ] 若必须改接口，先改 `docs/api-contract.md`，再通知吕霄阳同步客户端模型。
+## ★ 必做（答辩核心）
 
-## 1. 后端基础框架
+### 1. 用真实数据跑通主链路
 
-- [ ] 完善 FastAPI 项目结构。
-- [ ] 实现统一错误响应。
-- [ ] 接入 CORS，保证 Qt/Web 原型能访问接口。
-- [ ] 接入请求日志和耗时记录。
-- [ ] 保留当前 mock endpoint，逐步替换为真实实现。
+这是倪羽辰最重要的贡献，直接决定答辩能否演示真实效果。
 
-## 2. 数据库核心表
+- [ ] 配置真实模型 API Key（`MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-xxx`）。
+- [ ] 准备 1-3 段真实行车记录仪视频（含剐蹭、违停、行人鬼探头场景）。
+- [ ] 上传视频、触发后端处理、确认帧分析和事件生成正常写库。
+- [ ] 在 Qt 客户端输入自然语言查询，验证检索结果返回正确事件和时间戳。
+- [ ] 确认点击结果后播放器跳转误差在 2 秒以内。
+- [ ] 触发证据导出，确认文件生成在 `media/exports/`。
+- [ ] 整理跑通截图和日志，供答辩和文档引用。
 
-只先实现主链路需要的表：
+### 2. 替换数据库为 PostgreSQL + pgvector
 
-- [ ] `users`
-- [ ] `videos`
-- [ ] `processing_tasks`
-- [ ] `video_segments`
-- [ ] `frame_analysis`
-- [ ] `semantic_events`
-- [ ] `search_queries`
-- [ ] `search_results`
-- [ ] `event_exports`
-- [ ] `audit_logs`
+当前 lxy 实现使用 SQLite（降级方案），原分工要求 pgvector 向量检索。
 
-暂缓：
+- [ ] 本地或 Docker 搭建 PostgreSQL + pgvector。
+- [ ] 将 `apps/backend/dvr_semantic_backend/db.py` 中的 SQLite 连接替换为 psycopg2/asyncpg。
+- [ ] 为 `semantic_events` 表的 embedding 字段启用 `vector` 类型和 HNSW 索引。
+- [ ] 将 `hybrid_search.py` 中的余弦相似度 fallback 替换为真实 pgvector `<=>` 查询。
+- [ ] 确认 40 个现有测试在新数据库下仍然通过。
 
-- [ ] `alerts`、`reports`、`roles`、`permissions`、`settings` 可先用 mock 或配置文件，不作为第一阶段后端重点。
+### 3. 补全人工复核 API
 
-## 3. 视频上传与预处理
+复核接口目前是 stub，Qt 复核页的"提交复核结果"需要真实逻辑。
 
-- [ ] 实现 `POST /api/videos/upload`。
-- [ ] 保存原始视频到 `media/originals/`。
-- [ ] 使用 ffprobe 读取时长、分辨率、编码、文件大小。
-- [ ] 使用 ffmpeg 转码为统一可播放格式。
-- [ ] 生成封面图和关键帧。
-- [ ] 按固定粒度生成切片，写入 `video_segments`。
-- [ ] 实现 `GET /api/videos/{video_id}/status`。
-- [ ] 实现失败重试，处理中任务禁止重复触发。
+- [ ] 实现 `POST /api/review/tasks/{event_id}/decision`：接收 `verdict`（pass/reject/doubt）、`notes`、修正后的 `title`/`tags`，写入 `semantic_events` 并记录审计日志。
+- [ ] 实现 `GET /api/review/tasks`：返回 `review_status=reviewing` 的事件列表，供 Qt 复核页加载队列。
+- [ ] 在 Qt 复核页的任务列表点击时调用此接口（与吕霄阳联调）。
 
-## 4. 多模态模型分析
+---
 
-- [ ] 设计关键帧分析 prompt。
-- [ ] 调用成熟多模态模型 API。
-- [ ] 要求模型返回结构化 JSON。
-- [ ] 将 `description`、`tags`、`event_type`、`confidence`、`reason` 写入 `frame_analysis`。
-- [ ] 聚合连续帧结果，生成 `semantic_events`。
-- [ ] 对低置信事件设置 `review_status=reviewing`。
+## 建议做（加分项）
 
-## 5. 语义检索
+### 4. 视频流接口对接 VLC
 
-- [ ] 实现 `POST /api/search`。
-- [ ] 第一版可以先做关键词 + 文本相似度。
-- [ ] 第二版接 pgvector embedding 召回。
-- [ ] 支持 `hybrid` 模式：向量召回 + 关键词回退。
-- [ ] 写入 `search_queries` 和 `search_results`。
-- [ ] 返回吕霄阳客户端所需字段：事件标题、摘要、标签、置信度、缩略图、开始/结束秒数。
+- [ ] 确认 `GET /api/videos/{video_id}/stream` 返回可播放的 URL（本地 HTTP 或文件路径）。
+- [ ] 与吕霄阳联调：在 Qt 客户端设置 `DVR_SEMANTIC_API_BASE` 后，VLC 能实际播放视频而不是占位模式。
 
-## 6. 播放与时间轴接口
+### 5. 后端技术实现说明
 
-- [ ] 实现 `GET /api/videos/{video_id}/stream`。
-- [ ] 实现 `GET /api/videos/{video_id}/timeline`。
-- [ ] 确保时间戳基于原始视频时间轴。
-- [ ] 与吕霄阳联调，点击结果后播放器跳转误差控制在 2 秒内。
+- [ ] 写 1-2 页文档（Markdown 或 PDF），说明：模型 Prompt 设计、帧分析到事件聚合逻辑、检索排序策略、证据导出流程。
+- [ ] 供答辩时解释自己实现的代码，以及最终报告引用。
 
-## 7. 证据导出
+---
 
-- [ ] 实现 `POST /api/events/{event_id}/export`。
-- [ ] 支持截图 `snapshot`。
-- [ ] 支持短视频 `clip`。
-- [ ] 支持证据包 `package`。
-- [ ] 使用 ffmpeg 按事件时间段加前后缓冲裁剪。
-- [ ] 写入 `event_exports`。
-- [ ] 实现 `GET /api/exports`、`GET /api/exports/{export_id}`、`GET /api/exports/{export_id}/download`。
+## 可选（时间充裕再做）
 
-## 8. 人工复核接口
+### 6. Docker Compose 一键启动
 
-- [ ] 实现 `GET /api/review/tasks`。
-- [ ] 实现 `POST /api/review/tasks/{event_id}/decision`。
-- [ ] 支持修正事件类型、标题、摘要和标签。
-- [ ] 复核结果写入审计日志。
+- [ ] 编写 `docker-compose.yml`：包含 PostgreSQL、pgvector 插件、FastAPI 后端三个服务。
+- [ ] 确保 `docker compose up` 后不需要额外配置即可启动后端。
+- [ ] 更新 README 启动说明。
 
-## 9. 可先交给吕霄阳 mock 的接口
+---
 
-这些页面主要用于展示，倪羽辰第一阶段不用投入太多：
+## 不需要再做（lxy 已实现）
 
-- [ ] `/api/dashboard/*`
-- [ ] `/api/alerts/*`
-- [ ] `/api/accidents/*`
-- [ ] `/api/reports/daily`
-- [ ] `/api/settings/*`
-- [ ] `/api/users`
-- [ ] `/api/roles`
-- [ ] `/api/permissions`
+以下内容已在 lxy 分支实现并通过测试，倪羽辰无需重复：
 
-第一阶段只需要保持 mock 数据字段符合 `docs/api-contract.md`，等主链路稳定后再逐步真实化。
+| 模块 | 文件 | 状态 |
+|---|---|---|
+| FastAPI 框架 + CORS + 错误响应 | `api.py` | ✅ |
+| JWT + bcrypt 鉴权 | `services/auth.py` | ✅ |
+| 审计日志 | `services/audit.py` | ✅ |
+| 视频上传 + ffprobe + ffmpeg 转码/抽帧 | `services/media_pipeline.py` | ✅ |
+| 多模态模型接入（Qwen-VL / mock） | `services/model_adapter.py` | ✅ |
+| 帧分析聚合为语义事件 | `services/event_aggregator.py` | ✅ |
+| 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
+| 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
+| 核心数据库表（SQLite） | `db.py` | ✅（待替换为 PostgreSQL） |
+| 后端单元测试 + 集成测试 40 个 | `tests/` | ✅ |
 
-## 10. 测试与验收
+---
 
-- [ ] 写后端单元测试：检索排序、时间戳映射、状态流、导出路径。
-- [ ] 写接口测试：上传、状态、检索、事件详情、导出。
-- [ ] 准备三类演示查询：剐蹭、违停、道路障碍/异常停车。
-- [ ] 用样例视频跑通完整链路。
-- [ ] 输出后端实现说明，供答辩和最终文档引用。
+## 与吕霄阳的联调约定
 
+- 接口字段不随意改动：`video_id`、`event_id`、`start_sec`、`end_sec`、`confidence`、`thumbnail_url`。
+- 如必须改接口，先改 `docs/api-contract.md`，再通知吕霄阳同步客户端 DTO。
+- 联调时吕霄阳设置环境变量 `DVR_SEMANTIC_API_BASE=http://localhost:8000` 切换到真实后端。

@@ -20,12 +20,26 @@
 - [x] 编写团队交接文档和需求追踪文档。
 - [x] 编写客户端/搜索基础测试并验证通过。
 
+## 新增完成（第二阶段 lxy 分支）
+
+- [x] 完整后端服务实现：auth、audit、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator。
+- [x] SQLite 核心数据库层（videos/events/search/export/audit 表）。
+- [x] 40 个后端单元测试 + 集成测试全部通过。
+- [x] Qt6 全部 11 个页面精化：QPainter 自绘图表、VLC 视频播放、登录对话框。
+- [x] 主题样式对齐原型（nav active、border-l-4 结果卡、KPI 图标块、panel 圆角）。
+- [x] 页面滚动修复：`page_shell` 包装 `QScrollArea`，内容不再被截断。
+- [x] 登录模块规范化：从导航栏移除，⏻ 按钮改为退出确认对话框。
+- [x] 无响应按钮修复：所有展示型按钮接入 `_wip_button()` 统一提示。
+- [x] Phase 2 HTML 报告（15 张截图、幻灯片框架）。
+- [x] README 中文版 + mock vs 真实对照表。
+
 ## 吕霄阳后续只需联调/完善的事项
 
-- [ ] 等倪羽辰真实后端接口完成后，将 mock 数据源切换为 `DVR_SEMANTIC_API_BASE`。
-- [ ] 把原型中的上传按钮、检索按钮、导出按钮逐步绑定到真实接口。
-- [ ] 如果课程要求必须是 Qt 原生窗口展示，安装 `PySide6` 后使用 `apps/desktop_client/main.py`。
-- [ ] 答辩时优先展示 `语义检索中心.html`、`视频库管理.html`、`系统状态概览.html`、`证据与日志归档.html` 四个页面。
+- [ ] 等倪羽辰完成 PostgreSQL + pgvector 替换后，确认检索结果质量。
+- [ ] 等倪羽辰完成复核 API 后，在 Qt 复核页的任务列表接入真实数据（`GET /api/review/tasks`）。
+- [ ] 设置 `DVR_SEMANTIC_API_BASE` 切换到真实后端，端到端验证搜索 → 播放 → 导出流程。
+- [ ] 视频库页"检索 / 更多"操作列改成真实跳转按钮（目前是纯文字）。
+- [ ] 答辩演示脚本准备。
 
 ## 验收方式
 
