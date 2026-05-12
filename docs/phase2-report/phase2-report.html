@@ -304,7 +304,7 @@
       <h1>基于多模态大模型的<br/><span class="accent">行车记录仪视频语义检索与精准回放系统</span></h1>
       <p class="muted" style="margin-top:18px;font-size:16px;">从原型复刻到端到端服务落地 · 主链路真实跑通</p>
       <hr style="margin:32px auto;border:none;height:3px;width:280px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);border-radius:2px;" />
-      <p style="font-size:19px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (本期贡献 70%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (30%) </span></p>
+      <p style="font-size:19px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (客户端 + 全量后端服务 ≈ 85%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (真链路验证 + pgvector + 复核接口 ≈ 15%) </span></p>
       <p class="muted" style="margin-top:10px;">苏州大学 · 综合项目实践 · 2026 年 5 月</p>
     </div>
   </div>
@@ -315,11 +315,11 @@
 <!-- =============== 2. OVERVIEW WITH BARCHART =============== -->
 <section class="slide">
   <h2>阶段二已形成可运行的端到端主链路</h2>
-  <div class="subtitle">上传 → 预处理 → 分析 → 检索 → 回放 → 导出 全链路落地，下阶段进入真模型接入和性能打磨。</div>
+  <div class="subtitle">上传 → 预处理 → 分析 → 检索 → 回放 → 导出 全链路落地；UI 全页面可滚动，40 测试全过。下阶段：倪羽辰接入 pgvector + 真模型，吕霄阳联通辅助页面。</div>
   <div class="cards four" style="margin-top:14px;">
     <div class="card"><div class="label">📦 后端服务模块</div><div class="value">7</div><span class="pill b">media · model · search · export · auth · audit · agg</span></div>
     <div class="card"><div class="label">🗄️ 业务数据表</div><div class="value">9</div><span class="pill g">对齐概要设计 V4.0</span></div>
-    <div class="card"><div class="label">🧪 自动化测试</div><div class="value">39<span style="font-size:16px;color:var(--muted);"> +1 skip</span></div><span class="pill y">含端到端集成</span></div>
+    <div class="card"><div class="label">🧪 自动化测试</div><div class="value">40<span style="font-size:16px;color:var(--muted);"> pass</span></div><span class="pill y">含端到端集成</span></div>
     <div class="card"><div class="label">⚙️ 真实组件</div><div class="value">5</div><span class="pill r">ffmpeg · VLC · JWT · SQLAlchemy · Adapter</span></div>
   </div>
   <div class="row">
@@ -375,8 +375,8 @@
       <div class="progress b"><div style="width:95%;"></div></div>
       <div class="muted" style="margin-top:9px;">真模型 + 向量库 + 异步 — <b>55%</b></div>
       <div class="progress y"><div style="width:55%;"></div></div>
-      <div class="muted" style="margin-top:9px;">辅助页面（告警/报告/权限）— <b>45%</b></div>
-      <div class="progress r"><div style="width:45%;"></div></div>
+      <div class="muted" style="margin-top:9px;">辅助页面（告警/报告/权限）— <b>65%</b></div>
+      <div class="progress r"><div style="width:65%;"></div></div>
       <h3 style="margin-top:10px;">本期最有把握的部分</h3>
       <ul>
         <li class="g">真 ffmpeg 媒体流水线，可处理任意 mp4 输入</li>
@@ -887,7 +887,7 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
 <!-- =============== 10. TEST MATRIX + SCREENSHOT WALL =============== -->
 <section class="slide">
   <h2>测试矩阵 + 桌面端页面巡览</h2>
-  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">左：40 PASS / 0 SKIP &nbsp;·&nbsp; 中：pytest 终端输出 &nbsp;·&nbsp; 右：6 个 Qt 页面（概览自绘图表、复核/告警/证据均填充 mock 数据）</div>
+  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">左：40 PASS / 0 FAIL / 0 SKIP &nbsp;·&nbsp; 中：pytest -q 终端输出 &nbsp;·&nbsp; 右：6 个 Qt 页面（概览自绘图表、各页面均可纵向滚动）</div>
   <div class="row three" style="margin-top:8px;gap:10px;">
     <div class="panel" style="padding:12px 14px;">
       <h3 style="font-size:14px;margin-bottom:6px;">测试覆盖（40 PASS · 0 SKIP）</h3>
@@ -968,19 +968,20 @@ test_backend_search      <span class="ok">2 ✓</span>
       </ul>
     </div>
     <div class="panel">
-      <h3 style="color:var(--yellow);font-size:14px;">辅助页面已填 mock，未接业务后端</h3>
+      <h3 style="color:var(--yellow);font-size:14px;">辅助页面：UI 已成型，后端数据未接</h3>
       <ul style="margin-top:4px;">
-        <li class="y" style="font-size:12.5px;line-height:1.6;">告警 / 事故 / 复核：KPI + 状态色块 + 多行表已出，仍是 mock 数据</li>
-        <li class="y" style="font-size:12.5px;line-height:1.6;">概览页：QPainter 自绘柱状图 + 环形饼图，数据写死</li>
-        <li class="y" style="font-size:12.5px;line-height:1.6;">证据 / 全天报告 / 安全配置：UI 已成型，业务联动未做</li>
-        <li class="y" style="font-size:12.5px;line-height:1.6;">权限管理 UI：后端 users.role 就绪，前端编辑未做</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">告警 / 事故 / 复核：KPI + 状态色块 + 表格 + 滚动已就绪，仍是 mock 静态数据</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">概览页：QPainter 自绘柱状图 + 环形饼图，数据写死待接 /dashboard API</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">权限管理：矩阵 UI 完成，后端 users.role 就绪，前端编辑功能标记"开发中"</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 所有页面可纵向滚动（QScrollArea），内容不再被截断</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 所有未接后端的按钮点击弹"功能开发中"提示，不再静默无响应</li>
       </ul>
       <h3 style="margin-top:8px;font-size:14px;">演示前应做的操作清单</h3>
       <ul style="margin-top:4px;">
-        <li class="g" style="font-size:12.5px;line-height:1.6;">登录窗口（LoginDialog 输入 demo / admin123）</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">视频库管理上传成功后的状态条</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">真后端模式：设 <code>DVR_SEMANTIC_API_BASE</code> 后启动客户端，启动时弹登录窗（demo / demo123）</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">视频库管理上传成功后的状态条变 indexed</li>
         <li class="g" style="font-size:12.5px;line-height:1.6;">检索结果 + VLC 播放同框截图</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">导出弹窗显示 zip 路径</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">导出弹窗显示 zip 路径，解压验证 4 个文件</li>
       </ul>
     </div>
   </div>
@@ -1016,21 +1017,21 @@ test_backend_search      <span class="ok">2 ✓</span>
       </div>
     </div>
     <div class="panel">
-      <h3>阶段三计划</h3>
+      <h3>阶段三计划（调整后分工）</h3>
       <ul>
-        <li class="b">接真模型：填入 DeepSeek 或千问 API KEY，比较两家精度</li>
-        <li class="b">向量库：SQLite-vector / pgvector 二选一，正式上 embedding</li>
-        <li class="g">异步任务队列：长视频处理走后台 + WebSocket 进度推</li>
-        <li class="g">辅助页面：告警/报告/复核/权限 全部接真数据</li>
-        <li class="y">指标埋点：检索响应时间、模型成本、导出耗时</li>
-        <li class="r">压力测试：单服务 ≤10 客户端并发的非功能性指标</li>
+        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：PostgreSQL + pgvector 替换 SQLite，启用真向量检索</li>
+        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：补全复核 API（verdict 写库 + 审计日志），Qt 复核页联通</li>
+        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：用真实行车视频 + DeepSeek/千问 API Key 跑通全链路</li>
+        <li class="b" style="font-size:12.5px;line-height:1.7;"><b>吕霄阳</b>：概览页接真实 /dashboard API，告警/报告辅助页接真数据</li>
+        <li class="g" style="font-size:12.5px;line-height:1.7;"><b>共同</b>：端到端联调，检索结果 + VLC 播放同框演示截图</li>
+        <li class="y" style="font-size:12.5px;line-height:1.7;"><b>可选</b>：Docker Compose 一键启动、异步任务队列</li>
       </ul>
       <h3 style="margin-top:10px;">阶段三验收指标</h3>
       <ul>
-        <li class="g">检索响应时间 ≤ 4s (端到端含 embedding)</li>
+        <li class="g">检索响应时间 ≤ 4s（端到端含 embedding）</li>
         <li class="g">VLC seek 响应 ≤ 1s</li>
         <li class="g">单事件导出 ≤ 30s（含 ffmpeg 编码）</li>
-        <li class="g">核心操作步骤 ≤ 8 步</li>
+        <li class="g">主流程操作步骤 ≤ 8 步</li>
       </ul>
     </div>
   </div>
