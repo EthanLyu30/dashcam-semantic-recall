@@ -50,13 +50,28 @@ class EventTimeline(QWidget):
 
         if self._video is None or self._video.duration_sec <= 0:
             painter.setPen(QColor("#64748B"))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No video loaded")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "暂未加载视频")
             return
 
         duration = self._video.duration_sec
-        painter.setPen(QColor("#64748B"))
-        painter.drawText(margin, rail_y + 34, "00:00")
-        painter.drawText(self.width() - margin - 58, rail_y + 34, format_time(duration))
+        painter.setPen(QColor("#94A3B8"))
+
+        # 主刻度：起点 / 终点 + 中间 3 个等分刻度
+        tick_count = 4  # 切成 4 段，得 5 个刻度
+        usable = max(1, self.width() - margin * 2)
+        for i in range(tick_count + 1):
+            ratio = i / tick_count
+            tick_sec = int(duration * ratio)
+            tick_x = margin + usable * ratio
+            painter.setPen(QColor("#CBD5E1"))
+            painter.drawLine(int(tick_x), rail_y + 12, int(tick_x), rail_y + 18)
+            painter.setPen(QColor("#64748B"))
+            label = format_time(tick_sec)
+            metrics = painter.fontMetrics()
+            text_width = metrics.horizontalAdvance(label)
+            text_x = tick_x - text_width / 2
+            text_x = max(margin - 4, min(self.width() - margin - text_width + 4, text_x))
+            painter.drawText(int(text_x), rail_y + 34, label)
 
         for event in self._events:
             start_x = self._x_for_second(event.start_sec, margin, duration)

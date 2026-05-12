@@ -81,42 +81,75 @@ class MainWindow(QMainWindow):
         frame = QFrame()
         frame.setProperty("role", "panel")
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(16, 12, 16, 12)
+        layout.setContentsMargins(20, 12, 16, 12)
+        layout.setSpacing(16)
 
-        title = QLabel("DVR-S")
-        title.setProperty("role", "title")
-        subtitle = QLabel("多模态行车记录仪视频语义检索与精准回放")
-        subtitle.setProperty("role", "muted")
-        text_stack = QVBoxLayout()
-        text_stack.addWidget(title)
-        text_stack.addWidget(subtitle)
-
-        if self.login_ctx is not None:
-            who = self.login_ctx.display_name or self.login_ctx.username
-            role = self.login_ctx.role or "guest"
-            source = "REST" if self.base_url else "mock"
-            state_text = f"用户 {who} · {role} · 数据源 {source}"
-        else:
-            state_text = "Qt6 复现原型 · 当前数据源：mock"
-        state = QLabel(state_text)
-        state.setStyleSheet(
-            "color: #2563EB; background: #EFF6FF; border: 1px solid #BFDBFE; "
-            "border-radius: 12px; padding: 8px 12px;"
+        # 左：品牌 logo + 副标题
+        brand_logo = QLabel("DVR-S")
+        brand_logo.setStyleSheet(
+            "QLabel { color: #2563EB; font-size: 22px; font-weight: 800; "
+            "letter-spacing: 0.5px; }"
         )
+        brand_subtitle = QLabel("行车记录仪视频语义检索与精准回放")
+        brand_subtitle.setStyleSheet("color: #64748B; font-size: 11px;")
+        brand_stack = QVBoxLayout()
+        brand_stack.setContentsMargins(0, 0, 0, 0)
+        brand_stack.setSpacing(0)
+        brand_stack.addWidget(brand_logo)
+        brand_stack.addWidget(brand_subtitle)
+        brand_container = QWidget()
+        brand_container.setLayout(brand_stack)
+        brand_container.setFixedWidth(220)
 
-        layout.addLayout(text_stack, 1)
-        for index, label in enumerate(
-            ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告"]
-        ):
+        layout.addWidget(brand_container)
+
+        # 中：主导航（8 个常用页 + 视觉分隔 + 3 个右侧管理项）
+        nav_row = QHBoxLayout()
+        nav_row.setContentsMargins(0, 0, 0, 0)
+        nav_row.setSpacing(4)
+
+        primary_labels = ["概览", "检索", "视频流", "复核", "告警", "事故", "证据与日志", "全天业务报告"]
+        for index, label in enumerate(primary_labels):
             button = QPushButton(label)
+            button.setMinimumHeight(34)
             button.clicked.connect(lambda _checked=False, idx=index: self.show_page(idx))
             self.nav_buttons.append(button)
-            layout.addWidget(button)
-        for offset, label in enumerate(["模型配置", "权限", "登录"], start=8):
+            nav_row.addWidget(button)
+
+        # 视觉分隔条（细竖线）
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.VLine)
+        separator.setStyleSheet("color: #E2E8F0;")
+        separator.setFixedHeight(20)
+        nav_row.addSpacing(6)
+        nav_row.addWidget(separator)
+        nav_row.addSpacing(6)
+
+        secondary_labels = ["模型配置", "权限", "登录"]
+        for offset, label in enumerate(secondary_labels, start=8):
             button = QPushButton(label)
+            button.setMinimumHeight(34)
             button.clicked.connect(lambda _checked=False, idx=offset: self.show_page(idx))
             self.nav_buttons.append(button)
-            layout.addWidget(button)
+            nav_row.addWidget(button)
+
+        layout.addLayout(nav_row, 1)
+
+        # 右：当前用户 / 数据源 紧凑胶囊
+        if self.login_ctx is not None:
+            who = self.login_ctx.display_name or self.login_ctx.username
+            role_map = {"admin": "管理员", "reviewer": "审核员", "user": "普通用户"}
+            role = role_map.get(self.login_ctx.role, self.login_ctx.role or "访客")
+            source = "已连接后端" if self.base_url else "演示数据"
+            state_text = f"👤 {who} · {role}  |  {source}"
+        else:
+            state_text = "演示数据 · Qt6 复现原型"
+        state = QLabel(state_text)
+        state.setStyleSheet(
+            "QLabel { color: #2563EB; background: #EFF6FF; "
+            "border: 1px solid #BFDBFE; border-radius: 10px; "
+            "padding: 6px 11px; font-size: 11px; font-weight: 600; }"
+        )
         layout.addWidget(state)
         return frame
 
@@ -170,9 +203,9 @@ class MainWindow(QMainWindow):
     def _wrap_timeline(self) -> QFrame:
         frame = QFrame()
         frame.setProperty("role", "panel")
-        title = QLabel("Event Timeline")
+        title = QLabel("事件时间轴")
         title.setProperty("role", "panelTitle")
-        hint = QLabel("Click highlighted intervals to jump playback.")
+        hint = QLabel("点击彩色事件区段，可跳转到对应时刻播放")
         hint.setProperty("role", "muted")
 
         header = QHBoxLayout()
