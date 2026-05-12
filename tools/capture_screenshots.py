@@ -37,8 +37,18 @@ def main() -> int:
     )
     from PySide6.QtCore import Signal, Qt, QSize
 
+    # High-DPI antialiasing setup — must happen before any window is shown.
+    # Qt6 enables HiDPI support by default; we only need to set the font
+    # antialiasing strategy here.
+    from PySide6.QtGui import QFont
     app = QApplication(sys.argv)
-    print(">>> QApplication ready", flush=True)
+    # Set global font strategy to prefer smooth antialiasing
+    base_font = QFont("Microsoft YaHei UI", 10)
+    base_font.setStyleStrategy(
+        QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.PreferQuality
+    )
+    app.setFont(base_font)
+    print(">>> QApplication ready (HiDPI + AA font)", flush=True)
 
     # Load the light operational stylesheet so screenshots match the
     # prototype's visual language. Earlier instability was tracked down to
@@ -91,11 +101,13 @@ def main() -> int:
     window = MainWindow(MockApiClient())
     print(">>> MainWindow constructed", flush=True)
 
-    window.resize(1440, 900)
+    # Larger base resolution → more pixels in PNG → browser/slide downscale
+    # produces crisp text rather than upscale blur.
+    window.resize(1920, 1080)
     window.ensurePolished()
     for _ in range(20):
         app.processEvents()
-    print(">>> initial layout ready", flush=True)
+    print(">>> initial layout ready (1920×1080)", flush=True)
 
     def grab(widget, name, size=None):
         if size is not None:
@@ -152,12 +164,12 @@ def main() -> int:
 
     workspace = window.stack.currentWidget()
     if workspace is not None:
-        grab(workspace, "qt-13-search-only.png", size=(1380, 820))
+        grab(workspace, "qt-13-search-only.png", size=(1760, 1040))
 
     # Result list (the search panel) at a tighter width
-    grab(window.search_panel, "qt-14-result-list.png", size=(520, 720))
+    grab(window.search_panel, "qt-14-result-list.png", size=(640, 900))
     # Detail panel with export button enabled
-    grab(window.detail, "qt-15-event-detail.png", size=(520, 360))
+    grab(window.detail, "qt-15-event-detail.png", size=(640, 440))
 
     total = len(list(SHOTS_DIR.glob("qt-*.png")))
     print(f"\n>>> wrote {total} screenshots to "

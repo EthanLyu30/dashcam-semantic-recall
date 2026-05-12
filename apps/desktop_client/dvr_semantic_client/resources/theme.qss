@@ -169,6 +169,18 @@ QPushButton[variant="ghost"]:hover {
     color: #0F172A;
 }
 
+/* ---- 角色 / 状态芯片 ----
+ * 用于内嵌在列表行、标题栏的小标签。
+ * 用 setProperty("role","chip") 激活，再用 data-kind 区分颜色。
+ */
+QLabel[role="chip"] {
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+}
+
 /* ---- 输入控件 ---- */
 QLineEdit, QComboBox {
     background: #FFFFFF;

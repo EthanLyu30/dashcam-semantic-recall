@@ -1,13 +1,23 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QFrame,
+    QGraphicsDropShadowEffect,
+    QHBoxLayout,
+    QLabel,
+    QWidget,
+)
 
 from ..models import SemanticEvent
 
 
 class ResultCard(QFrame):
     """检索结果卡片：左侧大号置信度色块 + 右侧标题/时间/摘要/tags。
+
+    hover 时通过 QGraphicsDropShadowEffect 给出"浮起"阴影感，以补偿
+    Qt 没有 CSS transition 的不足。
 
     严格保持 ``self.event = event`` 放在构造函数最后赋值——这条不能动，
     否则会触发 PySide6 6.x 在 Windows 上的构造期 segfault（详见仓库历史）。
@@ -67,8 +77,27 @@ class ResultCard(QFrame):
         layout.addWidget(score_label, 0, Qt.AlignmentFlag.AlignTop)
         layout.addWidget(body_label, 1)
 
+        # Hover shadow effect — 用 QGraphicsDropShadowEffect 模拟 hover 浮起
+        # enterEvent 激活阴影，leaveEvent 移除，替代 CSS transition。
+        self._shadow = QGraphicsDropShadowEffect(self)
+        self._shadow.setBlurRadius(0)
+        self._shadow.setOffset(0, 2)
+        self._shadow.setColor(QColor(0, 0, 0, 0))
+        self.setGraphicsEffect(self._shadow)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
         # 关键：event 字段必须最后赋值，避免 PySide6 构造期 segfault
         self.event = event
+
+    def enterEvent(self, event) -> None:  # type: ignore[override]
+        self._shadow.setBlurRadius(16)
+        self._shadow.setColor(QColor(0, 0, 0, 40))
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:  # type: ignore[override]
+        self._shadow.setBlurRadius(0)
+        self._shadow.setColor(QColor(0, 0, 0, 0))
+        super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]
         if event.button() == Qt.MouseButton.LeftButton:

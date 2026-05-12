@@ -19,8 +19,16 @@ def main() -> int:
     from .widgets.login_dialog import LoginContext, LoginDialog
     from .widgets.main_window import MainWindow
 
+    from PySide6.QtGui import QFont
+
     app = QApplication(sys.argv)
     app.setApplicationName("Dashcam Semantic Recall")
+
+    base_font = QFont("Microsoft YaHei UI", 10)
+    base_font.setStyleStrategy(
+        QFont.StyleStrategy.PreferAntialias | QFont.StyleStrategy.PreferQuality
+    )
+    app.setFont(base_font)
 
     theme_path = Path(__file__).with_name("resources") / "theme.qss"
     if theme_path.exists():
