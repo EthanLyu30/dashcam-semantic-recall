@@ -193,6 +193,46 @@ python -m pytest -q
 
 ---
 
+## 真实跑通 vs mock 一览
+
+> 这一节回答：「现在哪些是真的能跑、哪些用的是 mock？」
+> 不夸大、不藏丑，按模块列。
+
+| 模块 | 状态 | 说明 |
+|---|---|---|
+| FastAPI 后端 + SQLite 9 表 | ✅ 真跑 | `uvicorn` 启动后，所有 REST API 都是真路由 + 真数据库 |
+| JWT 登录 / bcrypt / 审计日志 | ✅ 真跑 | 登录返回真 token；每次操作写 `audit_logs` |
+| 视频上传 / ffmpeg 抽帧/切片/缩略图 | ✅ 真跑 | `apps/backend/dvr_semantic_backend/services/media_pipeline.py` 调真 ffmpeg |
+| 嵌入检索（向量召回 + 关键词） | ✅ 真跑 | 装了 `sentence-transformers` 走真向量；没装走 hash-ngram fallback（也是真计算，不是预写答案） |
+| 证据导出 zip 打包 | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/` |
+| 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；配 `MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-...` 后走 `OpenAICompatibleAdapter` 真请求通义千问 VL，DeepSeek 同理 |
+| VLC 视频回放 | ✅ 真跑 | 你已经装了 VLC 3.0.23；客户端用 `python-vlc` 真嵌入播放 |
+| 桌面客户端默认数据源 | mock | 不传 `--base-url` 时用 `apps/desktop_client/dvr_semantic_client/mock_client.py` 的演示数据 |
+
+### 想要"真后端 + 真视频 + 真视觉模型"全链路跑通，4 步：
+
+```powershell
+# 1. 启 backend（默认 mock 模型适配器；下一步会切真模型）
+$env:MODEL_PROVIDER = "qwen"          # 或 "deepseek"
+$env:MODEL_API_KEY  = "sk-xxxxxxxx"   # 通义千问的 dashscope key，或 deepseek key
+# $env:MODEL_NAME   = "qwen-vl-plus"  # 可选，默认 qwen-vl-plus / deepseek-vl
+python -m apps.backend.main           # 监听 8000
+
+# 2. 另开一个 PowerShell 启客户端，连真后端
+python tools/run_qt_client.py --base-url http://localhost:8000
+
+# 3. 用客户端登录（默认账户 admin / admin123），到「视频流」页面上传一段 mp4
+#    ffmpeg 抽帧 + 通义/DeepSeek 视觉理解会真打远程 API，处理完状态变 "searchable"
+
+# 4. 回「检索」页面，输入自然语言查询，看到的就是真模型识别的事件
+```
+
+### 不想花钱调真模型，只想看演示？
+
+直接 `python tools/run_qt_client.py`（不带 `--base-url`），全部走 mock，5 秒就能看到完整 UI 联动。**这也是阶段二汇报演示推荐的路径**——稳定、确定性、不依赖外网。
+
+---
+
 ## 项目结构速查
 
 ```

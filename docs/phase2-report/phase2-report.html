@@ -767,11 +767,11 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
 <!-- =============== 9. DESKTOP UI — REAL SCREENSHOT =============== -->
 <section class="slide">
   <h2>桌面端 — 真实运行截图（语义检索中心）</h2>
-  <div class="subtitle">下图为 Qt6 客户端实际渲染的检索工作区。视频窗口因 offscreen 截图不能拉 VLC 帧而显示占位文字；其它 UI 元素与实际运行完全一致。</div>
+  <div class="subtitle">Qt6 客户端实际渲染的检索工作区：左侧检索结果卡片、右侧深色视频卡片融合事件时间轴、底部事件详情三色 metric 块。视频画面因 offscreen 截图不能拉 VLC 帧故显示占位文字，其它 UI 与运行一致。</div>
   <div class="panel" style="margin-top:10px;flex:1;padding:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
     <img src="shots/qt-01-search-workspace.png" alt="Qt6 检索工作区" style="max-width:100%;max-height:560px;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,.08);" />
   </div>
-  <div class="muted" style="margin-top:6px;font-size:12px;text-align:center;">由 <code>tools/capture_screenshots.py</code> 自动抓取 · 包含搜索栏 · 推荐查询 · 3 张结果卡片 · 时间轴 · 事件详情 + 导出按钮</div>
+  <div class="muted" style="margin-top:6px;font-size:12px;text-align:center;">由 <code>tools/capture_screenshots.py</code> 自动抓取 · flat nav + 紫蓝品牌芯片 · 推荐查询胶囊 · 3 张置信度色块卡片 · 深色视频卡 + 嵌入式时间轴 · 三色 metric（置信度/相关度/复核状态）</div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
   <div class="pagenum">09</div>
 </section>
@@ -885,7 +885,7 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
 <!-- =============== 10. TEST MATRIX + SCREENSHOT WALL =============== -->
 <section class="slide">
   <h2>测试矩阵 + 桌面端页面巡览</h2>
-  <div class="subtitle">左：40 个测试全通过 / 中：pytest 终端 / 右：其它 7 个原型页在 Qt 中的实现。</div>
+  <div class="subtitle">左：40 个测试全通过 / 中：pytest 终端 / 右：8 个 Qt 页面（概览自绘柱状/饼图、复核/告警/事故/证据均填充真实风格 mock，所有列表带状态色块）。</div>
   <div class="row three" style="margin-top:10px;">
     <div class="panel">
       <h3>测试覆盖（40 PASS · 0 SKIP）</h3>
@@ -968,12 +968,12 @@ tests/test_backend_search.py ..                       <span class="ok">2 passed<
       </ul>
     </div>
     <div class="panel">
-      <h3 style="color:var(--yellow);">辅助页面未接</h3>
+      <h3 style="color:var(--yellow);">辅助页面已填，未接业务后端</h3>
       <ul>
-        <li class="y">告警管理中心：静态展示，未接 audit_logs</li>
-        <li class="y">全天业务报告 / 模型与安全配置：仍是阶段一的页面雏形</li>
+        <li class="y">告警 / 事故 / 复核：UI 已按原型出 KPI + 状态色块 + 多行表，仍是 mock 数据，后端 audit_logs / accidents 路由未联</li>
+        <li class="y">概览页：用 QPainter 自绘柱状图 + 环形饼图替换占位表格，数据仍写死</li>
+        <li class="y">证据 / 全天报告 / 模型与安全配置：UI 已成型，业务联动未做</li>
         <li class="y">权限管理 UI：后端 users.role 字段就绪，前端编辑界面未做</li>
-        <li class="y">复核中心：API 已支持 review_status 改写，但页面未把它接上</li>
       </ul>
       <h3 style="margin-top:10px;">演示前应做的截图清单</h3>
       <ul>

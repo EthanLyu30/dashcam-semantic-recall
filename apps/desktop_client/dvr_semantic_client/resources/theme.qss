@@ -22,6 +22,14 @@ QWidget {
     font-size: 13px;
 }
 
+/* QLabel 在 Qt 里继承自 QFrame；任何不带选择器的 "QFrame {...border...}"
+ * 都会把 Label 框起来。这里给全局 QLabel 钉一个 border:none + transparent
+ * 兜底，避免每张卡片里再单独抵消。 */
+QLabel {
+    background: transparent;
+    border: none;
+}
+
 /* ---- 面板容器 ---- */
 QFrame[role="panel"] {
     background: #FFFFFF;

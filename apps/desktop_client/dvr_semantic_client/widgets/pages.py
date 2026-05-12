@@ -66,12 +66,19 @@ def page_shell(title_text: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
 
 def metric_card(label: str, value: str, note: str, accent: str = "#2563EB") -> QFrame:
     card = panel()
+    # 注意：QLabel 在 Qt 里继承自 QFrame，所以"QFrame { border... }"会顺带
+    # 把内部 Label 也画上边框。必须用 role 属性选择器锁死外框，且对内部
+    # Label 显式声明 border:none 防御样式表回环。
     card.setStyleSheet(
-        f"QFrame {{ background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 22px; }}"
-        f"QLabel#accent {{ color: {accent}; font-size: 28px; font-weight: 800; }}"
+        "QFrame[role='panel'] { background: #FFFFFF; "
+        "border: 1px solid #E2E8F0; border-radius: 22px; }"
+        f"QLabel#accent {{ color: {accent}; font-size: 28px; font-weight: 800; "
+        "background: transparent; border: none; }}"
+        "QLabel { background: transparent; border: none; }"
     )
     layout = QVBoxLayout(card)
-    layout.setContentsMargins(16, 14, 16, 14)
+    layout.setContentsMargins(18, 16, 18, 16)
+    layout.setSpacing(4)
     label_widget = muted(label)
     value_widget = QLabel(value)
     value_widget.setObjectName("accent")
