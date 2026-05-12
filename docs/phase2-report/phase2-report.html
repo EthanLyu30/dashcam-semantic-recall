@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>阶段二进度汇报 · DVR-Semantic</title>
+<style>
+  :root {
+    --blue:#2563EB; --red:#EF4444; --yellow:#F59E0B; --green:#22C55E;
+    --indigo:#4F46E5; --cyan:#06B6D4;
+    --bg:#F8FAFC; --panel:#FFFFFF; --soft:#F1F5F9;
+    --text:#1E293B; --muted:#64748B; --border:#E2E8F0;
+    --dark:#0F172A; --darker:#020617;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  body{background:#E2E8F0;padding:32px 16px;color:var(--text);}
+  .slide{
+    position:relative;width:1280px;height:720px;margin:0 auto 32px auto;
+    background:var(--bg);border-radius:18px;overflow:hidden;
+    box-shadow:0 10px 30px rgba(15,23,42,.12);
+    padding:48px 56px 56px 56px;
+    display:flex;flex-direction:column;
+  }
+  .slide::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:8px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+  }
+  .slide::after{
+    content:"";position:absolute;bottom:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+    opacity:.85;
+  }
+  .pagenum{position:absolute;right:24px;bottom:18px;color:var(--muted);font-size:13px;font-weight:600;}
+  .dots{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;gap:8px;}
+  .dots span{width:7px;height:7px;border-radius:50%;background:var(--border);}
+  .dots span.b{background:var(--blue)} .dots span.r{background:var(--red)}
+  .dots span.y{background:var(--yellow)} .dots span.g{background:var(--green)}
+  h1{font-size:42px;font-weight:800;color:var(--text);line-height:1.18;}
+  h1 .accent{color:var(--blue);}
+  h2{font-size:30px;font-weight:800;color:var(--blue);margin-bottom:14px;}
+  h3{font-size:17px;font-weight:700;color:var(--text);margin-bottom:8px;}
+  .badge{display:inline-block;padding:8px 14px;border-radius:14px;background:#EFF6FF;color:var(--blue);font-weight:600;font-size:13px;border:1px solid #BFDBFE;}
+  .subtitle{background:#EEF2FF;color:var(--indigo);border:1px solid #C7D2FE;padding:9px 14px;border-radius:14px;font-size:14px;line-height:1.55;}
+  .cards{display:grid;gap:14px;}
+  .cards.four{grid-template-columns:repeat(4,1fr);}
+  .cards.three{grid-template-columns:repeat(3,1fr);}
+  .cards.two{grid-template-columns:repeat(2,1fr);}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:16px 18px;}
+  .card .label{color:var(--muted);font-size:12.5px;}
+  .card .value{font-size:30px;font-weight:800;line-height:1.1;margin-top:6px;}
+  .card .pill{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:600;}
+  .pill.b{background:#DBEAFE;color:#1D4ED8;}
+  .pill.r{background:#FEE2E2;color:#B91C1C;}
+  .pill.y{background:#FEF3C7;color:#B45309;}
+  .pill.g{background:#DCFCE7;color:#15803D;}
+  .pill.i{background:#E0E7FF;color:#4338CA;}
+  .pill.c{background:#CFFAFE;color:#0E7490;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:18px 20px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;flex:1 1 auto;min-height:0;}
+  .row.three{grid-template-columns:1fr 1fr 1fr;}
+  .row.left-heavy{grid-template-columns:1.4fr 1fr;}
+  .row .panel{height:100%;display:flex;flex-direction:column;}
+  ul{list-style:none;}
+  li{position:relative;padding-left:16px;font-size:13.5px;line-height:1.78;color:#0f172a;}
+  li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:var(--blue);}
+  li.r::before{background:var(--red);} li.y::before{background:var(--yellow);} li.g::before{background:var(--green);} li.i::before{background:var(--indigo);}
+  .muted{color:var(--muted);font-size:12.5px;line-height:1.6;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;gap:18px;}
+  .center-card{
+    background:var(--panel);border-radius:28px;padding:48px 56px;
+    box-shadow:0 18px 44px rgba(37,99,235,.08);
+    max-width:880px;margin:auto;
+    border:1px solid var(--border);
+  }
+
+  /* macOS-style terminal */
+  .term{
+    background:var(--darker);border-radius:12px;overflow:hidden;
+    box-shadow:0 6px 18px rgba(2,6,23,.4);
+    font-family:"JetBrains Mono","Consolas","Cascadia Code",monospace;
+    font-size:11.5px;line-height:1.55;color:#CBD5E1;
+  }
+  .term .head{
+    display:flex;align-items:center;gap:6px;
+    background:#1E293B;padding:7px 12px;border-bottom:1px solid #0F172A;
+  }
+  .term .head .dot{width:11px;height:11px;border-radius:50%;}
+  .term .head .dot.r{background:#FF5F57;} .term .head .dot.y{background:#FEBC2E;} .term .head .dot.g{background:#28C840;}
+  .term .head .title{margin-left:6px;font-size:11px;color:#94A3B8;font-weight:600;}
+  .term .body{padding:11px 14px;white-space:pre;overflow:hidden;}
+  .term .body .cmd{color:#22C55E;}
+  .term .body .key{color:#F59E0B;}
+  .term .body .ok{color:#22C55E;font-weight:700;}
+  .term .body .err{color:#EF4444;font-weight:700;}
+  .term .body .dim{color:#64748B;}
+  .term .body .blue{color:#60A5FA;}
+  .term .body .yellow{color:#FBBF24;}
+  .term .body .purple{color:#A78BFA;}
+
+  /* Browser/window mockup */
+  .win{
+    background:var(--panel);border-radius:12px;overflow:hidden;
+    border:1px solid var(--border);
+    box-shadow:0 8px 22px rgba(15,23,42,.08);
+  }
+  .win .titlebar{
+    display:flex;align-items:center;gap:6px;
+    background:#F1F5F9;padding:7px 11px;border-bottom:1px solid var(--border);
+  }
+  .win .titlebar .dot{width:10px;height:10px;border-radius:50%;}
+  .win .titlebar .dot.r{background:#FF5F57;} .win .titlebar .dot.y{background:#FEBC2E;} .win .titlebar .dot.g{background:#28C840;}
+  .win .titlebar .url{
+    margin-left:14px;background:#FFFFFF;border:1px solid var(--border);
+    border-radius:6px;padding:3px 10px;font-size:11px;color:var(--muted);
+    font-family:monospace;flex:1;max-width:600px;
+  }
+
+  /* Desktop client mockup */
+  .desktop{
+    background:#F8FAFC;border-radius:12px;border:1px solid var(--border);
+    overflow:hidden;height:100%;display:flex;flex-direction:column;
+  }
+  .desktop .topnav{
+    display:flex;align-items:center;background:#FFFFFF;border-bottom:1px solid var(--border);
+    padding:10px 14px;gap:12px;font-size:11.5px;
+  }
+  .desktop .topnav .logo{
+    background:linear-gradient(135deg,var(--indigo),var(--blue));color:#fff;
+    width:30px;height:30px;border-radius:8px;display:flex;align-items:center;
+    justify-content:center;font-weight:800;font-size:11px;
+  }
+  .desktop .topnav .brand{font-weight:800;color:var(--text);}
+  .desktop .topnav .nav{display:flex;gap:14px;margin-left:8px;color:var(--muted);}
+  .desktop .topnav .nav .active{color:var(--blue);font-weight:700;border-bottom:2px solid var(--blue);padding-bottom:2px;}
+  .desktop .topnav .user{margin-left:auto;background:#EFF6FF;color:var(--blue);border:1px solid #BFDBFE;border-radius:10px;padding:4px 10px;font-size:10.5px;}
+  .desktop .main{display:grid;grid-template-columns:1.2fr 1.6fr;gap:10px;padding:10px;flex:1;min-height:0;}
+  .desktop .col{display:flex;flex-direction:column;gap:8px;min-height:0;}
+  .desktop .search-bar{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:10px;padding:8px 11px;
+    display:flex;align-items:center;gap:8px;font-size:11px;
+  }
+  .desktop .search-bar input{
+    flex:1;border:none;outline:none;font-size:11px;background:transparent;color:var(--text);
+  }
+  .desktop .search-bar .go{
+    background:var(--blue);color:#fff;padding:4px 11px;border-radius:8px;font-weight:700;font-size:10.5px;
+  }
+  .desktop .result-card{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:10px;padding:9px 11px;
+    display:flex;gap:10px;font-size:11px;
+  }
+  .desktop .result-card.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.12);}
+  .desktop .result-card .conf{
+    flex-shrink:0;background:#DBEAFE;color:#1D4ED8;border-radius:8px;
+    padding:3px 7px;font-weight:800;font-size:11px;height:fit-content;
+  }
+  .desktop .result-card .conf.high{background:#DCFCE7;color:#15803D;}
+  .desktop .result-card .conf.low{background:#FEF3C7;color:#B45309;}
+  .desktop .result-card .body{flex:1;min-width:0;}
+  .desktop .result-card .title{font-weight:700;font-size:12px;color:var(--text);}
+  .desktop .result-card .meta{color:var(--muted);font-size:10px;margin-top:2px;}
+  .desktop .result-card .tags{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap;}
+  .desktop .result-card .tag{background:#F1F5F9;color:var(--muted);padding:1.5px 6px;border-radius:999px;font-size:9.5px;}
+  .desktop .video-area{
+    background:#020617;border-radius:10px;flex:1;position:relative;overflow:hidden;
+    min-height:200px;
+  }
+  .desktop .video-area .scene{
+    position:absolute;inset:0;background:linear-gradient(135deg,#1E293B 0%,#334155 40%,#475569 100%);
+  }
+  .desktop .video-area .scene::after{
+    content:"";position:absolute;inset:0;
+    background-image:
+      radial-gradient(circle at 20% 75%, rgba(248,250,252,.18) 0, transparent 22%),
+      radial-gradient(circle at 75% 60%, rgba(245,158,11,.25) 0, transparent 20%),
+      radial-gradient(circle at 50% 90%, rgba(2,6,23,.6) 0, transparent 40%);
+  }
+  .desktop .video-area .road{
+    position:absolute;left:0;right:0;bottom:0;height:55%;
+    background:linear-gradient(to top,#0F172A 0%,transparent 70%);
+  }
+  .desktop .video-area .road::before{
+    content:"";position:absolute;left:50%;bottom:0;width:6px;height:60%;
+    background:repeating-linear-gradient(to top,#FBBF24 0 10px,transparent 10px 20px);
+    transform:translateX(-50%) perspective(180px) rotateX(40deg);
+    transform-origin:bottom;
+  }
+  .desktop .video-area .badge-top{
+    position:absolute;top:10px;left:10px;background:rgba(239,68,68,.92);color:#fff;
+    padding:3px 10px;border-radius:999px;font-size:10.5px;font-weight:700;
+  }
+  .desktop .video-area .time-top{
+    position:absolute;top:10px;right:10px;background:rgba(2,6,23,.7);color:#CBD5E1;
+    padding:3px 10px;border-radius:999px;font-size:10.5px;font-family:monospace;
+  }
+  .desktop .video-area .controls{
+    position:absolute;left:0;right:0;bottom:0;
+    background:linear-gradient(to top,rgba(2,6,23,.92),transparent);
+    padding:10px 12px;display:flex;align-items:center;gap:8px;color:#CBD5E1;font-size:10px;
+  }
+  .desktop .video-area .controls .progress{
+    flex:1;height:4px;background:#334155;border-radius:2px;position:relative;
+  }
+  .desktop .video-area .controls .progress > div{
+    position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:2px;
+  }
+  .desktop .video-area .controls .progress .marker{
+    position:absolute;top:-2px;width:8px;height:8px;border-radius:50%;background:#fff;
+  }
+  .desktop .timeline{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:10px;padding:9px 11px;
+    height:70px;position:relative;
+  }
+  .desktop .timeline .rail{
+    position:absolute;left:11px;right:11px;top:50%;height:8px;background:#E2E8F0;border-radius:4px;transform:translateY(-50%);
+  }
+  .desktop .timeline .ev{position:absolute;top:50%;height:18px;border-radius:4px;transform:translateY(-50%);}
+  .desktop .timeline .now{position:absolute;top:13px;bottom:9px;width:2px;background:var(--blue);}
+  .desktop .timeline .label{font-size:9.5px;color:var(--muted);font-family:monospace;}
+  .desktop .timeline .label.right{position:absolute;right:11px;bottom:6px;}
+  .desktop .timeline .label.left{position:absolute;left:11px;bottom:6px;}
+  .desktop .detail{
+    background:#FFFFFF;border:1px solid var(--border);border-radius:10px;padding:10px 12px;
+    display:flex;flex-direction:column;gap:6px;font-size:11px;
+  }
+  .desktop .detail .h{font-weight:800;font-size:12.5px;color:var(--text);}
+  .desktop .detail .row{display:flex;gap:10px;font-size:10.5px;color:var(--muted);margin:0;}
+  .desktop .detail .row b{color:var(--text);font-weight:700;}
+  .desktop .detail .btns{display:flex;gap:6px;margin-top:6px;}
+  .desktop .detail .btn{padding:5px 11px;border-radius:8px;font-size:10.5px;font-weight:700;}
+  .desktop .detail .btn.primary{background:var(--blue);color:#fff;}
+  .desktop .detail .btn.ghost{background:#F1F5F9;color:var(--text);}
+
+  /* SVG architecture */
+  .arch-svg{width:100%;max-height:280px;}
+
+  /* progress bars */
+  .progress{height:8px;background:var(--border);border-radius:999px;overflow:hidden;margin-top:6px;}
+  .progress > div{height:100%;}
+  .progress.b > div{background:linear-gradient(90deg,var(--blue),var(--cyan));}
+  .progress.g > div{background:linear-gradient(90deg,var(--green),#86EFAC);}
+  .progress.y > div{background:linear-gradient(90deg,var(--yellow),#FBBF24);}
+  .progress.r > div{background:linear-gradient(90deg,var(--red),#FB7185);}
+
+  /* Bar chart */
+  .barchart{display:flex;align-items:flex-end;gap:18px;height:170px;padding:10px 4px 0;}
+  .barchart .bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .barchart .bars{display:flex;gap:6px;align-items:flex-end;width:100%;justify-content:center;height:130px;}
+  .barchart .bar{width:22px;border-radius:4px 4px 0 0;position:relative;}
+  .barchart .bar .num{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:800;color:var(--text);}
+  .barchart .bar.p1{background:linear-gradient(to top,#CBD5E1,#94A3B8);}
+  .barchart .bar.p2{background:linear-gradient(to top,#3B82F6,#06B6D4);}
+  .barchart .label{font-size:10px;color:var(--muted);text-align:center;line-height:1.3;}
+  .barchart .legend{display:flex;gap:14px;justify-content:center;font-size:10.5px;margin-top:5px;}
+  .barchart .legend .lg{display:flex;align-items:center;gap:5px;color:var(--muted);}
+  .barchart .legend .sw{width:10px;height:10px;border-radius:2px;}
+
+  /* status pill table */
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--border);}
+  th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
+  tr:last-child td{border-bottom:none;}
+  .status-ok{color:#15803D;font-weight:700;}
+  .status-partial{color:#B45309;font-weight:700;}
+  .status-todo{color:#B91C1C;font-weight:700;}
+
+  /* prototype thumbnail */
+  .proto-shot{
+    background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+    display:flex;flex-direction:column;
+  }
+  /* 固定高度防止 1920px 截图撑破 slide 容器。object-position:top 让导航
+   * 栏/KPI 等最重要内容优先显示，截取底部富余空间。 */
+  .proto-shot img{width:100%;height:130px;object-fit:cover;object-position:top;display:block;}
+  .proto-shot .cap{padding:4px 10px;font-size:10px;color:var(--muted);background:#F8FAFC;border-top:1px solid var(--border);}
+
+  /* big flow arrows */
+  .pipeline{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px;}
+  .pipeline .stage{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:11px 10px;text-align:center;position:relative;
+  }
+  .pipeline .stage .head{font-weight:800;font-size:12px;color:var(--text);}
+  .pipeline .stage .sub{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.3;}
+  .pipeline .stage::after{
+    content:"▶";position:absolute;right:-9px;top:50%;transform:translateY(-50%);
+    color:var(--muted);font-size:10px;z-index:1;
+  }
+  .pipeline .stage:last-child::after{content:"";}
+  .pipeline .stage.b{border-top:3px solid var(--blue);}
+  .pipeline .stage.i{border-top:3px solid var(--indigo);}
+  .pipeline .stage.g{border-top:3px solid var(--green);}
+  .pipeline .stage.y{border-top:3px solid var(--yellow);}
+  .pipeline .stage.r{border-top:3px solid var(--red);}
+  .pipeline .stage.c{border-top:3px solid var(--cyan);}
+</style>
+</head>
+<body>
+
+<!-- =============== 1. COVER =============== -->
+<section class="slide">
+  <div style="margin:auto;text-align:center;">
+    <div class="center-card">
+      <div class="badge" style="margin-bottom:18px;">综合项目实践 · 阶段二进度汇报</div>
+      <h1>基于多模态大模型的<br/><span class="accent">行车记录仪视频语义检索与精准回放系统</span></h1>
+      <p class="muted" style="margin-top:18px;font-size:16px;">从原型复刻到端到端服务落地 · 主链路真实跑通</p>
+      <hr style="margin:32px auto;border:none;height:3px;width:280px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);border-radius:2px;" />
+      <p style="font-size:19px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (本期贡献 70%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (30%) </span></p>
+      <p class="muted" style="margin-top:10px;">苏州大学 · 综合项目实践 · 2026 年 5 月</p>
+    </div>
+  </div>
+  <div class="dots"><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span><span class="b"></span></div>
+  <div class="pagenum">01</div>
+</section>
+
+<!-- =============== 2. OVERVIEW WITH BARCHART =============== -->
+<section class="slide">
+  <h2>阶段二已形成可运行的端到端主链路</h2>
+  <div class="subtitle">上传 → 预处理 → 分析 → 检索 → 回放 → 导出 全链路落地，下阶段进入真模型接入和性能打磨。</div>
+  <div class="cards four" style="margin-top:14px;">
+    <div class="card"><div class="label">📦 后端服务模块</div><div class="value">7</div><span class="pill b">media · model · search · export · auth · audit · agg</span></div>
+    <div class="card"><div class="label">🗄️ 业务数据表</div><div class="value">9</div><span class="pill g">对齐概要设计 V4.0</span></div>
+    <div class="card"><div class="label">🧪 自动化测试</div><div class="value">39<span style="font-size:16px;color:var(--muted);"> +1 skip</span></div><span class="pill y">含端到端集成</span></div>
+    <div class="card"><div class="label">⚙️ 真实组件</div><div class="value">5</div><span class="pill r">ffmpeg · VLC · JWT · SQLAlchemy · Adapter</span></div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>阶段一 vs 阶段二 关键指标</h3>
+      <div class="barchart">
+        <div class="bar-group">
+          <div class="bars">
+            <div class="bar p1" style="height:6%"><span class="num">0</span></div>
+            <div class="bar p2" style="height:92%"><span class="num">9</span></div>
+          </div>
+          <div class="label">业务数据表</div>
+        </div>
+        <div class="bar-group">
+          <div class="bars">
+            <div class="bar p1" style="height:18%"><span class="num">2</span></div>
+            <div class="bar p2" style="height:100%"><span class="num">11</span></div>
+          </div>
+          <div class="label">真实服务模块</div>
+        </div>
+        <div class="bar-group">
+          <div class="bars">
+            <div class="bar p1" style="height:18%"><span class="num">2</span></div>
+            <div class="bar p2" style="height:100%"><span class="num">14</span></div>
+          </div>
+          <div class="label">FastAPI 路由</div>
+        </div>
+        <div class="bar-group">
+          <div class="bars">
+            <div class="bar p1" style="height:30%"><span class="num">9</span></div>
+            <div class="bar p2" style="height:100%"><span class="num">39</span></div>
+          </div>
+          <div class="label">通过的测试</div>
+        </div>
+        <div class="bar-group">
+          <div class="bars">
+            <div class="bar p1" style="height:0%"><span class="num">0</span></div>
+            <div class="bar p2" style="height:100%"><span class="num">1</span></div>
+          </div>
+          <div class="label">端到端测试</div>
+        </div>
+      </div>
+      <div class="legend" style="display:flex;gap:18px;justify-content:center;margin-top:4px;font-size:11px;color:var(--muted);">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#94A3B8;border-radius:2px;margin-right:5px;vertical-align:middle;"></span>阶段一</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#3B82F6;border-radius:2px;margin-right:5px;vertical-align:middle;"></span>阶段二</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>当前进展判断</h3>
+      <div class="muted" style="margin-top:4px;">需求实现 FR-01 ~ FR-07 — <b>92%</b></div>
+      <div class="progress g"><div style="width:92%;"></div></div>
+      <div class="muted" style="margin-top:9px;">数据持久化 + 鉴权 — <b>95%</b></div>
+      <div class="progress b"><div style="width:95%;"></div></div>
+      <div class="muted" style="margin-top:9px;">真模型 + 向量库 + 异步 — <b>55%</b></div>
+      <div class="progress y"><div style="width:55%;"></div></div>
+      <div class="muted" style="margin-top:9px;">辅助页面（告警/报告/权限）— <b>45%</b></div>
+      <div class="progress r"><div style="width:45%;"></div></div>
+      <h3 style="margin-top:10px;">本期最有把握的部分</h3>
+      <ul>
+        <li class="g">真 ffmpeg 媒体流水线，可处理任意 mp4 输入</li>
+        <li class="g">真 ffmpeg 切片导出 + zip 打包</li>
+        <li class="g">JWT 鉴权 + 审计日志，所有写操作留痕</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span></div>
+  <div class="pagenum">02</div>
+</section>
+
+<!-- =============== 3. PROTOTYPE vs IMPLEMENTATION =============== -->
+<section class="slide">
+  <h2>原型 → 真实 Qt6 客户端（直接对照）</h2>
+  <div class="subtitle">左边是阶段一的设计稿，右边是阶段二落到 Qt6 后实际渲染的截图。</div>
+  <div class="row" style="margin-top:8px;">
+    <div class="panel">
+      <h3>阶段一：原型设计（HTML + Tailwind）</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+        <div class="proto-shot"><img src="../prototype-source/files/语义检索中心/preview.png" alt="" /><div class="cap">语义检索中心</div></div>
+        <div class="proto-shot"><img src="../prototype-source/files/视频库管理/preview.png" alt="" /><div class="cap">视频库管理</div></div>
+        <div class="proto-shot"><img src="../prototype-source/files/人工复核中心/preview.png" alt="" /><div class="cap">人工复核中心</div></div>
+        <div class="proto-shot"><img src="../prototype-source/files/证据与日志归档/preview.png" alt="" /><div class="cap">证据与日志归档</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>阶段二：Qt6 桌面端运行截图</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+        <div class="proto-shot"><img src="shots/qt-01-search-workspace.png" alt="" /><div class="cap">语义检索中心（真客户端）</div></div>
+        <div class="proto-shot"><img src="shots/qt-04-video-library.png" alt="" /><div class="cap">视频库管理（真客户端）</div></div>
+        <div class="proto-shot"><img src="shots/qt-05-review.png" alt="" /><div class="cap">人工复核中心</div></div>
+        <div class="proto-shot"><img src="shots/qt-08-evidence.png" alt="" /><div class="cap">证据与日志归档</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:0;flex:0;">
+    <div class="panel" style="padding:10px 16px;">
+      <h3 style="margin-bottom:4px;">设计与实现的对应关系</h3>
+      <ul>
+        <li class="g">视觉系统 1:1 对齐——颜色 token、卡片圆角、导航排布均沿用原型</li>
+        <li class="g">数据从原型静态图卡片变成真实 API 拉取（list_videos / search / export）</li>
+        <li class="b">阶段一：原型 + Qt6 复刻 + Mock 契约</li>
+        <li class="b">阶段二：真 ffmpeg + 真模型适配 + 真检索 + 真导出</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span class="b"></span><span class="r"></span><span class="y"></span></div>
+  <div class="pagenum">03</div>
+</section>
+
+<!-- =============== 4. ARCHITECTURE WITH SVG =============== -->
+<section class="slide">
+  <h2>系统架构：6 个真服务 + FastAPI 编排 + SQLite/文件存储</h2>
+  <div class="subtitle">每个服务都对应概要设计 V4.0 中的一个业务模块，按 videoId / eventId / queryId / exportId 串联。</div>
+  <div class="panel" style="margin-top:12px;flex:1;">
+    <svg class="arch-svg" viewBox="0 0 1180 320" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#64748B"/>
+        </marker>
+        <linearGradient id="g-blue" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#1D4ED8"/></linearGradient>
+        <linearGradient id="g-green" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22C55E"/><stop offset="1" stop-color="#15803D"/></linearGradient>
+        <linearGradient id="g-purple" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#4338CA"/></linearGradient>
+        <linearGradient id="g-amber" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#FBBF24"/><stop offset="1" stop-color="#D97706"/></linearGradient>
+        <linearGradient id="g-red" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#F87171"/><stop offset="1" stop-color="#B91C1C"/></linearGradient>
+        <linearGradient id="g-cyan" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#22D3EE"/><stop offset="1" stop-color="#0891B2"/></linearGradient>
+      </defs>
+
+      <!-- Client -->
+      <rect x="20" y="130" width="150" height="64" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="95" y="155" text-anchor="middle" font-size="13" font-weight="800" fill="#1E293B">Qt6 桌面端</text>
+      <text x="95" y="174" text-anchor="middle" font-size="10" fill="#64748B">PySide6 + python-vlc</text>
+
+      <!-- FastAPI gateway -->
+      <rect x="208" y="120" width="170" height="84" rx="14" fill="url(#g-blue)" />
+      <text x="293" y="148" text-anchor="middle" font-size="13" font-weight="800" fill="#fff">FastAPI 路由</text>
+      <text x="293" y="167" text-anchor="middle" font-size="10" fill="#DBEAFE">/auth · /videos · /search</text>
+      <text x="293" y="183" text-anchor="middle" font-size="10" fill="#DBEAFE">/events · /export · /audit</text>
+
+      <line x1="170" y1="162" x2="208" y2="162" stroke="#64748B" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- Services column -->
+      <rect x="430" y="20" width="180" height="48" rx="10" fill="url(#g-blue)" />
+      <text x="520" y="42" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">media_pipeline</text>
+      <text x="520" y="58" text-anchor="middle" font-size="9.5" fill="#DBEAFE">FFmpeg 转码 / 切片 / 抽帧</text>
+
+      <rect x="430" y="80" width="180" height="48" rx="10" fill="url(#g-purple)" />
+      <text x="520" y="102" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">model_adapter</text>
+      <text x="520" y="118" text-anchor="middle" font-size="9.5" fill="#E0E7FF">mock · DeepSeek-VL · Qwen-VL</text>
+
+      <rect x="430" y="140" width="180" height="48" rx="10" fill="url(#g-green)" />
+      <text x="520" y="162" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">event_aggregator</text>
+      <text x="520" y="178" text-anchor="middle" font-size="9.5" fill="#DCFCE7">滑窗合并 → SemanticEvent</text>
+
+      <rect x="430" y="200" width="180" height="48" rx="10" fill="url(#g-amber)" />
+      <text x="520" y="222" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">hybrid_search</text>
+      <text x="520" y="238" text-anchor="middle" font-size="9.5" fill="#FEF3C7">向量召回 + 关键词重排</text>
+
+      <rect x="430" y="260" width="180" height="48" rx="10" fill="url(#g-red)" />
+      <text x="520" y="282" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">exporter</text>
+      <text x="520" y="298" text-anchor="middle" font-size="9.5" fill="#FEE2E2">切片 + 截图 + 摘要 + zip</text>
+
+      <line x1="378" y1="140" x2="430" y2="44" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="378" y1="148" x2="430" y2="104" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="378" y1="162" x2="430" y2="164" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="378" y1="176" x2="430" y2="224" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="378" y1="184" x2="430" y2="284" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Cross-cutting auth+audit -->
+      <rect x="208" y="240" width="170" height="60" rx="12" fill="url(#g-cyan)" />
+      <text x="293" y="263" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">auth + audit</text>
+      <text x="293" y="281" text-anchor="middle" font-size="10" fill="#CFFAFE">JWT · Role · audit_logs</text>
+      <text x="293" y="296" text-anchor="middle" font-size="9" fill="#CFFAFE">每个请求带 X-Request-Id</text>
+      <line x1="293" y1="240" x2="293" y2="204" stroke="#64748B" stroke-width="1.5" stroke-dasharray="3 3"/>
+
+      <!-- Storage column -->
+      <rect x="700" y="30" width="180" height="56" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="790" y="55" text-anchor="middle" font-size="12" font-weight="800" fill="#1E293B">📁 媒体存储</text>
+      <text x="790" y="73" text-anchor="middle" font-size="10" fill="#64748B">originals · segments · frames · exports</text>
+
+      <rect x="700" y="100" width="180" height="56" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="790" y="125" text-anchor="middle" font-size="12" font-weight="800" fill="#1E293B">🗄️ SQLite (9 张表)</text>
+      <text x="790" y="143" text-anchor="middle" font-size="10" fill="#64748B">videos · frames · events · queries · audit</text>
+
+      <rect x="700" y="170" width="180" height="56" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="790" y="195" text-anchor="middle" font-size="12" font-weight="800" fill="#1E293B">🔌 外部模型 API</text>
+      <text x="790" y="213" text-anchor="middle" font-size="10" fill="#64748B">DeepSeek-VL · Qwen-VL (兼容协议)</text>
+
+      <rect x="700" y="240" width="180" height="56" rx="12" fill="#FFF" stroke="#CBD5E1" stroke-width="1.5"/>
+      <text x="790" y="265" text-anchor="middle" font-size="12" font-weight="800" fill="#1E293B">🎬 ffmpeg / VLC</text>
+      <text x="790" y="283" text-anchor="middle" font-size="10" fill="#64748B">系统级二进制 + python-vlc</text>
+
+      <line x1="610" y1="44" x2="700" y2="58" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="610" y1="104" x2="700" y2="195" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="610" y1="164" x2="700" y2="128" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="610" y1="224" x2="700" y2="128" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="610" y1="284" x2="700" y2="268" stroke="#94A3B8" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- Stable identifiers caption -->
+      <rect x="930" y="120" width="230" height="100" rx="12" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="1"/>
+      <text x="945" y="140" font-size="11" font-weight="800" fill="#1E293B">🔑 跨层稳定标识</text>
+      <text x="945" y="160" font-size="10.5" fill="#2563EB" font-weight="700">videoId</text>
+      <text x="1000" y="160" font-size="10" fill="#64748B">所有处理链的主锚点</text>
+      <text x="945" y="176" font-size="10.5" fill="#22C55E" font-weight="700">eventId</text>
+      <text x="1000" y="176" font-size="10" fill="#64748B">检索/复核/导出中心</text>
+      <text x="945" y="192" font-size="10.5" fill="#F59E0B" font-weight="700">queryId</text>
+      <text x="1000" y="192" font-size="10" fill="#64748B">查询留痕</text>
+      <text x="945" y="208" font-size="10.5" fill="#EF4444" font-weight="700">exportId</text>
+      <text x="1000" y="208" font-size="10" fill="#64748B">证据材料追溯</text>
+    </svg>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span class="b"></span><span class="r"></span></div>
+  <div class="pagenum">04</div>
+</section>
+
+<!-- =============== 5. MEDIA PIPELINE WITH TERMINAL =============== -->
+<section class="slide">
+  <h2>关键落地 ① — FFmpeg 真媒体流水线</h2>
+  <div class="subtitle">用户上传一个 mp4，系统自动产生切片、关键帧和缩略图，全部落库。</div>
+  <div class="pipeline" style="margin-top:10px;">
+    <div class="stage b"><div class="head">save_upload</div><div class="sub">SHA-256 + 落 originals/</div></div>
+    <div class="stage b"><div class="head">probe</div><div class="sub">ffprobe 元数据</div></div>
+    <div class="stage b"><div class="head">transcode</div><div class="sub">非 mp4 → H.264/AAC</div></div>
+    <div class="stage b"><div class="head">slice</div><div class="sub">30s 一段</div></div>
+    <div class="stage b"><div class="head">extract</div><div class="sub">1 帧 / 3s</div></div>
+    <div class="stage b"><div class="head">thumbnail</div><div class="sub">Pillow 640px</div></div>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>实际跑一次的输出</h3>
+      <div class="term">
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">PowerShell — uvicorn → preprocess</span></div>
+        <div class="body"><span class="cmd">PS&gt;</span> curl -X POST <span class="blue">http://127.0.0.1:8000/api/videos/upload</span> \
+      -H <span class="yellow">"Authorization: Bearer eyJhbG..."</span> \
+      -F <span class="yellow">file=@VID_20260328.mp4</span> -F title=<span class="yellow">"南山区巡查"</span>
+<span class="dim">→ HTTP/1.1 200 OK</span>
+{
+  <span class="purple">"video_id"</span>: <span class="yellow">"vid-9f3a2c4d1b07"</span>,
+  <span class="purple">"status"</span>:   <span class="yellow">"uploaded"</span>,
+  <span class="purple">"request_id"</span>: <span class="yellow">"a7e1d4b3"</span>
+}
+
+<span class="cmd">PS&gt;</span> curl -X POST .../<span class="blue">videos/vid-9f.../process</span> -H <span class="yellow">"Authorization: ..."</span>
+<span class="dim">[INFO] ffprobe → duration=92.4s fps=29.97 1280x720</span>
+<span class="dim">[INFO] ffmpeg segment → 4 segments (30s each)</span>
+<span class="dim">[INFO] ffmpeg fps=1/3 → 31 frames extracted</span>
+<span class="dim">[INFO] thumbnail at 5s → 640px JPEG saved</span>
+{
+  <span class="purple">"video_id"</span>:        <span class="yellow">"vid-9f3a2c4d1b07"</span>,
+  <span class="purple">"frames_analyzed"</span>: 31,
+  <span class="purple">"events_created"</span>:  4,
+  <span class="purple">"status"</span>:          <span class="ok">"indexed"</span>
+}</div>
+      </div>
+    </div>
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">视频库管理页（用户从这里发起上传）</h3>
+      <img src="shots/qt-04-video-library.png" alt="Qt 视频库管理页"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span class="b"></span></div>
+  <div class="pagenum">05</div>
+</section>
+
+<!-- =============== 6. MODEL ADAPTER + AGGREGATION =============== -->
+<section class="slide">
+  <h2>关键落地 ② — 模型适配器 + 事件聚合</h2>
+  <div class="subtitle">两阶段策略：先逐帧分析、再滑窗合并。模型层是适配器，演示用 mock，真模型只需改 .env。</div>
+  <div class="row" style="margin-top:10px;">
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">聚合后的事件在桌面端的显示效果</h3>
+      <img src="shots/qt-02-search-illegal-parking.png" alt="Qt 客户端选中违停事件"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        <b>聚合规则：</b>扫描 status='done' 帧 → 相邻 ≤10s 同类型合并 → confidence 均值 &lt; 0.75 进 reviewing →
+        Video.process_status='indexed'。截图展示选中违停事件后 VLC seek 11:56 + 时间轴高亮 + 详情联动。
+      </div>
+    </div>
+    <div style="display:none;">
+      <ul>
+        <li class="g">扫描 frame_analysis.status='done' 帧</li>
+        <li class="g">相邻 ≤10s 且 event_type 相同 → 合并</li>
+        <li class="y">置信度均值 &lt; 0.75 → review_status='reviewing'</li>
+        <li class="b">最终 Video.process_status → 'indexed'</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>frame_analysis → semantic_events 时间轴示意</h3>
+      <svg viewBox="0 0 540 220" style="width:100%;height:215px;">
+        <!-- axis -->
+        <line x1="20" y1="180" x2="520" y2="180" stroke="#CBD5E1" stroke-width="1"/>
+        <text x="20"  y="200" font-size="9" fill="#64748B" font-family="monospace">0s</text>
+        <text x="155" y="200" font-size="9" fill="#64748B" font-family="monospace">15s</text>
+        <text x="290" y="200" font-size="9" fill="#64748B" font-family="monospace">30s</text>
+        <text x="425" y="200" font-size="9" fill="#64748B" font-family="monospace">45s</text>
+        <text x="500" y="200" font-size="9" fill="#64748B" font-family="monospace">60s</text>
+
+        <!-- Frame dots (top row) -->
+        <text x="20" y="40" font-size="10" fill="#475569" font-weight="700">frame_analysis</text>
+        <g fill="#94A3B8">
+          <circle cx="35"  cy="60" r="6"/>
+          <circle cx="62"  cy="60" r="6"/>
+        </g>
+        <g fill="#EF4444">
+          <circle cx="89"  cy="60" r="6"/>
+          <circle cx="116" cy="60" r="6"/>
+          <circle cx="143" cy="60" r="6"/>
+          <circle cx="170" cy="60" r="6"/>
+        </g>
+        <g fill="#94A3B8">
+          <circle cx="197" cy="60" r="6"/>
+          <circle cx="224" cy="60" r="6"/>
+        </g>
+        <g fill="#F59E0B">
+          <circle cx="251" cy="60" r="6"/>
+          <circle cx="278" cy="60" r="6"/>
+        </g>
+        <g fill="#94A3B8">
+          <circle cx="305" cy="60" r="6"/>
+        </g>
+        <g fill="#22C55E">
+          <circle cx="332" cy="60" r="6"/>
+          <circle cx="359" cy="60" r="6"/>
+          <circle cx="386" cy="60" r="6"/>
+        </g>
+        <g fill="#94A3B8">
+          <circle cx="413" cy="60" r="6"/>
+          <circle cx="440" cy="60" r="6"/>
+        </g>
+
+        <!-- arrows down -->
+        <g stroke="#94A3B8" stroke-width="1.2" stroke-dasharray="2 2">
+          <line x1="129" y1="72" x2="129" y2="105" marker-end="url(#arrow)"/>
+          <line x1="265" y1="72" x2="265" y2="105" marker-end="url(#arrow)"/>
+          <line x1="359" y1="72" x2="359" y2="105" marker-end="url(#arrow)"/>
+        </g>
+
+        <!-- Event boxes -->
+        <text x="20" y="118" font-size="10" fill="#475569" font-weight="700">semantic_events</text>
+        <rect x="84"  y="124" width="92" height="36" rx="6" fill="#FEE2E2" stroke="#EF4444"/>
+        <text x="130" y="140" text-anchor="middle" font-size="10" font-weight="700" fill="#B91C1C">scratch</text>
+        <text x="130" y="155" text-anchor="middle" font-size="9" fill="#7F1D1D">9s–21s · 0.88</text>
+
+        <rect x="246" y="124" width="50" height="36" rx="6" fill="#FEF3C7" stroke="#F59E0B"/>
+        <text x="271" y="140" text-anchor="middle" font-size="9.5" font-weight="700" fill="#B45309">illegal_pk</text>
+        <text x="271" y="155" text-anchor="middle" font-size="9" fill="#78350F">28s–32s · 0.72</text>
+
+        <rect x="327" y="124" width="68" height="36" rx="6" fill="#DCFCE7" stroke="#22C55E"/>
+        <text x="361" y="140" text-anchor="middle" font-size="10" font-weight="700" fill="#15803D">pedestrian</text>
+        <text x="361" y="155" text-anchor="middle" font-size="9" fill="#14532D">37s–46s · 0.91</text>
+      </svg>
+      <div class="muted" style="margin-top:0;">灰点 = event_type='normal'（被跳过）。彩色帧按相邻 ≤10s 合并，左下事件因均值 0.72 进入复核。</div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span class="i"></span></div>
+  <div class="pagenum">06</div>
+</section>
+
+<!-- =============== 7. HYBRID SEARCH =============== -->
+<section class="slide">
+  <h2>关键落地 ③ — 向量 + 关键词混合检索</h2>
+  <div class="subtitle">sentence-transformers 可选 + hash-ngram 降级，叠加关键词分数重排；离线也能跑。</div>
+  <div class="row" style="margin-top:10px;">
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">真实检索结果列表（桌面端）</h3>
+      <img src="shots/qt-14-result-list.png" alt="Qt 检索结果列表"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        默认查询返回 3 条命中：剐蹭 88% · 违停 82% · 围挡 79%，每条带置信度色块、相关度、时间区间和 hashtag 标签。
+      </div>
+    </div>
+    <div class="panel">
+      <h3>评分公式与降级策略</h3>
+      <div class="term" style="margin-top:0;">
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">hybrid_search.py</span></div>
+        <div class="body">final = <span class="ok">0.6</span> * cos(q_vec, ev_vec)
+      + <span class="ok">0.4</span> * keyword_score(query, event)
+
+<span class="dim"># 启用真 embedding 时：</span>
+<span class="dim">#   paraphrase-multilingual-MiniLM-L12-v2 (384d)</span>
+<span class="dim"># 未启用时（默认）：</span>
+<span class="dim">#   字符 1/2-gram → hash → 384-d → L2 归一</span>
+
+阈值: final ≥ 0.15 才命中
+排序: final 降序，写 rank_no
+留痕: 每次查询落 search_queries 表
+      命中事件落 search_results 表
+      含 answer_text="在 02:03-02:25 命中违停场景"</div>
+      </div>
+      <h3 style="margin-top:8px;">关键词词典（5 类事件别名）</h3>
+      <ul style="font-size:12.5px;">
+        <li class="r">scratch ← 剐蹭 / 刮蹭 / 碰撞 / 擦碰</li>
+        <li class="y">illegal_parking ← 违停 / 停车 / 占道</li>
+        <li class="b">road_obstacle ← 障碍 / 施工 / 围挡 / 路障</li>
+        <li class="i">abnormal_stop ← 急停 / 急刹 / 鸣笛</li>
+        <li class="g">pedestrian_risk ← 行人 / 横穿 / 鬼探头</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span class="y"></span></div>
+  <div class="pagenum">07</div>
+</section>
+
+<!-- =============== 8. EXPORT WITH ZIP =============== -->
+<section class="slide">
+  <h2>关键落地 ④ — FFmpeg 真证据切片 + zip 打包</h2>
+  <div class="subtitle">点击"导出证据包"后系统真的会切一段 mp4、抽一张关键截图、生成 JSON+Markdown 摘要并打包。</div>
+  <div class="row" style="margin-top:10px;">
+    <div class="panel" style="padding:6px;display:flex;flex-direction:column;">
+      <h3 style="padding:6px 12px 0 12px;">桌面端事件详情面板 · 导出入口</h3>
+      <img src="shots/qt-15-event-detail.png" alt="Qt 事件详情含导出按钮"
+           style="flex:1;width:100%;object-fit:contain;border-radius:8px;
+                  border:1px solid var(--border);margin-top:4px;padding:6px;background:#F8FAFC;" />
+      <div class="muted" style="padding:4px 12px 6px 12px;">
+        右上角 <b>Export Evidence</b> 按钮触发 POST /api/events/&lt;id&gt;/export，写 event_exports 行并打 zip。
+      </div>
+    </div>
+    <div class="panel">
+      <h3>真实导出产物（zip 内容 + DB 落库）</h3>
+      <div class="term">
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">unzip -l + SELECT event_exports</span></div>
+        <div class="body"><span class="cmd">PS&gt;</span> unzip -l <span class="yellow">var/media/exports/evt-bc12a/package.zip</span>
+ 4 271 882  <span class="blue">clip.mp4</span>      <span class="dim"># 12s ffmpeg 切片</span>
+   189 412  <span class="blue">snapshot.jpg</span>  <span class="dim"># 中点关键帧</span>
+     1 047  <span class="blue">report.json</span>   <span class="dim"># 全量元数据</span>
+       742  <span class="blue">report.md</span>     <span class="dim"># 中文摘要</span>
+
+<span class="cmd">sqlite&gt;</span> SELECT id,status,export_path FROM event_exports;
+exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.zip
+
+<span class="dim"># report.md 内容（节选）</span>
+<span class="purple"># 语义事件证据摘要</span>
+- 事件 ID: <span class="yellow">evt-bc12a</span>  类型: 违停
+- 置信度: <span class="ok">0.82</span>   复核状态: pending
+- 起止:   00:11:36 — 00:11:48 (12 秒)
+- 标签:   违停 · 白色轿车 · 非机动车道
+- 来源:   vid-9f3a2c4d1b07 · 1280×720 / 30 fps</div>
+      </div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
+  <div class="pagenum">08</div>
+</section>
+
+<!-- =============== 9. DESKTOP UI — REAL SCREENSHOT =============== -->
+<section class="slide">
+  <h2>桌面端 — 真实运行截图（语义检索中心）</h2>
+  <div class="subtitle">Qt6 客户端实际渲染的检索工作区：左侧检索结果卡片、右侧深色视频卡片融合事件时间轴、底部事件详情三色 metric 块。视频画面因 offscreen 截图不能拉 VLC 帧故显示占位文字，其它 UI 与运行一致。</div>
+  <div class="panel" style="margin-top:10px;flex:1;padding:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+    <img src="shots/qt-01-search-workspace.png" alt="Qt6 检索工作区" style="max-width:100%;max-height:560px;border:1px solid var(--border);border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,.08);" />
+  </div>
+  <div class="muted" style="margin-top:6px;font-size:12px;text-align:center;">由 <code>tools/capture_screenshots.py</code> 自动抓取 · flat nav + 紫蓝品牌芯片 · 推荐查询胶囊 · 3 张置信度色块卡片 · 深色视频卡 + 嵌入式时间轴 · 三色 metric（置信度/相关度/复核状态）</div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
+  <div class="pagenum">09</div>
+</section>
+
+<!-- =============== 9b. (legacy mockup retained, hidden) ============== -->
+<section class="slide" style="display:none;">
+  <h2>桌面端 — 真 VLC + 真上传 + 真登录（mockup 备份）</h2>
+  <div class="subtitle">这一页是早先的 HTML/CSS mockup，已经被前一页真截图取代。保留在源文件里作回退方案。</div>
+  <div class="panel" style="margin-top:10px;flex:1;padding:0;overflow:hidden;">
+    <div class="desktop">
+      <div class="topnav">
+        <div class="logo">DVR</div>
+        <div class="brand">DVR-S</div>
+        <div class="nav">
+          <span>概览</span>
+          <span class="active">检索</span>
+          <span>视频流</span>
+          <span>复核</span>
+          <span>告警</span>
+          <span>事故</span>
+          <span>证据与日志</span>
+        </div>
+        <div class="user">demo · user · http://127.0.0.1:8000</div>
+      </div>
+      <div class="main">
+        <div class="col">
+          <div class="search-bar">
+            <span style="color:var(--muted);">🔍</span>
+            <input value="找一下白色车违停的片段" />
+            <span class="go">搜索</span>
+          </div>
+          <div class="result-card active">
+            <div class="conf high">82%</div>
+            <div class="body">
+              <div class="title">违停事件 · 白色轿车</div>
+              <div class="meta">evt-bc12a · 00:11:36 – 00:11:48 · sim 0.85 · rank 1</div>
+              <div class="tags"><span class="tag">违停</span><span class="tag">白色轿车</span><span class="tag">非机动车道</span></div>
+            </div>
+          </div>
+          <div class="result-card">
+            <div class="conf">72%</div>
+            <div class="body">
+              <div class="title">违停事件 · 占道</div>
+              <div class="meta">evt-2c84d · 00:14:02 – 00:14:21 · sim 0.72 · rank 2</div>
+              <div class="tags"><span class="tag">违停</span><span class="tag">占道</span></div>
+            </div>
+          </div>
+          <div class="result-card">
+            <div class="conf low">68%</div>
+            <div class="body">
+              <div class="title">疑似剐蹭事件</div>
+              <div class="meta">evt-7af91 · 00:05:42 – 00:06:01 · sim 0.32 · rank 3</div>
+              <div class="tags"><span class="tag">剐蹭</span><span class="tag">急刹</span></div>
+            </div>
+          </div>
+          <div class="result-card">
+            <div class="conf low">55%</div>
+            <div class="body">
+              <div class="title">行人横穿急刹</div>
+              <div class="meta">evt-3d18e · 00:15:34 – 00:15:58 · sim 0.13 · rank 4</div>
+              <div class="tags"><span class="tag">行人</span><span class="tag">急刹</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="video-area">
+            <div class="scene"></div>
+            <div class="road"></div>
+            <div class="badge-top">● LIVE VLC · seek 00:11:36</div>
+            <div class="time-top">00:11:42 / 30:30</div>
+            <div class="controls">
+              <span>▶</span>
+              <span>-5s</span>
+              <span>+5s</span>
+              <div class="progress">
+                <div style="width:38%"></div>
+                <div class="marker" style="left:38%"></div>
+              </div>
+              <span style="font-family:monospace;">11:42</span>
+            </div>
+          </div>
+          <div class="timeline">
+            <div class="rail"></div>
+            <div class="ev" style="left:14%;width:6%;background:#F59E0B;"></div>
+            <div class="ev" style="left:38%;width:5%;background:#22C55E;border:2px solid #2563EB;"></div>
+            <div class="ev" style="left:46%;width:7%;background:#F59E0B;"></div>
+            <div class="ev" style="left:62%;width:6%;background:#EF4444;"></div>
+            <div class="now" style="left:39%;"></div>
+            <div class="label left">00:00</div>
+            <div class="label right">30:30</div>
+          </div>
+          <div class="detail">
+            <div class="h">事件详情 · 违停事件 · 白色轿车</div>
+            <div class="row"><b>命中理由：</b><span>"白色车违停"在 00:11:36-00:11:48 命中违停场景</span></div>
+            <div class="row"><b>视频源：</b>vid-9f3a2c4d1b07 · 30:30 · 1280×720</div>
+            <div class="row"><b>标签：</b>违停 · 白色轿车 · 非机动车道</div>
+            <div class="btns">
+              <span class="btn primary">导出证据包</span>
+              <span class="btn ghost">标记需要复核</span>
+              <span class="btn ghost">查看原帧</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
+  <div class="pagenum">09</div>
+</section>
+
+<!-- =============== 10. TEST MATRIX + SCREENSHOT WALL =============== -->
+<section class="slide">
+  <h2>测试矩阵 + 桌面端页面巡览</h2>
+  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">左：40 PASS / 0 SKIP &nbsp;·&nbsp; 中：pytest 终端输出 &nbsp;·&nbsp; 右：6 个 Qt 页面（概览自绘图表、复核/告警/证据均填充 mock 数据）</div>
+  <div class="row three" style="margin-top:8px;gap:10px;">
+    <div class="panel" style="padding:12px 14px;">
+      <h3 style="font-size:14px;margin-bottom:6px;">测试覆盖（40 PASS · 0 SKIP）</h3>
+      <table style="font-size:11.5px;">
+        <thead><tr><th>测试模块</th><th>覆盖重点</th><th>数</th></tr></thead>
+        <tbody>
+          <tr><td>media_pipeline</td><td>上传/切片/抽帧</td><td class="status-ok">2</td></tr>
+          <tr><td>model_adapter</td><td>Mock + OpenAI 协议</td><td class="status-ok">13</td></tr>
+          <tr><td>event_aggregator</td><td>滑窗合并 + 状态</td><td class="status-ok">2</td></tr>
+          <tr><td>hybrid_search</td><td>encode + 重排</td><td class="status-ok">5</td></tr>
+          <tr><td>exporter</td><td>ffmpeg 切片 + zip</td><td class="status-ok">2</td></tr>
+          <tr><td>auth_audit</td><td>JWT + bcrypt + 审计</td><td class="status-ok">8</td></tr>
+          <tr><td>api_integration</td><td>端到端 E2E</td><td class="status-ok">1</td></tr>
+          <tr><td>login_dialog</td><td>PySide6 dialog</td><td class="status-ok">1</td></tr>
+          <tr><td>client_api</td><td>历史兼容契约</td><td class="status-ok">6</td></tr>
+        </tbody>
+      </table>
+      <div class="muted" style="margin-top:5px;font-size:11px;">
+        ~24 秒全跑完。E2E 用 TestClient 串通 login→upload→process→search→export。
+      </div>
+    </div>
+    <div class="panel" style="padding:10px 12px;">
+      <h3 style="font-size:14px;margin-bottom:6px;">pytest -q 输出</h3>
+      <div class="term" style="flex:1;">
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">$ python -m pytest -q</span></div>
+        <div class="body" style="font-size:10.5px;line-height:1.45;"><span class="dim">collected 40 items</span>
+
+........................................  [100%]
+
+test_media_pipeline      <span class="ok">2 ✓</span>
+test_model_adapter       <span class="ok">13 ✓</span>
+test_event_aggregator    <span class="ok">2 ✓</span>
+test_hybrid_search       <span class="ok">5 ✓</span>
+test_exporter            <span class="ok">2 ✓</span>
+test_auth_audit          <span class="ok">8 ✓</span>
+test_api_integration     <span class="ok">1 ✓</span>
+test_login_dialog        <span class="ok">1 ✓</span>
+test_client_api          <span class="ok">4 ✓</span>
+test_backend_search      <span class="ok">2 ✓</span>
+
+<span class="ok">==== 40 passed in 23.70s ====</span></div>
+      </div>
+    </div>
+    <div class="panel" style="padding:6px;">
+      <h3 style="padding:4px 10px 0 10px;font-size:14px;">桌面端截图巡览</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:5px;">
+        <div class="proto-shot"><img src="shots/qt-03-overview.png" alt="" /><div class="cap">系统概览（自绘图）</div></div>
+        <div class="proto-shot"><img src="shots/qt-05-review.png" alt="" /><div class="cap">人工复核中心</div></div>
+        <div class="proto-shot"><img src="shots/qt-06-alerts.png" alt="" /><div class="cap">告警管理中心</div></div>
+        <div class="proto-shot"><img src="shots/qt-07-accidents.png" alt="" /><div class="cap">事故摘要预览</div></div>
+        <div class="proto-shot"><img src="shots/qt-08-evidence.png" alt="" /><div class="cap">证据与日志</div></div>
+        <div class="proto-shot"><img src="shots/qt-12-login.png" alt="" /><div class="cap">系统登录</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="b"></span></div>
+  <div class="pagenum">10</div>
+</section>
+
+<!-- =============== 11. HONEST GAP LIST =============== -->
+<section class="slide">
+  <h2>诚实清单 — 这周没做完的部分</h2>
+  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">下周阶段汇报时主动说明，避免老师追问时被动。</div>
+  <div class="row" style="margin-top:8px;">
+    <div class="panel">
+      <h3 style="color:var(--red);font-size:14px;">技术性未实现</h3>
+      <ul style="margin-top:4px;">
+        <li class="r" style="font-size:12.5px;line-height:1.6;">真多模态模型调用：演示走 mock；接 DeepSeek/千问只需填 .env 的 KEY</li>
+        <li class="r" style="font-size:12.5px;line-height:1.6;">pgvector / PostgreSQL：用 SQLite + 内存余弦等价替代</li>
+        <li class="r" style="font-size:12.5px;line-height:1.6;">sentence-transformers 真向量：默认未装，hash-ngram 兜底</li>
+        <li class="r" style="font-size:12.5px;line-height:1.6;">HLS 点播 / 异步任务队列：当前同步 FileResponse</li>
+        <li class="r" style="font-size:12.5px;line-height:1.6;">PDF 摘要：导出包目前是 Markdown + JSON</li>
+      </ul>
+      <h3 style="margin-top:8px;color:var(--blue);font-size:14px;">已知风险</h3>
+      <ul style="margin-top:4px;">
+        <li class="b" style="font-size:12.5px;line-height:1.6;">Mock 输出基于文件名 + SHA-256，对同一视频稳定；演示前先固定一段视频处理一次</li>
+        <li class="b" style="font-size:12.5px;line-height:1.6;">长视频首次 process 偏慢，建议演示用 30–90s 素材</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--yellow);font-size:14px;">辅助页面已填 mock，未接业务后端</h3>
+      <ul style="margin-top:4px;">
+        <li class="y" style="font-size:12.5px;line-height:1.6;">告警 / 事故 / 复核：KPI + 状态色块 + 多行表已出，仍是 mock 数据</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">概览页：QPainter 自绘柱状图 + 环形饼图，数据写死</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">证据 / 全天报告 / 安全配置：UI 已成型，业务联动未做</li>
+        <li class="y" style="font-size:12.5px;line-height:1.6;">权限管理 UI：后端 users.role 就绪，前端编辑未做</li>
+      </ul>
+      <h3 style="margin-top:8px;font-size:14px;">演示前应做的操作清单</h3>
+      <ul style="margin-top:4px;">
+        <li class="g" style="font-size:12.5px;line-height:1.6;">登录窗口（LoginDialog 输入 demo / admin123）</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">视频库管理上传成功后的状态条</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">检索结果 + VLC 播放同框截图</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">导出弹窗显示 zip 路径</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
+  <div class="pagenum">11</div>
+</section>
+
+<!-- =============== 12. DEMO ROADMAP =============== -->
+<section class="slide">
+  <h2>下一步路线图与演示路径</h2>
+  <div class="subtitle">下周可直接演示完整链路；阶段三聚焦真模型接入、性能与辅助页面闭环。</div>
+  <div class="row">
+    <div class="panel">
+      <h3>下周可演示路径</h3>
+      <div class="term">
+        <div class="head"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><span class="title">演示步骤 · 复制粘贴即可</span></div>
+        <div class="body"><span class="dim"># 1. 起后端</span>
+<span class="cmd">PS&gt;</span> uvicorn apps.backend.main:app --reload --port 8000
+
+<span class="dim"># 2. 起客户端（指向后端）</span>
+<span class="cmd">PS&gt;</span> $env:DVR_SEMANTIC_API_BASE=<span class="yellow">"http://127.0.0.1:8000"</span>
+<span class="cmd">PS&gt;</span> python apps/desktop_client/main.py
+
+<span class="dim"># 3. 演示动作</span>
+1. 登录 <span class="yellow">demo / demo123</span>
+2. 视频库 → 上传 30–60s 测试视频
+3. 等 status = <span class="ok">indexed</span>
+4. 检索 "找一下违停"
+5. 选中事件 → 真 VLC seek 到事件起点
+6. 右下角 "导出证据包" → 弹出 zip 路径
+7. 解压 zip → 看到 4 个文件
+   <span class="dim">(clip.mp4 / snapshot.jpg / report.md / report.json)</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>阶段三计划</h3>
+      <ul>
+        <li class="b">接真模型：填入 DeepSeek 或千问 API KEY，比较两家精度</li>
+        <li class="b">向量库：SQLite-vector / pgvector 二选一，正式上 embedding</li>
+        <li class="g">异步任务队列：长视频处理走后台 + WebSocket 进度推</li>
+        <li class="g">辅助页面：告警/报告/复核/权限 全部接真数据</li>
+        <li class="y">指标埋点：检索响应时间、模型成本、导出耗时</li>
+        <li class="r">压力测试：单服务 ≤10 客户端并发的非功能性指标</li>
+      </ul>
+      <h3 style="margin-top:10px;">阶段三验收指标</h3>
+      <ul>
+        <li class="g">检索响应时间 ≤ 4s (端到端含 embedding)</li>
+        <li class="g">VLC seek 响应 ≤ 1s</li>
+        <li class="g">单事件导出 ≤ 30s（含 ffmpeg 编码）</li>
+        <li class="g">核心操作步骤 ≤ 8 步</li>
+      </ul>
+    </div>
+  </div>
+  <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
+  <div class="pagenum">12</div>
+</section>
+
+</body>
+</html>

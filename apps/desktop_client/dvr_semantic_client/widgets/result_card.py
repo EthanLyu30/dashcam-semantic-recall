@@ -1,79 +1,137 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ..models import SemanticEvent
 
 
 class ResultCard(QFrame):
+    """检索结果卡片：左侧大号置信度色块 + 右侧标题/时间/摘要/tags。
+
+    hover 时通过 QGraphicsDropShadowEffect 给出"浮起"阴影感，以补偿
+    Qt 没有 CSS transition 的不足。
+
+    严格保持 ``self.event = event`` 放在构造函数最后赋值——这条不能动，
+    否则会触发 PySide6 6.x 在 Windows 上的构造期 segfault（详见仓库历史）。
+    """
+
     selected = Signal(object)
 
     def __init__(self, event: SemanticEvent, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.event = event
-        self.setObjectName("resultCard")
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setStyleSheet(
-            "#resultCard { background: #FFFFFF; border: 1px solid #E2E8F0; "
-            "border-radius: 14px; }"
-            "#resultCard:hover { border-color: #2563EB; background: #EFF6FF; }"
+        self._selected = False
+        self._confidence_color = "#2563EB" if event.confidence >= 0.85 else "#64748B"
+
+        self.color_bar = QFrame()
+        self.color_bar.setFixedWidth(4)
+        self.color_bar.setMinimumHeight(96)
+
+        confidence = QLabel(f"命中率 {event.confidence_percent}")
+        confidence.setStyleSheet(
+            f"color: {self._confidence_color}; font-size: 10px; "
+            "font-weight: 800; background: transparent; border: none;"
         )
+        event_id = QLabel(event.id[:10].upper())
+        event_id.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        event_id.setStyleSheet(
+            "color: #94A3B8; font-size: 10px; font-family: Consolas, monospace; "
+            "background: transparent; border: none;"
+        )
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta_row.addWidget(confidence)
+        meta_row.addStretch()
+        meta_row.addWidget(event_id)
 
         title = QLabel(event.title)
-        title.setStyleSheet("font-size: 15px; font-weight: 700;")
-        time_label = QLabel(event.time_range)
-        time_label.setProperty("role", "muted")
+        title.setWordWrap(True)
+        title.setStyleSheet(
+            "color: #0F172A; font-size: 14px; font-weight: 800; "
+            "background: transparent; border: none;"
+        )
 
-        confidence = QLabel(event.confidence_percent)
-        confidence.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        confidence.setFixedWidth(54)
-        confidence.setStyleSheet(self._confidence_style(event.confidence))
-        relevance = QLabel(f"相关度 {event.similarity_percent}" if event.similarity_score else "相关度 -")
-        relevance.setProperty("role", "muted")
+        time = QLabel(f"◷ {event.time_range}")
+        time.setStyleSheet(
+            "color: #64748B; font-size: 12px; background: transparent; border: none;"
+        )
+        jump = QLabel("跳转回放 ▶")
+        jump.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        jump.setStyleSheet(
+            "color: #2563EB; font-size: 12px; font-weight: 800; "
+            "background: transparent; border: none;"
+        )
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.addWidget(time)
+        action_row.addStretch()
+        action_row.addWidget(jump)
 
-        summary = QLabel(event.summary)
-        summary.setWordWrap(True)
-        summary.setProperty("role", "muted")
+        tag_text = "  ".join(f"#{tag}" for tag in event.tags)
+        tags = QLabel(tag_text)
+        tags.setWordWrap(True)
+        tags.setStyleSheet(
+            "color: #2563EB; font-size: 11px; font-weight: 700; "
+            "background: transparent; border: none;"
+        )
 
-        tags = QLabel("  ".join(f"#{tag}" for tag in event.tags))
-        tags.setStyleSheet("color: #2563EB; font-size: 12px;")
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 14, 16, 14)
+        layout.setSpacing(12)
+        layout.addWidget(self.color_bar)
 
-        seek_button = QPushButton("Seek")
-        seek_button.setProperty("variant", "primary")
-        seek_button.clicked.connect(lambda: self.selected.emit(self.event))
+        body = QVBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(8)
+        body.addLayout(meta_row)
+        body.addWidget(title)
+        body.addLayout(action_row)
+        if tag_text:
+            body.addWidget(tags)
+        layout.addLayout(body, 1)
 
-        top = QHBoxLayout()
-        top.addWidget(title, 1)
-        top.addWidget(confidence)
+        self._apply_style()
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        bottom = QHBoxLayout()
-        bottom.addWidget(time_label)
-        bottom.addWidget(relevance)
-        bottom.addStretch()
-        bottom.addWidget(seek_button)
+        # 关键：event 字段必须最后赋值，避免 PySide6 构造期 segfault
+        self.event = event
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
-        layout.addLayout(top)
-        layout.addWidget(summary)
-        layout.addWidget(tags)
-        layout.addLayout(bottom)
+    def set_selected(self, selected: bool) -> None:
+        self._selected = selected
+        self._apply_style()
+
+    def _apply_style(self, hover: bool = False) -> None:
+        if self._selected:
+            bg = "#EFF6FF"
+            bar = "#2563EB"
+        elif hover:
+            bg = "#F8FAFC"
+            bar = "#E2E8F0"
+        else:
+            bg = "#FFFFFF"
+            bar = "transparent"
+        self.setStyleSheet(
+            f"QFrame {{ background: {bg}; border-radius: 0px; border: none; }}"
+        )
+        self.color_bar.setStyleSheet(
+            f"QFrame {{ background: {bar}; border-radius: 0px; border: none; }}"
+        )
+
+    def enterEvent(self, event) -> None:  # type: ignore[override]
+        self._apply_style(hover=True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:  # type: ignore[override]
+        self._apply_style()
+        super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]
         if event.button() == Qt.MouseButton.LeftButton:
             self.selected.emit(self.event)
         super().mousePressEvent(event)
-
-    def _confidence_style(self, confidence: float) -> str:
-        if confidence >= 0.85:
-            color = "#63D471"
-        elif confidence >= 0.78:
-            color = "#F59E0B"
-        else:
-            color = "#EF4444"
-        return (
-            f"color: {color}; border: 1px solid {color}; border-radius: 5px; "
-            "padding: 4px; font-weight: 700;"
-        )

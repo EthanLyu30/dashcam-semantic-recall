@@ -17,6 +17,12 @@ class EventTimeline(QWidget):
         self._events: tuple[SemanticEvent, ...] = ()
         self._selected_id = ""
         self._current_sec = 0
+        self._dark = False
+
+    def set_dark(self, dark: bool) -> None:
+        """嵌到视频卡片底部时切到深色 palette。"""
+        self._dark = dark
+        self.update()
 
     def set_video(self, video: VideoRecord) -> None:
         self._video = video
@@ -39,24 +45,43 @@ class EventTimeline(QWidget):
     def paintEvent(self, _event) -> None:  # type: ignore[override]
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), QColor("#FFFFFF"))
+        bg = QColor("#0F172A") if self._dark else QColor("#FFFFFF")
+        rail_bg = QColor("#1E293B") if self._dark else QColor("#E2E8F0")
+        tick_color = QColor("#475569") if self._dark else QColor("#CBD5E1")
+        label_color = QColor("#94A3B8") if self._dark else QColor("#64748B")
+        empty_color = QColor("#94A3B8") if self._dark else QColor("#64748B")
+        painter.fillRect(self.rect(), bg)
 
         margin = 18
         rail_y = self.height() // 2
         rail_rect = QRectF(margin, rail_y - 7, self.width() - margin * 2, 14)
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor("#E2E8F0"))
+        painter.setBrush(rail_bg)
         painter.drawRoundedRect(rail_rect, 7, 7)
 
         if self._video is None or self._video.duration_sec <= 0:
-            painter.setPen(QColor("#64748B"))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No video loaded")
+            painter.setPen(empty_color)
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "暂未加载视频")
             return
 
         duration = self._video.duration_sec
-        painter.setPen(QColor("#64748B"))
-        painter.drawText(margin, rail_y + 34, "00:00")
-        painter.drawText(self.width() - margin - 58, rail_y + 34, format_time(duration))
+
+        # 主刻度：起点 / 终点 + 中间 3 个等分刻度
+        tick_count = 4  # 切成 4 段，得 5 个刻度
+        usable = max(1, self.width() - margin * 2)
+        for i in range(tick_count + 1):
+            ratio = i / tick_count
+            tick_sec = int(duration * ratio)
+            tick_x = margin + usable * ratio
+            painter.setPen(tick_color)
+            painter.drawLine(int(tick_x), rail_y + 12, int(tick_x), rail_y + 18)
+            painter.setPen(label_color)
+            label = format_time(tick_sec)
+            metrics = painter.fontMetrics()
+            text_width = metrics.horizontalAdvance(label)
+            text_x = tick_x - text_width / 2
+            text_x = max(margin - 4, min(self.width() - margin - text_width + 4, text_x))
+            painter.drawText(int(text_x), rail_y + 34, label)
 
         for event in self._events:
             start_x = self._x_for_second(event.start_sec, margin, duration)

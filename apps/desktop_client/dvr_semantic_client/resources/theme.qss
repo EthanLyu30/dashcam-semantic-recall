@@ -1,88 +1,302 @@
+/* DVR-Semantic 全局样式 — 对齐 docs/prototype-source 的视觉语言。
+ *
+ * 颜色 token：
+ *   背景        #F8FAFC
+ *   面板        #FFFFFF
+ *   软面板      #F1F5F9
+ *   文字主      #0F172A
+ *   文字次      #475569
+ *   文字弱      #94A3B8
+ *   边框        #E2E8F0
+ *   主蓝        #2563EB
+ *   靛蓝        #4F46E5
+ *   橙(证据)    #F59E0B
+ *   红          #EF4444
+ *   绿          #22C55E
+ */
+
 QWidget {
     background: #F8FAFC;
-    color: #1E293B;
-    font-family: "Microsoft YaHei UI", "Segoe UI", sans-serif;
+    color: #0F172A;
+    font-family: "Microsoft YaHei UI", "Segoe UI", "PingFang SC", sans-serif;
     font-size: 13px;
 }
 
-QFrame[role="panel"], QScrollArea, QListWidget {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 18px;
+QMainWindow, QStackedWidget {
+    background: #F8FAFC;
 }
 
-QLabel[role="muted"] {
+QStatusBar {
+    background: #FFFFFF;
+    border-top: 1px solid #E2E8F0;
     color: #64748B;
 }
 
-QLabel[role="title"] {
-    font-size: 24px;
-    font-weight: 700;
+/* QLabel 在 Qt 里继承自 QFrame；任何不带选择器的 "QFrame {...border...}"
+ * 都会把 Label 框起来。这里给全局 QLabel 钉一个 border:none + transparent
+ * 兜底，避免每张卡片里再单独抵消。 */
+QLabel {
+    background: transparent;
+    border: none;
 }
 
+/* ---- 面板容器 ---- */
+/* 原型用 bg-slate-50/70 + rounded-3xl + border-slate-100/60 */
+QFrame[role="panel"] {
+    background: #FFFFFF;
+    border: 1px solid #E8EDF2;
+    border-radius: 24px;
+}
+QFrame[role="appHeader"] {
+    background: rgba(248, 250, 252, 0.92);
+    border: none;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+}
+QFrame[role="searchHeader"] {
+    background: #FFFFFF;
+    border: none;
+    border-bottom: 1px solid #EEF2F7;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+QFrame[role="searchRight"] {
+    background: #0F172A;
+    border: none;
+    border-radius: 0;
+}
+QFrame#semanticSearchPanel {
+    background: #FFFFFF;
+    border: none;
+    border-right: 1px solid #EEF2F7;
+    border-radius: 0;
+}
+QSplitter#searchSplitter {
+    background: transparent;
+    border: none;
+}
+QScrollArea {
+    background: #F8FAFC;
+    border: none;
+}
+QScrollArea > QWidget > QWidget {
+    background: #F8FAFC;
+}
+QListWidget {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    padding: 4px;
+}
+
+/* ---- 文字层级 ---- */
+QLabel[role="muted"] {
+    color: #64748B;
+    font-size: 12px;
+}
+QLabel[role="title"] {
+    font-size: 22px;
+    font-weight: 700;
+    color: #0F172A;
+}
 QLabel[role="panelTitle"] {
     font-size: 16px;
-    font-weight: 650;
+    font-weight: 700;
+    color: #0F172A;
 }
-
+QLabel[role="hero"] {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0F172A;
+}
+QLabel[role="metric"] {
+    font-size: 24px;
+    font-weight: 800;
+    color: #2563EB;
+}
 QLabel[role="timecode"] {
     color: #2563EB;
-    font-family: "Cascadia Mono", "Consolas", monospace;
-    font-size: 20px;
+    font-family: "Cascadia Mono", "Consolas", "JetBrains Mono", monospace;
+    font-size: 18px;
     font-weight: 700;
+    letter-spacing: 1px;
 }
 
+/* ---- 按钮系统 ----
+ * 默认按钮：白底 + 灰边（弱主张），适合非操作主入口
+ * primary：主蓝实心，主要 CTA
+ * evidence：橙色描边，导出场景
+ * ghost：完全无边框灰字，适合次级动作（导航也用这套）
+ * nav：底部下划线 active 状态的导航按钮
+ */
 QPushButton {
     background: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-radius: 10px;
     color: #334155;
     min-height: 32px;
-    padding: 6px 12px;
+    padding: 6px 14px;
+    font-size: 13px;
 }
-
 QPushButton:hover {
-    border-color: #2563EB;
     background: #EFF6FF;
+    border-color: #BFDBFE;
+    color: #1D4ED8;
+}
+QPushButton:pressed {
+    background: #DBEAFE;
 }
 
 QPushButton[variant="primary"] {
     background: #2563EB;
-    border-color: #2563EB;
+    border: 1px solid #2563EB;
     color: #FFFFFF;
     font-weight: 650;
+    padding: 7px 18px;
+}
+QPushButton[variant="primary"]:hover {
+    background: #1D4ED8;
+    border-color: #1D4ED8;
+    color: #FFFFFF;
 }
 
 QPushButton[variant="evidence"] {
-    background: #FFF7ED;
-    border-color: #F59E0B;
+    background: #FFFBEB;
+    border: 1px solid #F59E0B;
     color: #B45309;
     font-weight: 650;
 }
+QPushButton[variant="evidence"]:hover {
+    background: #FEF3C7;
+    color: #92400E;
+}
 
+/* 导航：与原型一致——flat 无边框，hover 浅灰，active 淡蓝背景圆角（无下划线） */
+QPushButton[variant="nav"] {
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    color: #64748B;
+    padding: 6px 14px;
+    font-weight: 500;
+    font-size: 13px;
+}
+QPushButton[variant="nav"]:hover {
+    background: #F1F5F9;
+    color: #2563EB;
+}
+QPushButton[variant="nav-active"] {
+    background: #EFF6FF;
+    border: none;
+    border-radius: 10px;
+    color: #2563EB;
+    padding: 6px 14px;
+    font-weight: 700;
+    font-size: 13px;
+}
+QPushButton[variant="nav-active"]:hover {
+    background: #DBEAFE;
+    color: #1D4ED8;
+}
+
+QPushButton[variant="ghost"] {
+    background: transparent;
+    border: 1px solid transparent;
+    color: #475569;
+    padding: 6px 12px;
+}
+QPushButton[variant="ghost"]:hover {
+    background: #F1F5F9;
+    color: #0F172A;
+}
+
+/* ---- 角色 / 状态芯片 ----
+ * 用于内嵌在列表行、标题栏的小标签。
+ * 用 setProperty("role","chip") 激活，再用 data-kind 区分颜色。
+ */
+QLabel[role="chip"] {
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+}
+
+/* ---- 输入控件 ---- */
 QLineEdit, QComboBox {
     background: #FFFFFF;
     border: 1px solid #CBD5E1;
-    border-radius: 6px;
-    color: #1E293B;
-    min-height: 34px;
-    padding: 6px 10px;
+    border-radius: 10px;
+    color: #0F172A;
+    min-height: 36px;
+    padding: 6px 12px;
+    selection-background-color: #BFDBFE;
+    selection-color: #0F172A;
 }
-
 QLineEdit:focus, QComboBox:focus {
     border-color: #2563EB;
 }
-
-QScrollBar:vertical {
-    background: #F8FAFC;
-    width: 10px;
+QLineEdit::placeholder {
+    color: #94A3B8;
+}
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
 }
 
+/* ---- 滚动条 ---- */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 4px 0;
+}
 QScrollBar::handle:vertical {
     background: #CBD5E1;
     border-radius: 5px;
+    min-height: 30px;
 }
-
+QScrollBar::handle:vertical:hover {
+    background: #94A3B8;
+}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
     height: 0;
+}
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 0 4px;
+}
+QScrollBar::handle:horizontal {
+    background: #CBD5E1;
+    border-radius: 5px;
+    min-width: 30px;
+}
+
+/* ---- 表格 ---- */
+QTableWidget {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 14px;
+    gridline-color: #F1F5F9;
+}
+QHeaderView::section {
+    background: #F8FAFC;
+    color: #64748B;
+    padding: 8px;
+    border: none;
+    border-bottom: 1px solid #E2E8F0;
+    font-weight: 700;
+}
+
+/* ---- 进度条 ---- */
+QProgressBar {
+    background: #E2E8F0;
+    border: none;
+    border-radius: 6px;
+    height: 10px;
+    text-align: center;
+    color: transparent;
+}
+QProgressBar::chunk {
+    background: #2563EB;
+    border-radius: 6px;
 }

@@ -20,6 +20,7 @@ class VideoRecord:
     status: str = "searchable"
     thumbnail_url: str = ""
     source_path: str = ""
+    fail_reason: str = ""
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "VideoRecord":
@@ -30,6 +31,7 @@ class VideoRecord:
             status=str(data.get("status", "unknown")),
             thumbnail_url=str(data.get("thumbnail_url", "")),
             source_path=str(data.get("source_path", "")),
+            fail_reason=str(data.get("fail_reason", "")),
         )
 
 
@@ -47,6 +49,8 @@ class SemanticEvent:
     thumbnail_url: str = ""
     review_status: str = "pending"
     similarity_score: float = 0.0
+    rank_no: int = 0
+    answer_text: str = ""
 
     @property
     def time_range(self) -> str:
@@ -78,6 +82,8 @@ class SemanticEvent:
             thumbnail_url=str(data.get("thumbnail_url", "")),
             review_status=str(data.get("review_status", "pending")),
             similarity_score=float(data.get("similarity_score", 0.0)),
+            rank_no=int(data.get("rank_no", 0)),
+            answer_text=str(data.get("answer_text", "")),
         )
 
 

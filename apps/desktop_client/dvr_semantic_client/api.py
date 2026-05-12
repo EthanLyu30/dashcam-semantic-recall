@@ -2,12 +2,32 @@ from __future__ import annotations
 
 import time
 from dataclasses import asdict, replace
-from typing import Protocol
-
-import requests
+from pathlib import Path
+from typing import Any, Protocol
 
 from .demo_data import DEMO_EVENTS, DEMO_VIDEOS
 from .models import ExportResponse, SearchResponse, SemanticEvent, VideoRecord
+
+
+class _RequestsProxy:
+    def _module(self) -> Any:
+        try:
+            import requests
+        except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
+            raise RuntimeError(
+                "REST backend mode requires the 'requests' package. "
+                'Install dependencies with: python -m pip install -e ".[desktop,backend]"'
+            ) from exc
+        return requests
+
+    def get(self, *args: Any, **kwargs: Any) -> Any:
+        return self._module().get(*args, **kwargs)
+
+    def post(self, *args: Any, **kwargs: Any) -> Any:
+        return self._module().post(*args, **kwargs)
+
+
+requests = _RequestsProxy()
 
 
 class ApiClient(Protocol):
@@ -99,14 +119,73 @@ class MockApiClient:
             export_path=f"media/exports/{event_id}.{ 'zip' if export_type == 'package' else export_type }",
         )
 
+    # MockApiClient does not require login; methods kept for API parity.
+    def login(self, username: str, password: str) -> dict[str, Any]:
+        return {
+            "token": "mock-token",
+            "user_id": "mock-user",
+            "username": username or "demo",
+            "role": "admin",
+            "display_name": "Mock 演示用户",
+        }
+
+    def upload_video(self, file_path: Path, title: str) -> dict[str, Any]:
+        return {
+            "video_id": f"mock-{int(time.time())}",
+            "status": "uploaded",
+            "request_id": "mock",
+        }
+
+    def process_video(self, video_id: str) -> dict[str, Any]:
+        return {
+            "video_id": video_id,
+            "frames_analyzed": 0,
+            "events_created": 0,
+            "status": "analyzed",
+        }
+
 
 class RestApiClient:
-    def __init__(self, base_url: str, timeout_sec: float = 8.0) -> None:
+    def __init__(self, base_url: str, timeout_sec: float = 8.0, token: str = "") -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_sec = timeout_sec
+        self.token = token
 
+    # --- helpers -----------------------------------------------------------
+    def _headers(self) -> dict[str, str]:
+        if self.token:
+            return {"Authorization": f"Bearer {self.token}"}
+        return {}
+
+    def _get(self, path: str) -> requests.Response:
+        kwargs: dict[str, Any] = {"timeout": self.timeout_sec}
+        if self.token:
+            kwargs["headers"] = self._headers()
+        return requests.get(f"{self.base_url}{path}", **kwargs)
+
+    def _post_json(self, path: str, payload: dict[str, Any]) -> requests.Response:
+        kwargs: dict[str, Any] = {"timeout": self.timeout_sec, "json": payload}
+        if self.token:
+            kwargs["headers"] = self._headers()
+        return requests.post(f"{self.base_url}{path}", **kwargs)
+
+    # --- auth --------------------------------------------------------------
+    def login(self, username: str, password: str) -> dict[str, Any]:
+        response = requests.post(
+            f"{self.base_url}/api/auth/login",
+            json={"username": username, "password": password},
+            timeout=self.timeout_sec,
+        )
+        response.raise_for_status()
+        payload = response.json() or {}
+        token = str(payload.get("token", ""))
+        if token:
+            self.token = token
+        return payload
+
+    # --- videos ------------------------------------------------------------
     def list_videos(self) -> tuple[VideoRecord, ...]:
-        response = requests.get(f"{self.base_url}/api/videos", timeout=self.timeout_sec)
+        response = self._get("/api/videos")
         response.raise_for_status()
         payload = response.json()
         items = payload.get("items", ()) if isinstance(payload, dict) else payload
@@ -116,34 +195,68 @@ class RestApiClient:
             if isinstance(item, dict)
         )
 
-    def search(self, video_id: str, query: str, mode: str = "hybrid") -> SearchResponse:
+    def upload_video(self, file_path: Path, title: str) -> dict[str, Any]:
+        path = Path(file_path)
+        with path.open("rb") as fh:
+            files = {"file": (path.name, fh, "application/octet-stream")}
+            data = {"title": title}
+            kwargs: dict[str, Any] = {
+                "timeout": max(self.timeout_sec, 60.0),
+                "files": files,
+                "data": data,
+            }
+            if self.token:
+                kwargs["headers"] = self._headers()
+            response = requests.post(
+                f"{self.base_url}/api/videos/upload", **kwargs
+            )
+        response.raise_for_status()
+        return response.json() or {}
+
+    def process_video(self, video_id: str) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {"timeout": max(self.timeout_sec, 120.0)}
+        if self.token:
+            kwargs["headers"] = self._headers()
         response = requests.post(
-            f"{self.base_url}/api/search",
-            json={"video_id": video_id, "query": query, "mode": mode},
-            timeout=self.timeout_sec,
+            f"{self.base_url}/api/videos/{video_id}/process", **kwargs
         )
+        response.raise_for_status()
+        return response.json() or {}
+
+    def stream_url(self, video_id: str) -> str:
+        return f"{self.base_url}/api/videos/{video_id}/stream"
+
+    # --- search & events ---------------------------------------------------
+    def search(
+        self,
+        video_id: str,
+        query: str,
+        mode: str = "hybrid",
+        top_k: int = 10,
+    ) -> SearchResponse:
+        payload = {
+            "video_id": video_id or None,
+            "query": query,
+            "mode": mode,
+            "top_k": top_k,
+        }
+        response = self._post_json("/api/search", payload)
         response.raise_for_status()
         return SearchResponse.from_json(response.json())
 
     def get_event(self, event_id: str) -> SemanticEvent:
-        response = requests.get(
-            f"{self.base_url}/api/events/{event_id}",
-            timeout=self.timeout_sec,
-        )
+        response = self._get(f"/api/events/{event_id}")
         response.raise_for_status()
         return SemanticEvent.from_json(response.json())
 
     def export_event(self, event_id: str, export_type: str = "package") -> ExportResponse:
-        response = requests.post(
-            f"{self.base_url}/api/events/{event_id}/export",
-            json={
-                "export_type": export_type,
-                "include_video": True,
-                "include_snapshot": True,
-                "include_report": True,
-            },
-            timeout=self.timeout_sec,
-        )
+        payload = {
+            "export_type": export_type,
+            "include_video": True,
+            "include_snapshot": True,
+            "include_report": True,
+        }
+        response = self._post_json(f"/api/events/{event_id}/export", payload)
         response.raise_for_status()
         return ExportResponse.from_json(response.json())
 
@@ -158,7 +271,7 @@ def video_to_json(video: VideoRecord) -> dict[str, object]:
     return asdict(video)
 
 
-def create_api_client(base_url: str = "") -> ApiClient:
+def create_api_client(base_url: str = "", token: str = "") -> ApiClient:
     if base_url:
-        return RestApiClient(base_url)
+        return RestApiClient(base_url, token=token)
     return MockApiClient()
