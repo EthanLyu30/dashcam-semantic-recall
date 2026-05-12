@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QScrollArea,
     QSlider,
     QTableWidget,
     QTableWidgetItem,
@@ -50,8 +51,9 @@ def muted(text: str) -> QLabel:
 
 
 def page_shell(title_text: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
-    page = QWidget()
-    root = QVBoxLayout(page)
+    """Returns (scroll_area, content_layout) so pages can scroll vertically."""
+    inner = QWidget()
+    root = QVBoxLayout(inner)
     root.setContentsMargins(18, 18, 18, 18)
     root.setSpacing(14)
 
@@ -63,7 +65,13 @@ def page_shell(title_text: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
     header_layout.addWidget(page_title)
     header_layout.addWidget(muted(subtitle))
     root.addWidget(header)
-    return page, root
+
+    scroll = QScrollArea()
+    scroll.setWidget(inner)
+    scroll.setWidgetResizable(True)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    return scroll, root
 
 
 _ICON_PALETTE = {
@@ -153,6 +161,17 @@ def action_button(text: str, variant: str = "") -> QPushButton:
     if variant:
         button.setProperty("variant", variant)
     return button
+
+
+def _wip_button(text: str, variant: str = "") -> QPushButton:
+    """Button that shows a "feature in development" message when clicked."""
+    btn = action_button(text, variant)
+    btn.clicked.connect(
+        lambda: QMessageBox.information(
+            btn.window(), "功能开发中", "此功能正在开发中，当前版本为演示模式。"
+        )
+    )
+    return btn
 
 
 def section_header(text: str, note: str = "") -> QHBoxLayout:
@@ -327,7 +346,7 @@ class VideoLibraryPage(QWidget):
         header_text.addWidget(muted("批量导入、单个视频处理、状态筛选和语义检索入口"))
         header_layout.addLayout(header_text)
         header_layout.addStretch()
-        batch_button = action_button("批量导入视频")
+        batch_button = _wip_button("批量导入视频")
         self.upload_button = action_button("单个视频处理", "primary")
         self.upload_button.clicked.connect(self._on_upload_clicked)
         self.refresh_button = action_button("刷新列表")
@@ -358,7 +377,7 @@ class VideoLibraryPage(QWidget):
         filter_layout.addWidget(filename, 2)
         filter_layout.addWidget(status, 1)
         filter_layout.addWidget(plate, 1)
-        filter_layout.addWidget(action_button("查询", "primary"))
+        filter_layout.addWidget(_wip_button("查询", "primary"))
         root.addWidget(filters)
 
         progress = panel()
@@ -563,9 +582,9 @@ def review_page() -> QWidget:
     history.addItems(["10:22:15 · AI 系统识别 · 置信度 68%", "进行中 · 等待人工复核"])
     form_layout.addWidget(history, 1)
     action_row = QHBoxLayout()
-    action_row.addWidget(action_button("保存草稿"))
+    action_row.addWidget(_wip_button("保存草稿"))
     action_row.addStretch()
-    action_row.addWidget(action_button("提交复核结果", "primary"))
+    action_row.addWidget(_wip_button("提交复核结果", "primary"))
     form_layout.addLayout(action_row)
     body.addWidget(form, 3)
     root.addLayout(body, 1)
@@ -589,8 +608,8 @@ def alerts_page() -> QWidget:
     list_header = QHBoxLayout()
     list_header.addWidget(title("实时告警列表"))
     list_header.addStretch()
-    list_header.addWidget(action_button("全部"))
-    list_header.addWidget(action_button("严重", "primary"))
+    list_header.addWidget(_wip_button("全部"))
+    list_header.addWidget(_wip_button("严重", "primary"))
     list_layout.addLayout(list_header)
     list_layout.addWidget(
         table(
@@ -617,7 +636,7 @@ def alerts_page() -> QWidget:
         "违章停车检测 · 阈值 60% · 通知 关闭",
     ]:
         rules_layout.addWidget(compact_card(rule, "规则命中后自动推送告警队列并记录审计日志"))
-    rules_layout.addWidget(action_button("编辑告警规则", "primary"))
+    rules_layout.addWidget(_wip_button("编辑告警规则", "primary"))
     lower.addWidget(rules, 2)
 
     trend = panel()
@@ -677,8 +696,8 @@ def accidents_page() -> QWidget:
         layout.addWidget(title("大语言模型自动浓缩摘要"))
         layout.addWidget(muted(summary))
         actions = QHBoxLayout()
-        actions.addWidget(action_button("回放原片与标注", "primary"))
-        actions.addWidget(action_button("建立证据包并归档"))
+        actions.addWidget(_wip_button("回放原片与标注", "primary"))
+        actions.addWidget(_wip_button("建立证据包并归档"))
         actions.addStretch()
         layout.addLayout(actions)
         feed.addWidget(card)
@@ -696,7 +715,7 @@ def accidents_page() -> QWidget:
     side_layout.addWidget(heat)
     side_layout.addWidget(compact_card("全局风险指征", "侧向碰撞与行人横穿为今日主要风险类型，建议导出日报并同步车队培训库。", "#F59E0B"))
     side_layout.addStretch()
-    side_layout.addWidget(action_button("查看全天业务报告", "primary"))
+    side_layout.addWidget(_wip_button("查看全天业务报告", "primary"))
     body.addWidget(side, 2)
     root.addLayout(body, 1)
     return page
@@ -711,7 +730,7 @@ def evidence_page() -> QWidget:
     search = QLineEdit()
     search.setPlaceholderText("搜索案件编号、日志凭点...")
     controls_layout.addWidget(search, 1)
-    controls_layout.addWidget(action_button("打包备份归档", "primary"))
+    controls_layout.addWidget(_wip_button("打包备份归档", "primary"))
     root.addWidget(controls)
 
     body = QHBoxLayout()
@@ -825,7 +844,7 @@ def daily_report_page() -> QWidget:
     summary_layout.setContentsMargins(22, 20, 22, 20)
     summary_layout.addWidget(title("业务总结"))
     summary_layout.addWidget(muted("今日系统处理视频127个，识别关键事件342起，检索请求1204次，证据导出89份。事件主要集中在南山区和福田区，侧向碰撞和行人鬼探头为主要类型。系统运行稳定，无重大异常。"))
-    summary_layout.addWidget(action_button("导出PDF报告", "primary"))
+    summary_layout.addWidget(_wip_button("导出PDF报告", "primary"))
     right.addWidget(summary, 1)
     body.addLayout(right, 2)
     root.addLayout(body, 1)
@@ -881,8 +900,8 @@ def settings_page() -> QWidget:
         check.setChecked(True)
         sec_layout.addWidget(check)
     sec_layout.addStretch()
-    sec_layout.addWidget(action_button("保存所有全局设置", "primary"))
-    sec_layout.addWidget(action_button("恢复出厂默认值"))
+    sec_layout.addWidget(_wip_button("保存所有全局设置", "primary"))
+    sec_layout.addWidget(_wip_button("恢复出厂默认值"))
     body.addWidget(security, 2)
     root.addLayout(body, 1)
     return page
@@ -898,7 +917,7 @@ def roles_page() -> QWidget:
         ("交通巡查员", "TRAFFIC INSPECTOR", "具备跨平台视频检索权限，用于事故复盘及违章证据收集，受审计日志监控。", "管理用户列表 (4)", "#EF4444"),
     ]):
         card = compact_card(f"{name}\n{code}", desc, accent)
-        card.layout().addWidget(action_button(users))
+        card.layout().addWidget(_wip_button(users))
         roles.addWidget(card, 0, col)
     root.addLayout(roles)
 
@@ -906,8 +925,8 @@ def roles_page() -> QWidget:
     matrix_layout = QVBoxLayout(matrix)
     matrix_layout.setContentsMargins(22, 20, 22, 20)
     header = section_header("功能模块权限矩阵 (Matrix)")
-    header.addWidget(action_button("批量同步", "primary"))
-    header.addWidget(action_button("导出记录"))
+    header.addWidget(_wip_button("批量同步", "primary"))
+    header.addWidget(_wip_button("导出记录"))
     matrix_layout.addLayout(header)
     matrix_layout.addWidget(
         table(

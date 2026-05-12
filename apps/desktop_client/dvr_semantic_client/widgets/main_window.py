@@ -145,7 +145,7 @@ class MainWindow(QMainWindow):
         nav_row.addWidget(separator)
         nav_row.addSpacing(8)
 
-        secondary_labels = ["模型配置", "权限", "登录"]
+        secondary_labels = ["模型配置", "权限"]
         for offset, label in enumerate(secondary_labels, start=8):
             button = QPushButton(label)
             button.setProperty("variant", "nav")
@@ -178,8 +178,8 @@ class MainWindow(QMainWindow):
             icon_btn_qss.replace("color: #64748B", "color: #94A3B8")
             + "QPushButton:hover { background: #FEF2F2; color: #EF4444; }"
         )
-        logout_btn.setToolTip("登录 / 注销")
-        logout_btn.clicked.connect(lambda: self.show_page(10))
+        logout_btn.setToolTip("退出登录")
+        logout_btn.clicked.connect(self._on_logout)
 
         layout.addSpacing(4)
         layout.addWidget(settings_btn)
@@ -316,3 +316,15 @@ class MainWindow(QMainWindow):
             f"{response.status}: {response.export_path}",
         )
         self.statusBar().showMessage(f"Evidence export queued for {event.id}")
+
+    def _on_logout(self) -> None:
+        name = getattr(self.login_ctx, "display_name", "") or getattr(self.login_ctx, "username", "演示用户")
+        reply = QMessageBox.question(
+            self,
+            "退出登录",
+            f"确定要退出当前账号吗？\n当前用户：{name}",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.close()

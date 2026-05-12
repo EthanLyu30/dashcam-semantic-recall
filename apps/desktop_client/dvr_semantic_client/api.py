@@ -5,10 +5,29 @@ from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any, Protocol
 
-import requests
-
 from .demo_data import DEMO_EVENTS, DEMO_VIDEOS
 from .models import ExportResponse, SearchResponse, SemanticEvent, VideoRecord
+
+
+class _RequestsProxy:
+    def _module(self) -> Any:
+        try:
+            import requests
+        except ModuleNotFoundError as exc:  # pragma: no cover - dependency guard
+            raise RuntimeError(
+                "REST backend mode requires the 'requests' package. "
+                'Install dependencies with: python -m pip install -e ".[desktop,backend]"'
+            ) from exc
+        return requests
+
+    def get(self, *args: Any, **kwargs: Any) -> Any:
+        return self._module().get(*args, **kwargs)
+
+    def post(self, *args: Any, **kwargs: Any) -> Any:
+        return self._module().post(*args, **kwargs)
+
+
+requests = _RequestsProxy()
 
 
 class ApiClient(Protocol):
