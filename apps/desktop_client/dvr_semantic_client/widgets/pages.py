@@ -64,28 +64,85 @@ def page_shell(title_text: str, subtitle: str) -> tuple[QWidget, QVBoxLayout]:
     return page, root
 
 
+_ICON_PALETTE = {
+    "#2563EB": ("#EFF6FF", "▶"),
+    "#4F46E5": ("#EEF2FF", "◈"),
+    "#F59E0B": ("#FFFBEB", "⚡"),
+    "#EF4444": ("#FEF2F2", "⚠"),
+    "#22C55E": ("#F0FDF4", "✓"),
+}
+
+_LABEL_EN = {
+    "总处理视频": "Total Processed", "语义检索次数": "Semantic Queries",
+    "识别关键事件": "Key Events", "待人工复核": "Pending Review",
+    "待复核": "Pending Review", "今日已复核": "Reviewed Today",
+    "平均耗时": "Avg Duration", "复核同意率": "Approval Rate",
+    "未处理告警": "Open Alerts", "今日告警": "Today Alerts",
+    "已关闭": "Resolved", "平均响应": "Avg Response",
+    "处理视频": "Processed", "关键事件": "Key Events",
+    "检索次数": "Queries", "导出证据": "Exports",
+}
+
+
 def metric_card(label: str, value: str, note: str, accent: str = "#2563EB") -> QFrame:
+    """对齐原型的 KPI 卡片：图标块 + 英文副标题 + 大号黑色数字 + 彩色趋势注释。"""
     card = panel()
-    # 注意：QLabel 在 Qt 里继承自 QFrame，所以"QFrame { border... }"会顺带
-    # 把内部 Label 也画上边框。必须用 role 属性选择器锁死外框，且对内部
-    # Label 显式声明 border:none 防御样式表回环。
     card.setStyleSheet(
-        "QFrame[role='panel'] { background: #FFFFFF; "
-        "border: 1px solid #E2E8F0; border-radius: 22px; }"
-        f"QLabel#accent {{ color: {accent}; font-size: 28px; font-weight: 800; "
-        "background: transparent; border: none; }}"
+        "QFrame[role='panel'] { background: #F8FAFC; "
+        "border: 1px solid #E8EDF2; border-radius: 24px; }"
         "QLabel { background: transparent; border: none; }"
     )
+
+    icon_bg, icon_char = _ICON_PALETTE.get(accent, ("#EFF6FF", "●"))
+    icon_frame = QFrame()
+    icon_frame.setFixedSize(48, 48)
+    icon_frame.setStyleSheet(
+        f"QFrame {{ background: {icon_bg}; border-radius: 14px; border: none; }}"
+    )
+    icon_lbl = QLabel(icon_char)
+    icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    icon_lbl.setStyleSheet(
+        f"color: {accent}; font-size: 18px; background: transparent; border: none;"
+    )
+    icon_inner = QVBoxLayout(icon_frame)
+    icon_inner.setContentsMargins(0, 0, 0, 0)
+    icon_inner.addWidget(icon_lbl)
+
+    icon_row = QHBoxLayout()
+    icon_row.addWidget(icon_frame)
+    icon_row.addStretch()
+
+    lbl_main = QLabel(label)
+    lbl_main.setStyleSheet(
+        "font-size:13px;font-weight:700;color:#1E293B;"
+        "background:transparent;border:none;"
+    )
+    lbl_en = QLabel(_LABEL_EN.get(label, ""))
+    lbl_en.setStyleSheet(
+        "font-size:10px;font-weight:700;color:#94A3B8;letter-spacing:1px;"
+        "background:transparent;border:none;"
+    )
+    lbl_value = QLabel(value)
+    lbl_value.setStyleSheet(
+        "font-size:32px;font-weight:800;color:#0F172A;letter-spacing:-1px;"
+        "background:transparent;border:none;"
+    )
+    lbl_note = QLabel(note)
+    lbl_note.setStyleSheet(
+        f"font-size:12px;font-weight:700;color:{accent};"
+        "background:transparent;border:none;"
+    )
+
     layout = QVBoxLayout(card)
-    layout.setContentsMargins(18, 16, 18, 16)
-    layout.setSpacing(4)
-    label_widget = muted(label)
-    value_widget = QLabel(value)
-    value_widget.setObjectName("accent")
-    note_widget = muted(note)
-    layout.addWidget(label_widget)
-    layout.addWidget(value_widget)
-    layout.addWidget(note_widget)
+    layout.setContentsMargins(20, 18, 20, 18)
+    layout.setSpacing(0)
+    layout.addLayout(icon_row)
+    layout.addSpacing(12)
+    layout.addWidget(lbl_main)
+    layout.addWidget(lbl_en)
+    layout.addSpacing(8)
+    layout.addWidget(lbl_value)
+    layout.addWidget(lbl_note)
     return card
 
 
@@ -134,12 +191,12 @@ def status_chip(text: str, kind: str = "info") -> QLabel:
 
 def overview_page() -> QWidget:
     page, root = page_shell("系统状态概览", "2026年03月27日 · 系统运行正常 · 多模态节点 8/8")
+    # 原型是 3 列 KPI（不是 4 列）
     metrics = QGridLayout()
     metrics.setSpacing(14)
     metrics.addWidget(metric_card("总处理视频", "8,429", "+12% 本周增长"), 0, 0)
     metrics.addWidget(metric_card("语义检索次数", "1,204", "响应稳定", "#4F46E5"), 0, 1)
     metrics.addWidget(metric_card("识别关键事件", "342", "+5.4% 今日新增", "#F59E0B"), 0, 2)
-    metrics.addWidget(metric_card("待人工复核", "12", "低置信事件队列", "#EF4444"), 0, 3)
     root.addLayout(metrics)
 
     lower = QHBoxLayout()

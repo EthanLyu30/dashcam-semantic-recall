@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QFrame,
-    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QWidget,
@@ -29,74 +27,67 @@ class ResultCard(QFrame):
         super().__init__(parent)
         # 颜色策略：高=绿（≥0.85）/ 中=黄（≥0.78）/ 低=红
         if event.confidence >= 0.85:
-            color = "#16A34A"
-            bg, border = "rgba(22, 163, 74, 0.10)", "rgba(22, 163, 74, 0.40)"
+            bar_color = "#16A34A"
+            conf_css = "color:#16A34A;"
         elif event.confidence >= 0.78:
-            color = "#F59E0B"
-            bg, border = "rgba(245, 158, 11, 0.12)", "rgba(245, 158, 11, 0.40)"
+            bar_color = "#F59E0B"
+            conf_css = "color:#F59E0B;"
         else:
-            color = "#EF4444"
-            bg, border = "rgba(239, 68, 68, 0.10)", "rgba(239, 68, 68, 0.40)"
+            bar_color = "#EF4444"
+            conf_css = "color:#EF4444;"
 
-        # 左侧：大号置信度色块（百分比 + 文字标识）
-        score_label = QLabel(
-            f"<div align='center' style='line-height:1.05;'>"
-            f"<span style='color:{color};font-size:22pt;font-weight:800;'>"
-            f"{event.confidence_percent}</span><br>"
-            f"<span style='color:#64748B;font-size:10pt;'>置信度</span></div>"
-        )
-        score_label.setTextFormat(Qt.TextFormat.RichText)
-        score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        score_label.setFixedWidth(80)
-        score_label.setStyleSheet(
-            f"QLabel {{ background: {bg}; border: 1px solid {border}; "
-            "border-radius: 10px; padding: 8px 4px; }}"
+        # 外层卡片：左侧 4px 竖线 + 圆角（对齐原型 border-l-4 效果）
+        # Qt 里用 "border-left: Npx solid color; border-radius: 8px" 不太可靠，
+        # 改为在 HBox 里加一个 4px 宽的 QFrame 色条代替。
+        color_bar = QFrame()
+        color_bar.setFixedWidth(4)
+        color_bar.setMinimumHeight(60)
+        color_bar.setStyleSheet(
+            f"QFrame {{ background: {bar_color}; border-radius: 2px; border: none; }}"
         )
 
-        # 右侧：标题 + 元信息 + 摘要 + tags（用一个 rich-text Label 承载）
+        # 右侧内容区
         relevance = event.similarity_percent if event.similarity_score > 0 else "—"
         body_html = (
-            f"<div style='color:#1E293B;font-size:14pt;font-weight:700;'>"
+            f"<div style='margin-bottom:2px;'>"
+            f"<span style='{conf_css}font-size:10pt;font-weight:800;'>"
+            f"命中率 {event.confidence_percent}</span>"
+            f"&nbsp;&nbsp;<span style='color:#94A3B8;font-size:9pt;'>{event.id[:10]}</span>"
+            f"</div>"
+            f"<div style='color:#1E293B;font-size:12pt;font-weight:700;margin-bottom:4px;'>"
             f"{event.title}</div>"
-            f"<div style='color:#64748B;font-size:11pt;margin-top:3px;'>"
-            f"{event.time_range}  ·  相关度 {relevance}</div>"
-            f"<div style='color:#334155;font-size:11pt;margin-top:6px;'>"
-            f"{event.summary or '（无摘要）'}</div>"
-            f"<div style='color:#2563EB;font-size:11pt;margin-top:6px;'>"
+            f"<div style='color:#64748B;font-size:10pt;'>"
+            f"⏱ {event.time_range}</div>"
+            f"<div style='color:#2563EB;font-size:10pt;margin-top:4px;font-weight:600;'>"
             f"{'  '.join('#' + t for t in event.tags) or ''}</div>"
         )
         body_label = QLabel(body_html)
         body_label.setTextFormat(Qt.TextFormat.RichText)
         body_label.setWordWrap(True)
         body_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+        body_label.setStyleSheet("QLabel { background: transparent; border: none; }")
 
-        # 左右横向布局，赋给外层 QFrame
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(14, 12, 14, 12)
-        layout.setSpacing(14)
-        layout.addWidget(score_label, 0, Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(0, 10, 14, 10)
+        layout.setSpacing(12)
+        layout.addWidget(color_bar)
         layout.addWidget(body_label, 1)
 
-        # Hover shadow effect — 用 QGraphicsDropShadowEffect 模拟 hover 浮起
-        # enterEvent 激活阴影，leaveEvent 移除，替代 CSS transition。
-        self._shadow = QGraphicsDropShadowEffect(self)
-        self._shadow.setBlurRadius(0)
-        self._shadow.setOffset(0, 2)
-        self._shadow.setColor(QColor(0, 0, 0, 0))
-        self.setGraphicsEffect(self._shadow)
+        self._bar_color = bar_color
+        self._default_bg = "background: #FFFFFF; border-radius: 8px; border: none;"
+        self._hover_bg = "background: #EFF6FF; border-radius: 8px; border: none;"
+        self.setStyleSheet(f"QFrame {{ {self._default_bg} }}")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # 关键：event 字段必须最后赋值，避免 PySide6 构造期 segfault
         self.event = event
 
     def enterEvent(self, event) -> None:  # type: ignore[override]
-        self._shadow.setBlurRadius(16)
-        self._shadow.setColor(QColor(0, 0, 0, 40))
+        self.setStyleSheet(f"QFrame {{ {self._hover_bg} }}")
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:  # type: ignore[override]
-        self._shadow.setBlurRadius(0)
-        self._shadow.setColor(QColor(0, 0, 0, 0))
+        self.setStyleSheet(f"QFrame {{ {self._default_bg} }}")
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]

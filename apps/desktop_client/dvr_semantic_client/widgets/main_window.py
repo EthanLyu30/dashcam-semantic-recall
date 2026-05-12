@@ -154,22 +154,35 @@ class MainWindow(QMainWindow):
 
         layout.addLayout(nav_row, 1)
 
-        # 右：当前用户 / 数据源 紧凑胶囊
-        if self.login_ctx is not None:
-            who = self.login_ctx.display_name or self.login_ctx.username
-            role_map = {"admin": "管理员", "reviewer": "审核员", "user": "普通用户"}
-            role = role_map.get(self.login_ctx.role, self.login_ctx.role or "访客")
-            source = "已连接后端" if self.base_url else "演示数据"
-            state_text = f"  {who} · {role}  ·  {source}  "
-        else:
-            state_text = "  演示数据 · Qt6 复现原型  "
-        state = QLabel(state_text)
-        state.setStyleSheet(
-            "QLabel { color: #4338CA; background: #EEF2FF; "
-            "border: 1px solid #C7D2FE; border-radius: 999px; "
-            "padding: 5px 14px; font-size: 11px; font-weight: 600; }"
+        # 右：设置 / 用户 / 注销 三个图标圆按钮（对齐原型右上角）
+        icon_btn_qss = (
+            "QPushButton { background: transparent; border: none; border-radius: 20px; "
+            "color: #64748B; font-size: 16px; min-width: 36px; min-height: 36px; "
+            "max-width: 36px; max-height: 36px; padding: 0; }"
+            "QPushButton:hover { background: #F1F5F9; color: #2563EB; }"
         )
-        layout.addWidget(state)
+        settings_btn = QPushButton("⚙")
+        settings_btn.setStyleSheet(icon_btn_qss)
+        settings_btn.setToolTip("模型与安全配置")
+        settings_btn.clicked.connect(lambda: self.show_page(8))
+
+        user_btn = QPushButton("👤")
+        user_btn.setStyleSheet(icon_btn_qss)
+        user_btn.setToolTip("角色与权限管理")
+        user_btn.clicked.connect(lambda: self.show_page(9))
+
+        logout_btn = QPushButton("⏻")
+        logout_btn.setStyleSheet(
+            icon_btn_qss.replace("color: #64748B", "color: #94A3B8")
+            + "QPushButton:hover { background: #FEF2F2; color: #EF4444; }"
+        )
+        logout_btn.setToolTip("登录 / 注销")
+        logout_btn.clicked.connect(lambda: self.show_page(10))
+
+        layout.addSpacing(4)
+        layout.addWidget(settings_btn)
+        layout.addWidget(user_btn)
+        layout.addWidget(logout_btn)
         return frame
 
     def _build_pages(self) -> None:

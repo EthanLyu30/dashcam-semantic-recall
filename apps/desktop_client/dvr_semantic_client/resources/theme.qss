@@ -31,10 +31,11 @@ QLabel {
 }
 
 /* ---- 面板容器 ---- */
+/* 原型用 bg-slate-50/70 + rounded-3xl + border-slate-100/60 */
 QFrame[role="panel"] {
-    background: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 22px;
+    background: #F8FAFC;
+    border: 1px solid #E8EDF2;
+    border-radius: 24px;
 }
 QScrollArea {
     background: transparent;
@@ -129,33 +130,32 @@ QPushButton[variant="evidence"]:hover {
     color: #92400E;
 }
 
-/* 导航：flat 无边框，hover 浅蓝，active 蓝字 + 蓝下划线 */
+/* 导航：与原型一致——flat 无边框，hover 浅灰，active 淡蓝背景圆角（无下划线） */
 QPushButton[variant="nav"] {
     background: transparent;
     border: none;
-    border-bottom: 2px solid transparent;
-    border-radius: 0;
+    border-radius: 10px;
     color: #64748B;
-    padding: 8px 14px;
+    padding: 6px 14px;
     font-weight: 500;
+    font-size: 13px;
 }
 QPushButton[variant="nav"]:hover {
+    background: #F1F5F9;
     color: #2563EB;
-    background: transparent;
-    border-bottom-color: transparent;
 }
 QPushButton[variant="nav-active"] {
-    background: transparent;
+    background: #EFF6FF;
     border: none;
-    border-bottom: 2px solid #2563EB;
-    border-radius: 0;
+    border-radius: 10px;
     color: #2563EB;
-    padding: 8px 14px;
+    padding: 6px 14px;
     font-weight: 700;
+    font-size: 13px;
 }
 QPushButton[variant="nav-active"]:hover {
+    background: #DBEAFE;
     color: #1D4ED8;
-    border-bottom-color: #1D4ED8;
 }
 
 QPushButton[variant="ghost"] {
