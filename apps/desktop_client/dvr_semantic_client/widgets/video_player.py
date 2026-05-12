@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QTimer, Qt, Signal
+from PySide6.QtCore import QPoint, QTimer, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QPainter, QPixmap, QPolygon
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -17,6 +19,54 @@ from PySide6.QtWidgets import (
 
 from ..models import SemanticEvent, VideoRecord, format_time
 
+
+class _PrototypeSurface(QLabel):
+    """Video placeholder that mirrors the HTML prototype when VLC is unavailable."""
+
+    def __init__(self, text: str, parent: QWidget | None = None) -> None:
+        super().__init__(text, parent)
+        self._pixmap = QPixmap()
+
+    def set_scene_image(self, path: Path) -> None:
+        if path.exists():
+            self._pixmap = QPixmap(str(path))
+            self.update()
+
+    def paintEvent(self, event) -> None:  # type: ignore[override]
+        if self._pixmap.isNull():
+            super().paintEvent(event)
+            return
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        target = self.rect()
+        scaled = self._pixmap.scaled(
+            target.size(),
+            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        x = (scaled.width() - target.width()) // 2
+        y = (scaled.height() - target.height()) // 2
+        painter.drawPixmap(-x, -y, scaled)
+        painter.fillRect(target, QColor(2, 6, 23, 125))
+
+        painter.setBrush(QColor(0, 0, 0, 120))
+        painter.setPen(Qt.PenStyle.NoPen)
+        center = target.center()
+        painter.drawEllipse(center, 34, 34)
+        painter.setBrush(QColor("#FFFFFF"))
+        points = QPolygon([
+            center + QPoint(-8, -14),
+            center + QPoint(-8, 14),
+            center + QPoint(16, 0),
+        ])
+        painter.drawPolygon(points)
+
+        painter.setPen(QColor("#CBD5E1"))
+        font = QFont("Microsoft YaHei UI", 11)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(target.adjusted(24, 24, -24, -24), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft, self.text())
 
 class VideoPlayerPanel(QFrame):
     """视频回放面板。
@@ -32,8 +82,8 @@ class VideoPlayerPanel(QFrame):
         super().__init__(parent)
         self.setProperty("role", "panel-dark")
         self.setStyleSheet(
-            "QFrame[role='panel-dark'] { background: #0B1220; "
-            "border: 1px solid #1E293B; border-radius: 22px; }"
+            "QFrame[role='panel-dark'] { background: transparent; "
+            "border: none; border-radius: 0px; }"
         )
         self._video: VideoRecord | None = None
         self._current_sec = 0
@@ -60,7 +110,7 @@ class VideoPlayerPanel(QFrame):
             )
 
         # 占位 Label，未加载视频或 VLC 不可用时显示
-        self.surface_label = QLabel(self._placeholder_text("idle"))
+        self.surface_label = _PrototypeSurface(self._placeholder_text("idle"))
         self.surface_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.surface_label.setWordWrap(True)
         self.surface_label.setStyleSheet(
@@ -68,6 +118,14 @@ class VideoPlayerPanel(QFrame):
             "border: 1px solid #1E293B; color: #CBD5E1; "
             "font-size: 16px; padding: 28px; line-height: 1.6; }"
         )
+        scene_path = (
+            Path(__file__).resolve().parents[4]
+            / "docs"
+            / "prototype-source"
+            / "images"
+            / "交通场景.jpg"
+        )
+        self.surface_label.set_scene_image(scene_path)
 
         # 用 QStackedLayout 在 video_frame 和占位 Label 之间切换
         self.surface_container = QWidget()
@@ -80,7 +138,7 @@ class VideoPlayerPanel(QFrame):
 
         self.title = QLabel("视频回放")
         self.title.setStyleSheet(
-            "QLabel { color: #F8FAFC; font-size: 16px; font-weight: 700; "
+            "QLabel { color: #F8FAFC; font-size: 16px; font-weight: 800; "
             "background: transparent; }"
         )
         self.timecode = QLabel("00:00")
@@ -90,11 +148,7 @@ class VideoPlayerPanel(QFrame):
             "font-size: 18px; font-weight: 700; letter-spacing: 1px; "
             "background: transparent; }"
         )
-        status_text = (
-            "VLC 已就绪 · 等待视频流"
-            if self._vlc_available
-            else "未检测到 VLC · 进入占位模式"
-        )
+        status_text = "VLC 已就绪 · 等待视频流" if self._vlc_available else "占位模式 · 点击检索结果可同步跳转"
         self.status = QLabel(status_text)
         self.status.setStyleSheet(
             "QLabel { color: #94A3B8; font-size: 12px; background: transparent; }"

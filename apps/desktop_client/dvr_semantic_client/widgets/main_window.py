@@ -58,6 +58,8 @@ class MainWindow(QMainWindow):
         self.timeline = EventTimeline()
         self.player.attach_timeline(self.timeline)
         self.detail = EventDetailPanel()
+        self.detail.set_dark(True)
+        self.query_id_label = QLabel("QueryID: -")
         self.stack = QStackedWidget()
         self.nav_buttons: list[QPushButton] = []
 
@@ -69,8 +71,8 @@ class MainWindow(QMainWindow):
 
         central = QWidget()
         root = QVBoxLayout(central)
-        root.setContentsMargins(24, 22, 24, 22)
-        root.setSpacing(18)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
         root.addWidget(self._build_header())
         self._build_pages()
         root.addWidget(self.stack, 1)
@@ -80,9 +82,9 @@ class MainWindow(QMainWindow):
 
     def _build_header(self) -> QFrame:
         frame = QFrame()
-        frame.setProperty("role", "panel")
+        frame.setProperty("role", "appHeader")
         layout = QHBoxLayout(frame)
-        layout.setContentsMargins(26, 16, 22, 16)
+        layout.setContentsMargins(96, 12, 96, 12)
         layout.setSpacing(18)
 
         # 左：品牌 logo 块（圆角彩色方块 + 文字标题）
@@ -96,13 +98,13 @@ class MainWindow(QMainWindow):
             "letter-spacing: 0.5px; }"
         )
 
-        brand_name = QLabel("DVR-Semantic")
+        brand_name = QLabel("DVR-S")
         brand_name.setStyleSheet(
             "QLabel { color: #0F172A; font-size: 17px; font-weight: 800; "
             "letter-spacing: 0.2px; }"
         )
-        brand_subtitle = QLabel("行车记录仪视频语义检索与精准回放")
-        brand_subtitle.setStyleSheet("color: #64748B; font-size: 11px;")
+        brand_subtitle = QLabel("Semantic Recall")
+        brand_subtitle.setStyleSheet("color: #94A3B8; font-size: 10px;")
         brand_text = QVBoxLayout()
         brand_text.setContentsMargins(0, 0, 0, 0)
         brand_text.setSpacing(1)
@@ -202,21 +204,45 @@ class MainWindow(QMainWindow):
     def _build_search_workspace(self) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(16)
+        layout.setContentsMargins(96, 30, 96, 0)
+        layout.setSpacing(0)
 
-        # 上：检索结果 | 视频回放（时间轴已经在 player 内部）
+        header = QFrame()
+        header.setProperty("role", "searchHeader")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(32, 18, 32, 18)
+        page_title = QLabel("多模态语义检索")
+        page_title.setStyleSheet(
+            "color: #0F172A; font-size: 22px; font-weight: 800; "
+            "background: transparent; border: none;"
+        )
+        self.query_id_label.setStyleSheet(
+            "color: #64748B; font-size: 11px; font-family: Consolas, monospace; "
+            "background: transparent; border: none;"
+        )
+        header_layout.addWidget(page_title)
+        header_layout.addStretch()
+        header_layout.addWidget(self.query_id_label)
+        layout.addWidget(header)
+
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setHandleWidth(16)
+        splitter.setObjectName("searchSplitter")
+        splitter.setHandleWidth(0)
         splitter.addWidget(self.search_panel)
-        splitter.addWidget(self.player)
+
+        right_panel = QFrame()
+        right_panel.setProperty("role", "searchRight")
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(24, 24, 24, 24)
+        right_layout.setSpacing(18)
+        right_layout.addWidget(self.player, 3)
+        self.detail.setMaximumHeight(290)
+        right_layout.addWidget(self.detail, 1)
+
+        splitter.addWidget(right_panel)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 3)
-        layout.addWidget(splitter, 3)
-
-        # 下：事件详情独占一行
-        self.detail.setMaximumHeight(320)
-        layout.addWidget(self.detail, 1)
+        layout.addWidget(splitter, 1)
         return page
 
     def show_page(self, index: int) -> None:
@@ -264,6 +290,7 @@ class MainWindow(QMainWindow):
             self.timeline.set_video(selected_video)
 
         self.current_events = response.results
+        self.query_id_label.setText(f"QueryID: {response.query_id or '-'}")
         self.search_panel.set_response(response)
         self.timeline.set_events(response.results)
         self.statusBar().showMessage(f"Search completed: {len(response.results)} results")

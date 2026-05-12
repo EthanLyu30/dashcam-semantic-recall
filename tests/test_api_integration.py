@@ -47,6 +47,8 @@ def isolated_env(tmp_path, monkeypatch):
 
 
 def _make_video(path: Path, duration: int = 8) -> None:
+    if shutil.which("ffmpeg") is None:
+        pytest.skip("ffmpeg is required to generate the smoke-test video clip")
     cmd = [
         "ffmpeg",
         "-f",

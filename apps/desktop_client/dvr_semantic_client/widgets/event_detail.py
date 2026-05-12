@@ -41,6 +41,7 @@ class _MetricBlock(QFrame):
     def __init__(self, label: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(70)
+        self._dark = False
         self._label = QLabel(label)
         self._value = QLabel("—")
         layout = QVBoxLayout(self)
@@ -50,9 +51,16 @@ class _MetricBlock(QFrame):
         layout.addWidget(self._value)
         self.set_state(label, "—", "#94A3B8")
 
+    def set_dark(self, dark: bool) -> None:
+        self._dark = dark
+        self.set_state(self._label.text(), self._value.text(), "#94A3B8")
+
     def set_state(self, label: str, value: str, color: str) -> None:
         bg = _hex_to_rgba(color, 0.10)
         border = _hex_to_rgba(color, 0.40)
+        if self._dark:
+            bg = "rgba(30, 41, 59, 0.72)"
+            border = "rgba(255, 255, 255, 0.08)"
         self.setStyleSheet(
             f"QFrame {{ background: {bg}; border: 1px solid {border}; "
             f"border-radius: 12px; }}"
@@ -60,7 +68,8 @@ class _MetricBlock(QFrame):
         )
         self._label.setText(label)
         self._label.setStyleSheet(
-            "color: #64748B; font-size: 11px; font-weight: 600;"
+            f"color: {'#94A3B8' if self._dark else '#64748B'}; "
+            "font-size: 11px; font-weight: 600;"
         )
         self._value.setText(value)
         self._value.setStyleSheet(
@@ -77,6 +86,7 @@ class EventDetailPanel(QFrame):
         super().__init__(parent)
         self.setProperty("role", "panel")
         self._event: SemanticEvent | None = None
+        self._dark = False
 
         self.title = QLabel("事件详情")
         self.title.setProperty("role", "panelTitle")
@@ -119,6 +129,51 @@ class EventDetailPanel(QFrame):
         layout.addWidget(self.summary)
         layout.addWidget(self.tags)
         layout.addStretch()
+        self._apply_palette()
+
+    def set_dark(self, dark: bool) -> None:
+        self._dark = dark
+        self.setProperty("role", "panel-dark-card" if dark else "panel")
+        for block in (
+            self._metric_confidence,
+            self._metric_relevance,
+            self._metric_review,
+        ):
+            block.set_dark(dark)
+        self._apply_palette()
+        if self._event is not None:
+            self.set_event(self._event)
+
+    def _apply_palette(self) -> None:
+        if self._dark:
+            self.setStyleSheet(
+                "QFrame { background: transparent; border: none; }"
+                "QLabel { background: transparent; border: none; }"
+            )
+            self.title.setStyleSheet(
+                "color: #E2E8F0; font-size: 16px; font-weight: 800;"
+            )
+            self.subtitle.setStyleSheet("color: #94A3B8; font-size: 12px;")
+            self.summary.setStyleSheet("color: #F8FAFC; font-size: 12px;")
+            self.tags.setStyleSheet(
+                "color: #93C5FD; font-size: 12px; font-weight: 700;"
+            )
+            self.export_button.setStyleSheet(
+                "QPushButton { background: #2563EB; border: 1px solid #2563EB; "
+                "color: #FFFFFF; border-radius: 9px; padding: 8px 14px; "
+                "font-size: 12px; font-weight: 800; }"
+                "QPushButton:hover { background: #1D4ED8; border-color: #1D4ED8; }"
+                "QPushButton:disabled { background: #334155; border-color: #334155; "
+                "color: #94A3B8; }"
+            )
+            return
+
+        self.setStyleSheet("")
+        self.title.setStyleSheet("")
+        self.subtitle.setStyleSheet("")
+        self.summary.setStyleSheet("")
+        self.tags.setStyleSheet("color: #2563EB; font-size: 12px;")
+        self.export_button.setStyleSheet("")
 
     def set_event(self, event: SemanticEvent) -> None:
         self._event = event
@@ -126,6 +181,7 @@ class EventDetailPanel(QFrame):
         self.subtitle.setText(f"{event.time_range}  ·  事件类型 {event.event_type}")
         self.summary.setText(event.summary or "（无摘要）")
         self.tags.setText("  ".join(f"#{tag}" for tag in event.tags) or "（无标签）")
+        self._apply_palette()
 
         # 置信度色：高=绿、中=黄、低=红
         if event.confidence >= 0.85:

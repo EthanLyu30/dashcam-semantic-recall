@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -25,69 +26,109 @@ class ResultCard(QFrame):
 
     def __init__(self, event: SemanticEvent, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        # 颜色策略：高=绿（≥0.85）/ 中=黄（≥0.78）/ 低=红
-        if event.confidence >= 0.85:
-            bar_color = "#16A34A"
-            conf_css = "color:#16A34A;"
-        elif event.confidence >= 0.78:
-            bar_color = "#F59E0B"
-            conf_css = "color:#F59E0B;"
-        else:
-            bar_color = "#EF4444"
-            conf_css = "color:#EF4444;"
+        self._selected = False
+        self._confidence_color = "#2563EB" if event.confidence >= 0.85 else "#64748B"
 
-        # 外层卡片：左侧 4px 竖线 + 圆角（对齐原型 border-l-4 效果）
-        # Qt 里用 "border-left: Npx solid color; border-radius: 8px" 不太可靠，
-        # 改为在 HBox 里加一个 4px 宽的 QFrame 色条代替。
-        color_bar = QFrame()
-        color_bar.setFixedWidth(4)
-        color_bar.setMinimumHeight(60)
-        color_bar.setStyleSheet(
-            f"QFrame {{ background: {bar_color}; border-radius: 2px; border: none; }}"
+        self.color_bar = QFrame()
+        self.color_bar.setFixedWidth(4)
+        self.color_bar.setMinimumHeight(96)
+
+        confidence = QLabel(f"命中率 {event.confidence_percent}")
+        confidence.setStyleSheet(
+            f"color: {self._confidence_color}; font-size: 10px; "
+            "font-weight: 800; background: transparent; border: none;"
+        )
+        event_id = QLabel(event.id[:10].upper())
+        event_id.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        event_id.setStyleSheet(
+            "color: #94A3B8; font-size: 10px; font-family: Consolas, monospace; "
+            "background: transparent; border: none;"
+        )
+        meta_row = QHBoxLayout()
+        meta_row.setContentsMargins(0, 0, 0, 0)
+        meta_row.addWidget(confidence)
+        meta_row.addStretch()
+        meta_row.addWidget(event_id)
+
+        title = QLabel(event.title)
+        title.setWordWrap(True)
+        title.setStyleSheet(
+            "color: #0F172A; font-size: 14px; font-weight: 800; "
+            "background: transparent; border: none;"
         )
 
-        # 右侧内容区
-        relevance = event.similarity_percent if event.similarity_score > 0 else "—"
-        body_html = (
-            f"<div style='margin-bottom:2px;'>"
-            f"<span style='{conf_css}font-size:10pt;font-weight:800;'>"
-            f"命中率 {event.confidence_percent}</span>"
-            f"&nbsp;&nbsp;<span style='color:#94A3B8;font-size:9pt;'>{event.id[:10]}</span>"
-            f"</div>"
-            f"<div style='color:#1E293B;font-size:12pt;font-weight:700;margin-bottom:4px;'>"
-            f"{event.title}</div>"
-            f"<div style='color:#64748B;font-size:10pt;'>"
-            f"⏱ {event.time_range}</div>"
-            f"<div style='color:#2563EB;font-size:10pt;margin-top:4px;font-weight:600;'>"
-            f"{'  '.join('#' + t for t in event.tags) or ''}</div>"
+        time = QLabel(f"◷ {event.time_range}")
+        time.setStyleSheet(
+            "color: #64748B; font-size: 12px; background: transparent; border: none;"
         )
-        body_label = QLabel(body_html)
-        body_label.setTextFormat(Qt.TextFormat.RichText)
-        body_label.setWordWrap(True)
-        body_label.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
-        body_label.setStyleSheet("QLabel { background: transparent; border: none; }")
+        jump = QLabel("跳转回放 ▶")
+        jump.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        jump.setStyleSheet(
+            "color: #2563EB; font-size: 12px; font-weight: 800; "
+            "background: transparent; border: none;"
+        )
+        action_row = QHBoxLayout()
+        action_row.setContentsMargins(0, 0, 0, 0)
+        action_row.addWidget(time)
+        action_row.addStretch()
+        action_row.addWidget(jump)
+
+        tag_text = "  ".join(f"#{tag}" for tag in event.tags)
+        tags = QLabel(tag_text)
+        tags.setWordWrap(True)
+        tags.setStyleSheet(
+            "color: #2563EB; font-size: 11px; font-weight: 700; "
+            "background: transparent; border: none;"
+        )
 
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(0, 10, 14, 10)
+        layout.setContentsMargins(0, 14, 16, 14)
         layout.setSpacing(12)
-        layout.addWidget(color_bar)
-        layout.addWidget(body_label, 1)
+        layout.addWidget(self.color_bar)
 
-        self._bar_color = bar_color
-        self._default_bg = "background: #FFFFFF; border-radius: 8px; border: none;"
-        self._hover_bg = "background: #EFF6FF; border-radius: 8px; border: none;"
-        self.setStyleSheet(f"QFrame {{ {self._default_bg} }}")
+        body = QVBoxLayout()
+        body.setContentsMargins(0, 0, 0, 0)
+        body.setSpacing(8)
+        body.addLayout(meta_row)
+        body.addWidget(title)
+        body.addLayout(action_row)
+        if tag_text:
+            body.addWidget(tags)
+        layout.addLayout(body, 1)
+
+        self._apply_style()
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # 关键：event 字段必须最后赋值，避免 PySide6 构造期 segfault
         self.event = event
 
+    def set_selected(self, selected: bool) -> None:
+        self._selected = selected
+        self._apply_style()
+
+    def _apply_style(self, hover: bool = False) -> None:
+        if self._selected:
+            bg = "#EFF6FF"
+            bar = "#2563EB"
+        elif hover:
+            bg = "#F8FAFC"
+            bar = "#E2E8F0"
+        else:
+            bg = "#FFFFFF"
+            bar = "transparent"
+        self.setStyleSheet(
+            f"QFrame {{ background: {bg}; border-radius: 0px; border: none; }}"
+        )
+        self.color_bar.setStyleSheet(
+            f"QFrame {{ background: {bar}; border-radius: 0px; border: none; }}"
+        )
+
     def enterEvent(self, event) -> None:  # type: ignore[override]
-        self.setStyleSheet(f"QFrame {{ {self._hover_bg} }}")
+        self._apply_style(hover=True)
         super().enterEvent(event)
 
     def leaveEvent(self, event) -> None:  # type: ignore[override]
-        self.setStyleSheet(f"QFrame {{ {self._default_bg} }}")
+        self._apply_style()
         super().leaveEvent(event)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]
