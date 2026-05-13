@@ -1,21 +1,37 @@
-"""SQLite-backed persistence layer.
+"""Dual-engine persistence layer (PostgreSQL + SQLite fallback).
 
-Tables follow 概要设计 V4.0 chapter 4. We stay on SQLite for the course demo
-(it ships with Python, zero install) and keep the schema close enough to the
-PostgreSQL+pgvector design that swapping the engine later is a config change.
-Vector similarity is computed in Python rather than via pgvector.
+Tables follow 概要设计 V4.0 chapter 4. By default we use PostgreSQL with
+native vector storage (REAL[]). Set DVR_SEMANTIC_DB_URL to a ``sqlite:///``
+URL to switch back to SQLite for quick local demos or testing.
+
+Vector similarity is computed via a PostgreSQL stored function when using PG,
+otherwise in Python (same math, different executor).
 """
+
 from __future__ import annotations
 
 import json
 import os
 from contextlib import contextmanager
-from datetime import datetime
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load .env from project root (3 levels up from this file)
+_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
+load_dotenv(_ENV_PATH, override=True)
+
+# Ensure ffmpeg/ffprobe are findable by ffmpeg-python (it only checks PATH)
+_ffmpeg_dir = Path(os.getenv("FFMPEG_BIN", "")).parent
+if _ffmpeg_dir.exists():
+    os.environ["PATH"] = str(_ffmpeg_dir) + os.pathsep + os.environ.get("PATH", "")
+
+from datetime import datetime
 from typing import Iterator
 
 from sqlalchemy import (
     JSON,
+    ARRAY,
     Column,
     DateTime,
     Float,
@@ -25,6 +41,7 @@ from sqlalchemy import (
     Text,
     create_engine,
     event,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Session, relationship, sessionmaker
 
@@ -33,23 +50,23 @@ def _default_db_url() -> str:
     url = os.getenv("DVR_SEMANTIC_DB_URL", "").strip()
     if url:
         return url
-    var_dir = Path(__file__).resolve().parents[3] / "var"
-    var_dir.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{var_dir / 'dvr_semantic.db'}"
+    return "postgresql://postgres:postgres@localhost:5432/dvr_semantic"
 
 
 DATABASE_URL = _default_db_url()
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
+
 _engine = create_engine(
     DATABASE_URL,
     future=True,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
 )
 SessionLocal = sessionmaker(bind=_engine, autoflush=False, autocommit=False, future=True)
 
 
 @event.listens_for(_engine, "connect")
 def _enable_sqlite_fk(dbapi_connection, _record):  # pragma: no cover
-    if DATABASE_URL.startswith("sqlite"):
+    if IS_SQLITE:
         cur = dbapi_connection.cursor()
         cur.execute("PRAGMA foreign_keys=ON")
         cur.close()
@@ -61,6 +78,11 @@ class Base(DeclarativeBase):
 
 def _utcnow() -> datetime:
     return datetime.utcnow()
+
+
+# ---------------------------------------------------------------------------
+# ORM Models (9 tables, compatible with both PostgreSQL and SQLite)
+# ---------------------------------------------------------------------------
 
 
 class User(Base):
@@ -139,7 +161,15 @@ class SemanticEvent(Base):
     tags_json = Column(JSON, default=list)
     thumbnail_path = Column(String(512), default="")
     vector_text = Column(Text, default="")
-    embedding_json = Column(JSON, default=list)  # store list[float] when available
+
+    # ----- vector storage: dual-engine -----
+    # PostgreSQL: REAL[] native array column (upserted by hybrid_search.py)
+    # SQLite:      JSON column (list[float], same format as before)
+    if IS_SQLITE:
+        embedding = Column(JSON, default=list)
+    else:
+        embedding = Column(ARRAY(Float), default=list)
+
     review_status = Column(String(32), default="pending")
     # pending | reviewing | confirmed | rejected
     created_at = Column(DateTime, default=_utcnow, nullable=False)
@@ -197,8 +227,52 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=_utcnow, nullable=False, index=True)
 
 
+# ---------------------------------------------------------------------------
+# PostgreSQL cosine-similarity function (A2: no pgvector, pure PG math)
+# ---------------------------------------------------------------------------
+
+_COSINE_SIM_FUNCTION = """
+DROP FUNCTION IF EXISTS cosine_similarity(double precision[], double precision[]) CASCADE;
+CREATE OR REPLACE FUNCTION cosine_similarity(a double precision[], b double precision[])
+RETURNS double precision AS $$
+DECLARE
+    dot_product double precision := 0;
+    norm_a double precision := 0;
+    norm_b double precision := 0;
+    i int;
+BEGIN
+    IF array_length(a, 1) IS NULL OR array_length(b, 1) IS NULL THEN
+        RETURN 0;
+    END IF;
+    IF array_length(a, 1) != array_length(b, 1) THEN
+        RETURN 0;
+    END IF;
+    FOR i IN 1..array_length(a, 1) LOOP
+        dot_product := dot_product + a[i] * b[i];
+        norm_a := norm_a + a[i] * a[i];
+        norm_b := norm_b + b[i] * b[i];
+    END LOOP;
+    IF norm_a = 0 OR norm_b = 0 THEN
+        RETURN 0;
+    END IF;
+    RETURN dot_product / sqrt(norm_a * norm_b);
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+"""
+
+
 def init_db() -> None:
+    """Create tables and (on PostgreSQL) install the cosine_similarity function."""
     Base.metadata.create_all(bind=_engine)
+    if not IS_SQLITE:
+        with _engine.connect() as conn:
+            conn.execute(text(_COSINE_SIM_FUNCTION))
+            conn.commit()
+
+
+# ---------------------------------------------------------------------------
+# Session helpers
+# ---------------------------------------------------------------------------
 
 
 @contextmanager

@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 try:
     from .dvr_semantic_backend.api import create_app
 except ImportError:  # pragma: no cover - supports direct script execution
