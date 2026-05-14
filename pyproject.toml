@@ -38,11 +38,15 @@ media = [
 ]
 dev = [
   "pytest>=8.0",
+  "pytest-env>=1.1",
   "httpx>=0.27",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+env = [
+  "DVR_SEMANTIC_DB_URL=sqlite:///:memory:"
+]
 pythonpath = [
   "apps/desktop_client",
   "apps/backend",
