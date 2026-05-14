@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 
 # Load .env from project root (3 levels up from this file)
 _ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
-load_dotenv(_ENV_PATH, override=True)
+load_dotenv(_ENV_PATH, override=False)  # respect externally-set env vars (e.g. pytest)
 
 # Ensure ffmpeg/ffprobe are findable by ffmpeg-python (it only checks PATH)
 _ffmpeg_dir = Path(os.getenv("FFMPEG_BIN", "")).parent
