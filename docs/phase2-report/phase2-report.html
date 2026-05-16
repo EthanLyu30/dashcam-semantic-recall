@@ -304,7 +304,7 @@
       <h1>基于多模态大模型的<br/><span class="accent">行车记录仪视频语义检索与精准回放系统</span></h1>
       <p class="muted" style="margin-top:18px;font-size:16px;">从原型复刻到端到端服务落地 · 主链路真实跑通</p>
       <hr style="margin:32px auto;border:none;height:3px;width:280px;background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);border-radius:2px;" />
-      <p style="font-size:19px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (客户端 + 全量后端服务 ≈ 85%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (真链路验证 + pgvector + 复核接口 ≈ 15%) </span></p>
+      <p style="font-size:19px;font-weight:700;color:var(--blue);">吕霄阳<span style="color:var(--muted);font-weight:500;"> (客户端 + 后端框架 + 测试 ≈ 50%) </span>/ 倪羽辰<span style="color:var(--muted);font-weight:500;"> (PostgreSQL + 复核 API + 真链路验证 ≈ 50%) </span></p>
       <p class="muted" style="margin-top:10px;">苏州大学 · 综合项目实践 · 2026 年 5 月</p>
     </div>
   </div>
@@ -315,7 +315,7 @@
 <!-- =============== 2. OVERVIEW WITH BARCHART =============== -->
 <section class="slide">
   <h2>阶段二已形成可运行的端到端主链路</h2>
-  <div class="subtitle">上传 → 预处理 → 分析 → 检索 → 回放 → 导出 全链路落地；UI 全页面可滚动，40 测试全过。下阶段：倪羽辰接入 pgvector + 真模型，吕霄阳联通辅助页面。</div>
+  <div class="subtitle">上传 → 预处理 → 分析 → 检索 → 回放 → 导出 全链路落地；UI 全页面可滚动，40 测试全过。PostgreSQL 双引擎与复核 API 已合入 main；剩余：真实视频 + 真模型 API Key 端到端联调。</div>
   <div class="cards four" style="margin-top:14px;">
     <div class="card"><div class="label">📦 后端服务模块</div><div class="value">7</div><span class="pill b">media · model · search · export · auth · audit · agg</span></div>
     <div class="card"><div class="label">🗄️ 业务数据表</div><div class="value">9</div><span class="pill g">对齐概要设计 V4.0</span></div>
@@ -956,7 +956,8 @@ test_backend_search      <span class="ok">2 ✓</span>
       <h3 style="color:var(--red);font-size:14px;">技术性未实现</h3>
       <ul style="margin-top:4px;">
         <li class="r" style="font-size:12.5px;line-height:1.6;">真多模态模型调用：演示走 mock；接 DeepSeek/千问只需填 .env 的 KEY</li>
-        <li class="r" style="font-size:12.5px;line-height:1.6;">pgvector / PostgreSQL：用 SQLite + 内存余弦等价替代</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ PostgreSQL 双引擎已合入（REAL[] 原生向量 + cosine_similarity 存储函数 + SQLite 降级）</li>
+        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 复核 API 已合入（GET /review/tasks 分页 + POST /{id}/decision 修正写库）</li>
         <li class="r" style="font-size:12.5px;line-height:1.6;">sentence-transformers 真向量：默认未装，hash-ngram 兜底</li>
         <li class="r" style="font-size:12.5px;line-height:1.6;">HLS 点播 / 异步任务队列：当前同步 FileResponse</li>
         <li class="r" style="font-size:12.5px;line-height:1.6;">PDF 摘要：导出包目前是 Markdown + JSON</li>
@@ -1019,9 +1020,10 @@ test_backend_search      <span class="ok">2 ✓</span>
     <div class="panel">
       <h3>阶段三计划（调整后分工）</h3>
       <ul>
-        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：PostgreSQL + pgvector 替换 SQLite，启用真向量检索</li>
-        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：补全复核 API（verdict 写库 + 审计日志），Qt 复核页联通</li>
-        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：用真实行车视频 + DeepSeek/千问 API Key 跑通全链路</li>
+        <li class="g" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ✅</b>：PostgreSQL 双引擎已实现（REAL[] 向量 + cosine_similarity 存储函数）</li>
+        <li class="g" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ✅</b>：复核 API 已实现（GET 分页 + POST decision 修正写库 + 审计）</li>
+        <li class="r" style="font-size:12.5px;line-height:1.7;"><b>倪羽辰 ★</b>：用真实行车视频 + DeepSeek/千问 API Key 跑通全链路（联调）</li>
+        <li class="b" style="font-size:12.5px;line-height:1.7;"><b>吕霄阳</b>：Qt 复核页接真实 /review/tasks API，与倪羽辰联调</li>
         <li class="b" style="font-size:12.5px;line-height:1.7;"><b>吕霄阳</b>：概览页接真实 /dashboard API，告警/报告辅助页接真数据</li>
         <li class="g" style="font-size:12.5px;line-height:1.7;"><b>共同</b>：端到端联调，检索结果 + VLC 播放同框演示截图</li>
         <li class="y" style="font-size:12.5px;line-height:1.7;"><b>可选</b>：Docker Compose 一键启动、异步任务队列</li>

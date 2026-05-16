@@ -2,7 +2,7 @@
 
 > **项目英文名**：`dashcam-semantic-recall`
 > **仓库地址**：<https://github.com/EthanLyu30/dashcam-semantic-recall>
-> **当前分支**：`lxy`（阶段二开发分支）
+> **当前状态**：`main` 为集成主干（已合入 lxy + leonore 两个阶段二分支）
 
 本项目是苏州大学综合项目实践课题——**基于多模态大模型的行车记录仪视频语义检索与精准回放系统**——的实现仓库。系统把长时段行车记录仪视频转换成可被自然语言检索的语义事件，让用户用一句"找一下白色车违停的片段"就能跳到对应时间点，并导出包含视频片段、截图、摘要的证据包。
 
@@ -14,40 +14,42 @@
 
 > 详细任务清单见 [`docs/ni-yuchen-todolist.md`](docs/ni-yuchen-todolist.md) 和 [`docs/lv-xiaoyang-completed.md`](docs/lv-xiaoyang-completed.md)。
 
-**吕霄阳** —— 桌面客户端、完整后端服务、原型迁移、演示层
+**吕霄阳**（≈ 50%）—— 桌面客户端、后端服务框架、原型迁移、演示层
 - Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）
-- 完整后端服务层：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
-- SQLite 核心数据库（9 张业务表）+ 40 个自动化测试
-- Mock 数据、REST 契约对接、最终演示流程
+- 后端服务框架：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
+- SQLite 数据库（9 张业务表）+ 40 个自动化测试 + Mock 数据契约
 
-**倪羽辰** —— 真实链路验证、数据库升级、复核接口
-- **必做**：用真实行车视频 + 真实模型 API Key 跑通完整演示链路
-- **必做**：将 SQLite 升级为 PostgreSQL + pgvector（真实向量检索）
-- **必做**：补全人工复核 API（`POST /review/tasks/{id}/decision` 真实写库）
-- **建议做**：后端技术实现说明文档、Docker Compose 一键启动
+**倪羽辰**（≈ 50%）—— PostgreSQL 升级、向量检索、复核接口、真实链路验证
+- ✅ PostgreSQL 双引擎（PG REAL[] 原生向量 + cosine\_similarity 存储函数 + SQLite 降级）
+- ✅ 人工复核 API（`GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库）
+- ✅ 后端技术实现说明文档（`docs/backend-tech-notes.md`，298 行）
+- **待完成**：用真实行车视频 + 真实模型 API Key 跑通端到端演示
 
 ---
 
-## 阶段二已实现（`lxy` 分支当前状态）
+## 阶段二已实现（`main` 分支当前状态）
 
-阶段一已完成（`main` 分支保留）：原型复刻、Qt6 多页面、Mock 数据契约。
+阶段一已完成（保留）：原型复刻、Qt6 多页面、Mock 数据契约。
 
-阶段二在 `lxy` 分支新增：
+阶段二（lxy + leonore 均已合入 main）新增：
 
-| 模块 | 内容 |
-|---|---|
-| 真实后端 | SQLAlchemy + SQLite，9 张业务表对齐《概要设计 V4.0》第 4 章；FastAPI 整合所有服务 |
-| ffmpeg 媒体流水线 | 上传 → 转码 → 30s 切片 → 1 帧/3s 抽取 → 640px 缩略图 |
-| 多模态模型适配层 | mock / DeepSeek-VL / 通义千问 Qwen-VL 一键切换，OpenAI 兼容协议 |
-| 语义事件聚合 | 相邻 ≤10s 同类型帧合并，置信度阈值进复核队列 |
-| 混合检索 | 向量召回（sentence-transformers 可选 + hash-ngram 降级）+ 关键词重排 |
-| 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 |
-| 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 |
-| 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 |
-| 测试 | 40 个测试全部通过，含端到端 `test_api_integration.py` 串通 login → upload → process → search → export |
-| UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 |
-| 登录流程规范化 | 登录已从顶部导航栏移除；启动时若设置 `DVR_SEMANTIC_API_BASE` 则弹登录对话框，⏻ 按钮改为退出确认 |
-| 按钮响应 | 所有展示型按钮接入 `_wip_button()`，点击弹"功能开发中"提示，不再静默无响应 |
+| 模块 | 内容 | 贡献者 |
+|---|---|---|
+| 真实后端框架 | SQLAlchemy，9 张业务表对齐《概要设计 V4.0》第 4 章；FastAPI 整合所有服务 | 吕霄阳 |
+| PostgreSQL 双引擎 | PG `REAL[]` 原生向量存储 + `cosine_similarity` 存储函数；SQLite 降级兼容测试 | 倪羽辰 |
+| ffmpeg 媒体流水线 | 上传 → 转码 → 30s 切片 → 1 帧/3s 抽取 → 640px 缩略图 | 吕霄阳 |
+| 多模态模型适配层 | mock / DeepSeek-VL / 通义千问 Qwen-VL 一键切换，OpenAI 兼容协议 | 吕霄阳 |
+| 语义事件聚合 | 相邻 ≤10s 同类型帧合并，置信度阈值进复核队列 | 吕霄阳 |
+| 混合检索 | PG 库内向量排序 + Python numpy 降级；关键词重排 | 吕霄阳（框架）/ 倪羽辰（PG 路径） |
+| 人工复核 API | `GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库 | 倪羽辰 |
+| 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 | 吕霄阳 |
+| 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
+| 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
+| 测试 | 40 个测试全部通过，含端到端 `test_api_integration.py`；pytest-env 隔离 | 吕霄阳（40个）/ 倪羽辰（测试隔离） |
+| UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
+| 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
+| 按钮响应 | 所有展示型按钮接入 `_wip_button()`，点击弹"功能开发中"提示 | 吕霄阳 |
+| 后端技术说明 | `docs/backend-tech-notes.md`（298 行）涵盖架构/向量/Qwen/聚合/导出 | 倪羽辰 |
 
 详细进度与剩余事项见 `plans/IMPL_PLAN.md`，需求实现状态见 `docs/requirements-trace.md`。
 
@@ -63,14 +65,36 @@ python --version    # 应当 ≥ 3.10
 ```
 
 #### 2. ffmpeg（视频预处理 / 证据导出必需）
-- Windows：`winget install Gyan.FFmpeg` 或者从 <https://ffmpeg.org/download.html> 下载放进 PATH
+- Windows 一键安装：`.\tools\install_ffmpeg.ps1`（仓库自带脚本，需管理员 PowerShell）
+- 或手动：`winget install Gyan.FFmpeg`，从 <https://ffmpeg.org/download.html> 下载放进 PATH
 - 验证：`ffmpeg -version` 能看到版本号即可
 
-#### 3. VLC media player（真实视频播放，可选）
+#### 3. PostgreSQL 16（真后端模式必需，或用 SQLite 快速降级）
+
+后端默认连接 `postgresql://postgres:postgres@localhost:5432/dvr_semantic`。
+
+**选项 A — 用 PostgreSQL（推荐，支持真向量检索）**：
+```powershell
+# Windows 安装 PG + pgvector：https://www.postgresql.org/download/windows/
+# 建库（psql -U postgres）：
+#   CREATE DATABASE dvr_semantic;
+# 运行后端时 init_db() 会自动建表并注册 cosine_similarity 函数
+```
+
+**选项 B — 快速 SQLite 降级（无需装 PG，适合快速演示）**：
+```powershell
+# 在后端终端设置环境变量，改回 SQLite
+$env:DVR_SEMANTIC_DB_URL = "sqlite:///./var/dvr_semantic.db"
+# 然后再启动后端（见下方"方式 B"）
+```
+
+也可以在项目根目录创建 `.env` 文件（仓库提供了 `.env.example` 模板）指定以上环境变量，后端启动时会自动读取。
+
+#### 4. VLC media player（真实视频播放，可选）
 - Windows：`winget install VideoLAN.VLC`
 - 不装也能跑——客户端会自动降级到占位提示，但视频区不会真播放
 
-#### 4. 创建虚拟环境并安装依赖
+#### 5. 创建虚拟环境并安装依赖
 
 ```powershell
 python -m venv .venv
@@ -203,13 +227,14 @@ python -m pytest -q
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| FastAPI 后端 + SQLite 9 表 | ✅ 真跑 | `uvicorn` 启动后，所有 REST API 都是真路由 + 真数据库 |
+| FastAPI 后端 + 数据库 | ✅ 真跑 | PostgreSQL 模式（推荐）+ SQLite 降级均可；所有 REST API 都是真路由 + 真数据库 |
 | JWT 登录 / bcrypt / 审计日志 | ✅ 真跑 | 登录返回真 token；每次操作写 `audit_logs` |
 | 视频上传 / ffmpeg 抽帧/切片/缩略图 | ✅ 真跑 | `apps/backend/dvr_semantic_backend/services/media_pipeline.py` 调真 ffmpeg |
-| 嵌入检索（向量召回 + 关键词） | ✅ 真跑 | 装了 `sentence-transformers` 走真向量；没装走 hash-ngram fallback（也是真计算，不是预写答案） |
+| 混合检索（向量召回 + 关键词） | ✅ 真跑 | PG 模式走 `cosine_similarity` 存储函数；SQLite 走 numpy 余弦；装了 `sentence-transformers` 走真向量，否则用 hash-ngram fallback |
+| 人工复核 API | ✅ 真跑 | `GET /review/tasks` + `POST /review/tasks/{id}/decision`，支持修正字段 + 写审计日志 |
 | 证据导出 zip 打包 | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/` |
-| 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；配 `MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-...` 后走 `OpenAICompatibleAdapter` 真请求通义千问 VL，DeepSeek 同理 |
-| VLC 视频回放 | ✅ 真跑 | 你已经装了 VLC 3.0.23；客户端用 `python-vlc` 真嵌入播放 |
+| 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；配 `MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-...` 后走真请求 |
+| VLC 视频回放 | ✅ 真跑 | 客户端用 `python-vlc` 真嵌入播放；未装 VLC 自动降级占位 |
 | 桌面客户端默认数据源 | mock | 不传 `--base-url` 时用 `apps/desktop_client/dvr_semantic_client/mock_client.py` 的演示数据 |
 
 ### 想要"真后端 + 真视频 + 真视觉模型"全链路跑通，4 步：
@@ -328,6 +353,7 @@ A：登录入口已从导航栏移除。设置 `DVR_SEMANTIC_API_BASE` 后启动
 - 开题报告：`D:\苏大\综合项目实践\output\opening-report-dashcam-ai.pptx`
 - 交互原型源码：`docs/prototype-source/`
 - 阶段二汇报 PPT：`docs/phase2-report/phase2-report.html`（浏览器打开）
+- 后端技术实现说明：`docs/backend-tech-notes.md`（倪羽辰撰写，供答辩引用）
 
 ---
 
