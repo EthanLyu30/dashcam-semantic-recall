@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QProgressBar,
+    QRadioButton,
     QScrollArea,
     QSlider,
     QTableWidget,
@@ -308,9 +309,23 @@ def overview_page() -> QWidget:
     route_layout.setContentsMargins(22, 20, 22, 20)
     route_layout.addLayout(section_header("实时车辆轨迹状态", "实时速度 45 km/h"))
     route_layout.addWidget(muted("当前位置: 深南大道科苑段 · 起始: 14:15:00 科技园站 · 预达: 14:25:30 车公庙站 · 里程: 4.2 km"))
+    route_info = QLabel("📍 深南大道科苑段  →  车公庙站  |  45 km/h  |  行程 48%")
+    route_info.setStyleSheet(
+        "color:#2563EB;font-size:13px;font-weight:700;"
+        "background:#EFF6FF;border:1px solid #BFDBFE;"
+        "border-radius:10px;padding:8px 14px;"
+    )
+    route_layout.addWidget(route_info)
     route_bar = QProgressBar()
     route_bar.setRange(0, 100)
     route_bar.setValue(48)
+    route_bar.setTextVisible(False)
+    route_bar.setFixedHeight(8)
+    route_bar.setStyleSheet(
+        "QProgressBar{background:#E2E8F0;border-radius:4px;border:none;}"
+        "QProgressBar::chunk{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+        "stop:0 #2563EB,stop:1 #4F46E5);border-radius:4px;}"
+    )
     route_layout.addWidget(route_bar)
     bottom.addWidget(route, 3)
 
@@ -362,6 +377,7 @@ class VideoLibraryPage(QWidget):
         stats.addWidget(metric_card("正在处理中", "18", "识别队列 65%", "#2563EB"), 0, 1)
         stats.addWidget(metric_card("待人工复核", "24", "低置信片段", "#F59E0B"), 0, 2)
         stats.addWidget(metric_card("处理失败", "3", "等待重试", "#EF4444"), 0, 3)
+        stats.addWidget(metric_card("已完成结构化", "3,421", "可检索", "#22C55E"), 0, 4)
         root.addLayout(stats)
 
         filters = panel()
@@ -372,11 +388,14 @@ class VideoLibraryPage(QWidget):
         filename.setPlaceholderText("文件名 / VideoID，例如 VID_2026...")
         status = QComboBox()
         status.addItems(["全部状态", "已完成识别", "正在识别", "待人工复核", "处理失败"])
-        plate = QLineEdit()
-        plate.setPlaceholderText("车牌 / 车辆编号")
+        vehicle = QLineEdit()
+        vehicle.setPlaceholderText("车队 / 车辆编号")
+        date_start = QLineEdit()
+        date_start.setPlaceholderText("开始日期 2026-03-01")
         filter_layout.addWidget(filename, 2)
         filter_layout.addWidget(status, 1)
-        filter_layout.addWidget(plate, 1)
+        filter_layout.addWidget(vehicle, 1)
+        filter_layout.addWidget(date_start, 1)
         filter_layout.addWidget(_wip_button("查询", "primary"))
         root.addWidget(filters)
 
@@ -565,17 +584,20 @@ def review_page() -> QWidget:
     form_header.addWidget(status_chip("当前: 施工围挡占道", "info"))
     form_layout.addLayout(form_header)
     form_layout.addWidget(muted("选择复核结论、补充备注，提交后写入审计日志"))
+    radio_buttons = []
     for option, chip in [
         ("通过识别结果", "AI准确"),
         ("驳回 / 误报", "模型误判"),
         ("标记为存疑点", "需二次复核"),
     ]:
         row = QHBoxLayout()
-        check = QCheckBox(option)
+        check = QRadioButton(option)
+        radio_buttons.append(check)
         row.addWidget(check)
         row.addStretch()
         row.addWidget(status_chip(chip, "low" if "通过" in option else "mid"))
         form_layout.addLayout(row)
+    radio_buttons[0].setChecked(True)
     note = QTextEdit("AI未识别出侧方变道的遮挡车辆，建议追加人工标注并保留关键帧。")
     form_layout.addWidget(note, 1)
     history = QListWidget()
@@ -638,6 +660,20 @@ def alerts_page() -> QWidget:
         rules_layout.addWidget(compact_card(rule, "规则命中后自动推送告警队列并记录审计日志"))
     rules_layout.addWidget(_wip_button("编辑告警规则", "primary"))
     lower.addWidget(rules, 2)
+
+    type_dist = panel()
+    type_layout = QVBoxLayout(type_dist)
+    type_layout.setContentsMargins(22, 20, 22, 20)
+    type_layout.addWidget(title("事件类型分布"))
+    pie2 = CategoryPieChart()
+    pie2.set_slices([
+        PieSlice("剧烈碰撞", 38, "#EF4444"),
+        PieSlice("违规停靠", 29, "#F59E0B"),
+        PieSlice("逆行行为", 21, "#4F46E5"),
+        PieSlice("物体掉落", 12, "#22C55E"),
+    ])
+    type_layout.addWidget(pie2, 1)
+    lower.addWidget(type_dist, 2)
 
     trend = panel()
     trend_layout = QVBoxLayout(trend)
@@ -811,19 +847,30 @@ def daily_report_page() -> QWidget:
     dist_layout = QVBoxLayout(dist)
     dist_layout.setContentsMargins(22, 20, 22, 20)
     dist_layout.addWidget(title("事件类型分布"))
-    for name, pct, color in [
-        ("侧向碰撞", "45%", "#EF4444"),
-        ("行人鬼探头", "30%", "#F59E0B"),
-        ("违停", "15%", "#2563EB"),
-        ("其他", "10%", "#64748B"),
+    for name, pct_int, color in [
+        ("侧向碰撞", 45, "#EF4444"),
+        ("行人鬼探头", 30, "#F59E0B"),
+        ("违停", 15, "#2563EB"),
+        ("其他", 10, "#64748B"),
     ]:
         row = QHBoxLayout()
-        row.addWidget(muted(name))
-        row.addStretch()
-        label = QLabel(pct)
-        label.setStyleSheet(f"color:{color};font-weight:800;")
-        row.addWidget(label)
+        name_lbl = muted(name)
+        pct_lbl = QLabel(f"{pct_int}%")
+        pct_lbl.setStyleSheet(f"color:{color};font-weight:800;font-size:12px;")
+        pct_lbl.setFixedWidth(38)
+        row.addWidget(name_lbl)
+        row.addWidget(pct_lbl)
         dist_layout.addLayout(row)
+        bar = QProgressBar()
+        bar.setRange(0, 100)
+        bar.setValue(pct_int)
+        bar.setTextVisible(False)
+        bar.setFixedHeight(6)
+        bar.setStyleSheet(
+            f"QProgressBar {{ background:#E2E8F0; border-radius:3px; border:none; }}"
+            f"QProgressBar::chunk {{ background:{color}; border-radius:3px; }}"
+        )
+        dist_layout.addWidget(bar)
     left.addWidget(dist, 1)
     body.addLayout(left, 3)
 
@@ -853,7 +900,7 @@ def daily_report_page() -> QWidget:
 
 def settings_page() -> QWidget:
     page, root = page_shell("系统参数与模型配置", "模型供应商、抽帧间隔、置信阈值和接口安全策略")
-    body = QHBoxLayout()
+    body = QVBoxLayout()
     body.setSpacing(14)
 
     model = panel()
@@ -870,8 +917,11 @@ def settings_page() -> QWidget:
     api_key.setEchoMode(QLineEdit.EchoMode.Password)
     model_layout.addWidget(muted("模型 API Key / 安全令牌"))
     model_layout.addWidget(api_key)
+    model_layout.addWidget(muted("API Endpoint"))
+    endpoint = QLineEdit("https://api.internal-dvr.net/v1/semantic")
+    model_layout.addWidget(endpoint)
     model_layout.addWidget(muted("提示：Key 仅在服务端安全容器内解密使用。"))
-    body.addWidget(model, 2)
+    body.addWidget(model)
 
     pipeline = panel()
     pipe_layout = QVBoxLayout(pipeline)
@@ -887,7 +937,9 @@ def settings_page() -> QWidget:
     slider.setValue(72)
     pipe_layout.addWidget(slider)
     pipe_layout.addWidget(status_chip("当前阈值 0.72", "info"))
-    body.addWidget(pipeline, 2)
+    pipe_layout.addWidget(muted("存储根目录 (Media Root)"))
+    pipe_layout.addWidget(QLineEdit("./var/media"))
+    body.addWidget(pipeline)
 
     security = panel()
     sec_layout = QVBoxLayout(security)
@@ -902,7 +954,7 @@ def settings_page() -> QWidget:
     sec_layout.addStretch()
     sec_layout.addWidget(_wip_button("保存所有全局设置", "primary"))
     sec_layout.addWidget(_wip_button("恢复出厂默认值"))
-    body.addWidget(security, 2)
+    body.addWidget(security)
     root.addLayout(body, 1)
     return page
 
@@ -946,6 +998,8 @@ def roles_page() -> QWidget:
 
 def login_page() -> QWidget:
     page = QWidget()
+    page.setStyleSheet("QWidget { background: qlineargradient(x1:0,y1:0,x2:1,y2:1,"
+                       "stop:0 #0F172A, stop:1 #1E293B); }")
     root = QHBoxLayout(page)
     root.setContentsMargins(160, 90, 160, 90)
     root.setSpacing(0)
@@ -953,21 +1007,55 @@ def login_page() -> QWidget:
     login = QFrame()
     login.setFixedWidth(460)
     login.setStyleSheet(
-        "QFrame { background:#FFFFFF; border:1px solid #E8EDF2; border-radius:28px; }"
-        "QLabel { background:transparent; border:none; }"
+        "QFrame { background: rgba(15,23,42,0.96); border: 1px solid rgba(255,255,255,0.10);"
+        " border-radius: 28px; }"
+        "QLabel { background: transparent; border: none; color: #E2E8F0; }"
+        "QLineEdit { background: #1E293B; border: 1px solid #334155; border-radius: 10px;"
+        " color: #F1F5F9; padding: 10px 14px; font-size: 14px; }"
+        "QPushButton[role='role-btn'] { background: #1E293B; border: 1px solid #334155;"
+        " border-radius: 10px; color: #94A3B8; font-size: 12px; padding: 8px 16px; }"
+        "QPushButton[role='role-btn'][selected='true'] { background: #2563EB; border-color: #2563EB;"
+        " color: #FFFFFF; font-weight: 700; }"
     )
     layout = QVBoxLayout(login)
     layout.setContentsMargins(34, 32, 34, 32)
     layout.setSpacing(14)
-    logo = QLabel("DVR-S")
+    logo = QLabel("📷 DVR-S")
     logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    logo.setStyleSheet("color:#0F172A;font-size:28px;font-weight:900;letter-spacing:4px;")
+    logo.setStyleSheet("color:#FFFFFF;font-size:28px;font-weight:900;letter-spacing:4px;"
+                       "background:transparent;border:none;")
     layout.addWidget(logo)
     subtitle = muted("多模态行车记录仪视频语义检索与精准回放系统")
     subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
     layout.addWidget(subtitle)
-    layout.addSpacing(16)
-    layout.addWidget(muted("安全登录账号 (Account)"))
+    layout.addSpacing(8)
+
+    # Role selector chips
+    role_row = QHBoxLayout()
+    role_row.setSpacing(8)
+    _role_btns = []
+    for role_name in ["巡查员", "车队管理", "驾驶员"]:
+        rb = QPushButton(role_name)
+        rb.setProperty("role", "role-btn")
+        _role_btns.append(rb)
+        role_row.addWidget(rb)
+
+    def _select_role(btn: QPushButton) -> None:
+        for b in _role_btns:
+            b.setProperty("selected", "false")
+            b.style().unpolish(b)
+            b.style().polish(b)
+        btn.setProperty("selected", "true")
+        btn.style().unpolish(btn)
+        btn.style().polish(btn)
+
+    for rb in _role_btns:
+        rb.clicked.connect(lambda checked=False, b=rb: _select_role(b))
+    _role_btns[0].setProperty("selected", "true")
+    layout.addLayout(role_row)
+    layout.addSpacing(8)
+
+    layout.addWidget(muted("工号 / 手机号 (Account)"))
     layout.addWidget(QLineEdit("admin"))
     layout.addWidget(muted("安全登录密码 (Password)"))
     password = QLineEdit()
@@ -983,8 +1071,24 @@ def login_page() -> QWidget:
     signin = action_button("安全登录 (Sign In)", "primary")
     signin.setMinimumHeight(44)
     layout.addWidget(signin)
-    footer = muted("© 2026 DVR-Semantic System. All Rights Reserved.")
+
+    # Compliance footer chips
+    compliance_row = QHBoxLayout()
+    compliance_row.setSpacing(6)
+    for chip_text in ["🔒 OAuth2.0", "🔐 TLS 1.3", "📋 Audit Log"]:
+        chip = QLabel(chip_text)
+        chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        chip.setStyleSheet(
+            "QLabel { background: rgba(37,99,235,0.18); color: #93C5FD;"
+            " border: 1px solid rgba(147,197,253,0.25); border-radius: 999px;"
+            " padding: 3px 10px; font-size: 10px; font-weight: 700; }"
+        )
+        compliance_row.addWidget(chip)
+    layout.addLayout(compliance_row)
+
+    footer = QLabel("© 2026 DVR-Semantic System. All Rights Reserved.")
     footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    footer.setStyleSheet("color:#475569;font-size:11px;background:transparent;border:none;")
     layout.addWidget(footer)
     root.addWidget(login)
     root.addStretch()
