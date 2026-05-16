@@ -368,21 +368,33 @@
       </div>
     </div>
     <div class="panel">
-      <h3>当前进展判断</h3>
-      <div class="muted" style="margin-top:4px;">需求实现 FR-01 ~ FR-07 — <b>92%</b></div>
-      <div class="progress g"><div style="width:92%;"></div></div>
-      <div class="muted" style="margin-top:9px;">数据持久化 + 鉴权 — <b>95%</b></div>
-      <div class="progress b"><div style="width:95%;"></div></div>
-      <div class="muted" style="margin-top:9px;">真模型 + 向量库 + 异步 — <b>55%</b></div>
-      <div class="progress y"><div style="width:55%;"></div></div>
-      <div class="muted" style="margin-top:9px;">辅助页面（告警/报告/权限）— <b>65%</b></div>
-      <div class="progress r"><div style="width:65%;"></div></div>
-      <h3 style="margin-top:10px;">本期最有把握的部分</h3>
-      <ul>
-        <li class="g">真 ffmpeg 媒体流水线，可处理任意 mp4 输入</li>
-        <li class="g">真 ffmpeg 切片导出 + zip 打包</li>
-        <li class="g">JWT 鉴权 + 审计日志，所有写操作留痕</li>
-      </ul>
+      <h3>各技术模块完成度（按可验证单元）</h3>
+      <div style="display:grid;grid-template-columns:16px 1fr 38px;gap:3px 8px;margin-top:6px;align-items:center;font-size:11.5px;">
+        <span style="color:var(--green);font-weight:800;">✅</span><span>FFmpeg 媒体流水线（转码/切片/抽帧/缩略图）</span><span style="color:var(--green);font-weight:700;text-align:right;">100%</span>
+        <div style="grid-column:1/-1;"><div class="progress g" style="margin:0;height:5px;"><div style="width:100%;"></div></div></div>
+
+        <span style="color:var(--green);font-weight:800;">✅</span><span>JWT + bcrypt + Audit + FastAPI 14 个接口</span><span style="color:var(--green);font-weight:700;text-align:right;">100%</span>
+        <div style="grid-column:1/-1;"><div class="progress g" style="margin:0;height:5px;"><div style="width:100%;"></div></div></div>
+
+        <span style="color:var(--green);font-weight:800;">✅</span><span>证据导出（ffmpeg 精切片 + zip + event_exports 落库）</span><span style="color:var(--green);font-weight:700;text-align:right;">100%</span>
+        <div style="grid-column:1/-1;"><div class="progress g" style="margin:0;height:5px;"><div style="width:100%;"></div></div></div>
+
+        <span style="color:var(--blue);font-weight:800;">✅</span><span>混合检索（0.6·cos + 0.4·kw，hash-ngram 降级可用）</span><span style="color:var(--blue);font-weight:700;text-align:right;">90%</span>
+        <div style="grid-column:1/-1;"><div class="progress b" style="margin:0;height:5px;"><div style="width:90%;"></div></div></div>
+
+        <span style="color:var(--yellow);font-weight:800;">⚠</span><span>Qt 客户端（UI 全部完成，MockApiClient 中，未联调）</span><span style="color:var(--yellow);font-weight:700;text-align:right;">60%</span>
+        <div style="grid-column:1/-1;"><div class="progress y" style="margin:0;height:5px;"><div style="width:60%;"></div></div></div>
+
+        <span style="color:var(--yellow);font-weight:800;">⚠</span><span>事件聚合（滑窗合并 ✅，真向量 embedding 待装）</span><span style="color:var(--yellow);font-weight:700;text-align:right;">75%</span>
+        <div style="grid-column:1/-1;"><div class="progress y" style="margin:0;height:5px;"><div style="width:75%;"></div></div></div>
+
+        <span style="color:var(--red);font-weight:800;">✗</span><span>多模态模型真调用（需 API Key + 真实视频）</span><span style="color:var(--red);font-weight:700;text-align:right;">10%</span>
+        <div style="grid-column:1/-1;"><div class="progress r" style="margin:0;height:5px;"><div style="width:10%;"></div></div></div>
+
+        <span style="color:var(--red);font-weight:800;">✗</span><span>VLC 真实播放联调（当前 DVR_DISABLE_VLC=1 占位）</span><span style="color:var(--red);font-weight:700;text-align:right;">0%</span>
+        <div style="grid-column:1/-1;"><div class="progress r" style="margin:0;height:5px;"><div style="width:0%;"></div></div></div>
+      </div>
+      <div class="muted" style="margin-top:7px;font-size:11px;">40 个测试全过（~24s）· E2E TestClient 串通 login→upload→process→search→export</div>
     </div>
   </div>
   <div class="dots"><span></span><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span></div>
@@ -941,41 +953,84 @@ test_backend_search      <span class="ok">2 ✓</span>
 
 <!-- =============== 11. HONEST GAP LIST =============== -->
 <section class="slide">
-  <h2>诚实清单 — 这周没做完的部分</h2>
-  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">下周阶段汇报时主动说明，避免老师追问时被动。</div>
+  <h2>技术完成度诚实清单 — 已落地 vs 仍缺</h2>
+  <div class="subtitle" style="font-size:12.5px;padding:6px 14px;">左栏每条均可从 main 分支代码 / pytest 输出 / 接口文档验证；右栏给出当前状态与具体修复路径。</div>
   <div class="row" style="margin-top:8px;">
-    <div class="panel">
-      <h3 style="color:var(--red);font-size:14px;">技术性未实现</h3>
-      <ul style="margin-top:4px;">
-        <li class="r" style="font-size:12.5px;line-height:1.6;">真多模态模型调用：演示走 mock；接 DeepSeek/千问只需填 .env 的 KEY</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ PostgreSQL 双引擎已合入（REAL[] 原生向量 + cosine_similarity 存储函数 + SQLite 降级）</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 复核 API 已合入（GET /review/tasks 分页 + POST /{id}/decision 修正写库）</li>
-        <li class="r" style="font-size:12.5px;line-height:1.6;">sentence-transformers 真向量：默认未装，hash-ngram 兜底</li>
-        <li class="r" style="font-size:12.5px;line-height:1.6;">HLS 点播 / 异步任务队列：当前同步 FileResponse</li>
-        <li class="r" style="font-size:12.5px;line-height:1.6;">PDF 摘要：导出包目前是 Markdown + JSON</li>
-      </ul>
-      <h3 style="margin-top:8px;color:var(--blue);font-size:14px;">已知风险</h3>
-      <ul style="margin-top:4px;">
-        <li class="b" style="font-size:12.5px;line-height:1.6;">Mock 输出基于文件名 + SHA-256，对同一视频稳定；演示前先固定一段视频处理一次</li>
-        <li class="b" style="font-size:12.5px;line-height:1.6;">长视频首次 process 偏慢，建议演示用 30–90s 素材</li>
-      </ul>
+    <div class="panel" style="overflow:hidden;">
+      <h3 style="color:var(--green);font-size:13px;margin-bottom:5px;">✅ 已真实落地（main 分支可验证）</h3>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">media_pipeline.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">save_upload → ffprobe → transcode(H.264/AAC) → slice(30s/段) → extract(1帧/3s) → Pillow 缩略图 640px</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">model_adapter.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">MockProvider / OpenAICompatProvider 策略模式；json_mode → event_type / tags / summary / confidence 结构化输出</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">event_aggregator.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">相邻 ≤10s + 同类型帧合并为 SemanticEvent；conf 均值 &lt; 0.75 → review_status='reviewing'</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">auth.py / audit.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">bcrypt 密码哈希 + HS256 Token（1h）；所有写操作 → audit_logs（request_id + target_id + user_id）</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">hybrid_search.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">final = 0.6·cos(q,e) + 0.4·keyword；5 类事件别名词典；hash-ngram 向量降级（无需安装模型）</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">exporter.py</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">ffmpeg -ss 精确切片 + Pillow 截图 + JSON/MD 报告 + zip 打包；记录落 event_exports 表可追溯</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">db.py（倪羽辰）</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">IS_SQLITE 自动路由；REAL[] 原生向量 vs JSON 降级；cosine_similarity PL/pgSQL 存储函数</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">review.py（倪羽辰）</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">GET /review/tasks?status&amp;page；POST /{id}/decision + 修正字段 + 审计写库；ReviewDecisionRequest schema</div>
+        </div>
+        <div style="border-left:3px solid var(--green);padding:2px 0 2px 8px;">
+          <span style="font-family:monospace;font-size:9.5px;background:#DCFCE7;color:#15803D;padding:1px 6px;border-radius:4px;">tests/ · 40 PASS · ~24s</span>
+          <div style="font-size:11px;color:var(--text);line-height:1.4;margin-top:1px;">unit×39 + E2E×1（login→upload→process→search→export）；pytest-env 强制 SQLite:memory: 隔离</div>
+        </div>
+      </div>
     </div>
-    <div class="panel">
-      <h3 style="color:var(--yellow);font-size:14px;">辅助页面：UI 已成型，后端数据未接</h3>
-      <ul style="margin-top:4px;">
-        <li class="y" style="font-size:12.5px;line-height:1.6;">告警 / 事故 / 复核：KPI + 状态色块 + 表格 + 滚动已就绪，仍是 mock 静态数据</li>
-        <li class="y" style="font-size:12.5px;line-height:1.6;">概览页：QPainter 自绘柱状图 + 环形饼图，数据写死待接 /dashboard API</li>
-        <li class="y" style="font-size:12.5px;line-height:1.6;">权限管理：矩阵 UI 完成，后端 users.role 就绪，前端编辑功能标记"开发中"</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 所有页面可纵向滚动（QScrollArea），内容不再被截断</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">✅ 所有未接后端的按钮点击弹"功能开发中"提示，不再静默无响应</li>
-      </ul>
-      <h3 style="margin-top:8px;font-size:14px;">演示前应做的操作清单</h3>
-      <ul style="margin-top:4px;">
-        <li class="g" style="font-size:12.5px;line-height:1.6;">真后端模式：设 <code>DVR_SEMANTIC_API_BASE</code> 后启动客户端，启动时弹登录窗（demo / demo123）</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">视频库管理上传成功后的状态条变 indexed</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">检索结果 + VLC 播放同框截图</li>
-        <li class="g" style="font-size:12.5px;line-height:1.6;">导出弹窗显示 zip 路径，解压验证 4 个文件</li>
-      </ul>
+    <div class="panel" style="overflow:hidden;">
+      <h3 style="color:var(--red);font-size:13px;margin-bottom:5px;">⚠ 当前仍为 Mock / 未联通（附修复路径）</h3>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="border-left:3px solid var(--red);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">多模态模型真调用</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：MockProvider → SHA-256(frame_path) 伪随机生成 tags / summary，与画面内容无关</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：.env 写 <code>MODEL_PROVIDER=qwen</code> + <code>MODEL_API_KEY=sk-xxx</code>，零改代码</div>
+        </div>
+        <div style="border-left:3px solid var(--red);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">真向量 Embedding（语义检索精度）</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：hash-ngram → XOR 特征，无语义理解，召回靠关键词字典补偿，精度有限</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：<code>pip install sentence-transformers</code> + <code>EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12</code></div>
+        </div>
+        <div style="border-left:3px solid var(--red);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">VLC 真实播放联调</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：<code>DVR_DISABLE_VLC=1</code> → 占位画面；GET /videos/&lt;id&gt;/stream 文件路径已就绪</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：取消 env var + 测 seek 精度（SRS 要求 ≤2s），可用短视频验证</div>
+        </div>
+        <div style="border-left:3px solid var(--yellow);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">Qt 客户端 ↔ 真后端联调</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：MockApiClient（内存假数据）；HttpApiClient 代码已实现，仅需切换</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：设 <code>DVR_SEMANTIC_API_BASE=http://localhost:8000</code> + 启动后端</div>
+        </div>
+        <div style="border-left:3px solid var(--yellow);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">复核/概览/告警/日报 数据接口</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：Qt 辅助页面 KPI + 列表均写死 Mock；UI 已成型，QScrollArea 全部可滚动</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：接入 /review/tasks · /dashboard · /alerts 真实接口</div>
+        </div>
+        <div style="border-left:3px solid var(--yellow);padding:3px 0 3px 8px;">
+          <div style="font-size:12px;font-weight:700;color:var(--text);">异步任务队列</div>
+          <div style="font-size:10.5px;color:var(--muted);line-height:1.4;">现：process() 同步阻塞；30s 以上视频首次处理会超 HTTP timeout（约 30s）</div>
+          <div style="font-size:10.5px;color:var(--blue);line-height:1.4;">解：FastAPI BackgroundTasks 即可解决，无需引入 Celery</div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
