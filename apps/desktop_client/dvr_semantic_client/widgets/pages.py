@@ -371,13 +371,35 @@ class VideoLibraryPage(QWidget):
         header_layout.addWidget(self.refresh_button)
         root.addWidget(header)
 
-        stats = QGridLayout()
-        stats.setSpacing(14)
-        stats.addWidget(metric_card("全部视频", "3,482", "车队库总量"), 0, 0)
-        stats.addWidget(metric_card("正在处理中", "18", "识别队列 65%", "#2563EB"), 0, 1)
-        stats.addWidget(metric_card("待人工复核", "24", "低置信片段", "#F59E0B"), 0, 2)
-        stats.addWidget(metric_card("处理失败", "3", "等待重试", "#EF4444"), 0, 3)
-        stats.addWidget(metric_card("已完成结构化", "3,421", "可检索", "#22C55E"), 0, 4)
+        stats = QHBoxLayout()
+        stats.setSpacing(10)
+        for label, value, note, accent in [
+            ("全部视频", "3,482", "车队库总量", "#2563EB"),
+            ("正在处理中", "18", "识别队列 65%", "#2563EB"),
+            ("待人工复核", "24", "低置信片段", "#F59E0B"),
+            ("处理失败", "3", "等待重试", "#EF4444"),
+            ("已完成结构化", "3,421", "可检索", "#22C55E"),
+        ]:
+            sc = QFrame()
+            sc.setProperty("role", "panel")
+            sc.setStyleSheet(
+                f"QFrame[role='panel'] {{ background:#FFFFFF; border:1px solid #E2E8F0; "
+                f"border-radius:14px; border-left:4px solid {accent}; }}"
+                "QLabel { background:transparent; border:none; }"
+            )
+            sl = QVBoxLayout(sc)
+            sl.setContentsMargins(16, 14, 16, 14)
+            sl.setSpacing(4)
+            val_lbl = QLabel(value)
+            val_lbl.setStyleSheet(f"color:{accent};font-size:26px;font-weight:900;")
+            name_lbl = QLabel(label)
+            name_lbl.setStyleSheet("color:#0F172A;font-size:12px;font-weight:700;")
+            note_lbl = QLabel(note)
+            note_lbl.setStyleSheet("color:#64748B;font-size:11px;")
+            sl.addWidget(val_lbl)
+            sl.addWidget(name_lbl)
+            sl.addWidget(note_lbl)
+            stats.addWidget(sc)
         root.addLayout(stats)
 
         filters = panel()
@@ -534,16 +556,41 @@ def review_page() -> QWidget:
     queue_header.addWidget(status_chip("剩余 12", "high"))
     queue_layout.addLayout(queue_header)
     queue_layout.addWidget(muted("置信度 < 80% 自动入队，紧急事件置顶"))
-    tasks = QListWidget()
-    for item in [
-        "紧急 · 沪A·88888 疑似路口碰撞 · 68% · 03-27 10:22",
-        "普通 · 粤B·00001 违章掉头识别 · 72% · 03-27 11:15",
-        "普通 · 施工围挡占道 · 79% · 14:22 - 14:23",
-        "普通 · 异常停车与连续鸣笛 · 74% · 09:15 - 09:16",
-        "存疑 · 夜间逆行 · 71% · 21:08 - 21:09",
+    tasks_widget = QWidget()
+    tasks_inner = QVBoxLayout(tasks_widget)
+    tasks_inner.setContentsMargins(0, 0, 0, 0)
+    tasks_inner.setSpacing(6)
+    for priority, plate, event, conf, time_str, kind in [
+        ("紧急", "沪A·88888", "疑似路口碰撞事件", "68%", "03-27 10:22", "high"),
+        ("普通", "粤B·00001", "违章掉头识别", "72%", "03-27 11:15", "mid"),
+        ("普通", "—", "施工围挡占道检测", "79%", "14:22–14:23", "mid"),
+        ("普通", "—", "异常停车与连续鸣笛", "74%", "09:15–09:16", "mid"),
+        ("存疑", "—", "夜间逆行行为记录", "71%", "21:08–21:09", "info"),
     ]:
-        tasks.addItem(QListWidgetItem(item))
-    queue_layout.addWidget(tasks, 1)
+        item_frame = QFrame()
+        item_frame.setStyleSheet(
+            "QFrame { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; }"
+            "QLabel { background:transparent; border:none; }"
+        )
+        item_lay = QHBoxLayout(item_frame)
+        item_lay.setContentsMargins(10, 8, 10, 8)
+        item_lay.setSpacing(8)
+        item_lay.addWidget(status_chip(priority, kind))
+        info = QVBoxLayout()
+        top_lbl = QLabel(f"{plate}  {event}")
+        top_lbl.setStyleSheet("color:#0F172A;font-size:12px;font-weight:700;")
+        bot_lbl = QLabel(f"置信度 {conf} · {time_str}")
+        bot_lbl.setStyleSheet("color:#64748B;font-size:11px;")
+        info.addWidget(top_lbl)
+        info.addWidget(bot_lbl)
+        item_lay.addLayout(info, 1)
+        tasks_inner.addWidget(item_frame)
+    tasks_inner.addStretch()
+    tasks_scroll = QScrollArea()
+    tasks_scroll.setWidget(tasks_widget)
+    tasks_scroll.setWidgetResizable(True)
+    tasks_scroll.setFrameShape(QFrame.Shape.NoFrame)
+    queue_layout.addWidget(tasks_scroll, 1)
     body.addWidget(queue, 2)
 
     workbench = dark_panel()
@@ -702,34 +749,56 @@ def accidents_page() -> QWidget:
 
     feed = QVBoxLayout()
     feed.setSpacing(14)
-    for heading, chip, time_text, summary, accent in [
+    for heading, chip, time_text, plate, summary, accent, kind in [
         (
             "南山区深南大道科苑立交段侧向碰撞",
             "高危变道",
-            "14:22:15 · 粤B·88888 · 94% 置信度",
+            "14:22:15 · 2026-03-27",
+            "粤B·88888 · 94% 置信度",
             "白色 SUV 在路口右转时未充分观察侧方来车，与直行黑色轿车发生侧向剐蹭。系统建议回放原片、建立证据包并进入归档流程。",
             "#EF4444",
+            "high",
         ),
         (
             "滨河大道行人鬼探头横穿致紧急刹车",
             "行人鬼探头",
-            "09:15:33 · Near-miss · 87% 置信度",
+            "09:15:33 · 2026-03-27",
+            "Near-miss · 87% 置信度",
             "画面左前方绿化带区域突然跑出行人，本车触发车道偏离警告并紧急制动，最终在约 1.2 米处停稳。",
             "#F59E0B",
+            "mid",
         ),
     ]:
-        card = panel()
+        card = QFrame()
+        card.setProperty("role", "panel")
+        card.setStyleSheet(
+            f"QFrame[role='panel'] {{ background:#FFFFFF; border:1px solid #E2E8F0; "
+            f"border-radius:18px; border-left:5px solid {accent}; }}"
+            "QLabel { background:transparent; border:none; }"
+        )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(22, 20, 22, 20)
+        layout.setContentsMargins(22, 18, 22, 18)
         top = QHBoxLayout()
+        icon_lbl = QLabel("⚠" if accent == "#EF4444" else "⚡")
+        icon_lbl.setStyleSheet(
+            f"color:{accent}; font-size:20px; padding-right:6px;"
+        )
         title_label = QLabel(heading)
-        title_label.setStyleSheet("color:#0F172A;font-size:18px;font-weight:800;")
-        top.addWidget(title_label)
-        top.addStretch()
-        top.addWidget(status_chip(chip, "high" if accent == "#EF4444" else "mid"))
+        title_label.setStyleSheet("color:#0F172A;font-size:16px;font-weight:800;")
+        title_label.setWordWrap(True)
+        top.addWidget(icon_lbl)
+        top.addWidget(title_label, 1)
+        top.addWidget(status_chip(chip, kind))
         layout.addLayout(top)
-        layout.addWidget(muted(time_text))
-        layout.addWidget(title("大语言模型自动浓缩摘要"))
+        time_row = QHBoxLayout()
+        time_row.addWidget(muted(time_text))
+        plate_chip = status_chip(plate, "muted")
+        time_row.addWidget(plate_chip)
+        time_row.addStretch()
+        layout.addLayout(time_row)
+        summary_title = QLabel("大语言模型自动浓缩摘要")
+        summary_title.setStyleSheet(f"color:{accent};font-size:12px;font-weight:700;")
+        layout.addWidget(summary_title)
         layout.addWidget(muted(summary))
         actions = QHBoxLayout()
         actions.addWidget(_wip_button("回放原片与标注", "primary"))
@@ -961,17 +1030,85 @@ def settings_page() -> QWidget:
 
 def roles_page() -> QWidget:
     page, root = page_shell("角色与权限管理", "管理员、审核人员、普通用户的权限维护")
-    roles = QGridLayout()
-    roles.setSpacing(14)
-    for col, (name, code, desc, users, accent) in enumerate([
-        ("车主 / 驾驶员", "OWNER / DRIVER", "仅可查看及检索与其驾驶证/行驶证绑定的车辆视频。具备个人证据链导出权限。", "管理用户列表 (124)", "#2563EB"),
-        ("车队管理员", "FLEET MANAGER", "可管理车队视频源、处理任务、车辆分组与成员授权。", "管理用户列表 (8)", "#F59E0B"),
-        ("交通巡查员", "TRAFFIC INSPECTOR", "具备跨平台视频检索权限，用于事故复盘及违章证据收集，受审计日志监控。", "管理用户列表 (4)", "#EF4444"),
-    ]):
-        card = compact_card(f"{name}\n{code}", desc, accent)
-        card.layout().addWidget(_wip_button(users))
-        roles.addWidget(card, 0, col)
-    root.addLayout(roles)
+
+    # Page header button
+    hdr_row = QHBoxLayout()
+    hdr_row.addStretch()
+    hdr_row.addWidget(_wip_button("新增管理员", "primary"))
+    root.addLayout(hdr_row)
+
+    roles_layout = QHBoxLayout()
+    roles_layout.setSpacing(14)
+
+    _role_perms = [
+        [("✓ 查看绑定车辆视频", True), ("✓ 个人证据链导出", True),
+         ("✗ 跨车队检索", False), ("✗ 审计日志查看", False)],
+        [("✓ 车队视频管理", True), ("✓ 任务与分组管理", True),
+         ("✓ 成员授权管理", True), ("✗ 审计日志查看", False)],
+        [("✓ 跨平台视频检索", True), ("✓ 事故证据收集", True),
+         ("✓ 审计日志查看", True), ("✗ 模型参数微调", False)],
+    ]
+
+    for (name, code, letter, desc, users, count, accent, bg), perms in zip([
+        ("车主 / 驾驶员", "OWNER / DRIVER", "U", "仅可查看及检索与其驾驶证/行驶证绑定的车辆视频。具备个人证据链导出权限。", "管理用户列表", "124", "#2563EB", "#EFF6FF"),
+        ("车队管理员", "FLEET MANAGER", "M", "可管理车队视频源、处理任务、车辆分组与成员授权。", "管理用户列表", "8", "#F59E0B", "#FFFBEB"),
+        ("交通巡查员", "TRAFFIC INSPECTOR", "I", "具备跨平台视频检索权限，用于事故复盘及违章证据收集，受审计日志监控。", "管理用户列表", "4", "#EF4444", "#FEF2F2"),
+    ], _role_perms):
+        card = QFrame()
+        card.setStyleSheet(
+            f"QFrame[role='panel'] {{ background:#FFFFFF; border:1px solid #E2E8F0; "
+            f"border-radius:20px; border-top:4px solid {accent}; }}"
+            "QLabel { background:transparent; border:none; }"
+        )
+        card.setProperty("role", "panel")
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(20, 18, 20, 18)
+        cl.setSpacing(10)
+
+        # Badge + title row
+        top = QHBoxLayout()
+        badge = QLabel(letter)
+        badge.setFixedSize(44, 44)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        badge.setStyleSheet(
+            f"QLabel {{ background:{accent}; color:#FFFFFF; border-radius:12px; "
+            f"font-size:20px; font-weight:900; border:none; }}"
+        )
+        top.addWidget(badge)
+        title_col = QVBoxLayout()
+        name_lbl = QLabel(name)
+        name_lbl.setStyleSheet(f"color:{accent}; font-size:14px; font-weight:800;")
+        code_lbl = QLabel(code)
+        code_lbl.setStyleSheet("color:#94A3B8; font-size:11px; font-weight:600; letter-spacing:0.5px;")
+        title_col.addWidget(name_lbl)
+        title_col.addWidget(code_lbl)
+        top.addLayout(title_col)
+        top.addStretch()
+        cl.addLayout(top)
+
+        desc_lbl = muted(desc)
+        cl.addWidget(desc_lbl)
+
+        # Permission list
+        for perm_text, allowed in perms:
+            perm_row = QHBoxLayout()
+            dot = QLabel("✓" if allowed else "✗")
+            dot.setStyleSheet(
+                f"color:{'#22C55E' if allowed else '#94A3B8'}; font-weight:700; font-size:13px;"
+            )
+            dot.setFixedWidth(18)
+            txt = QLabel(perm_text[2:])  # strip "✓ " or "✗ "
+            txt.setStyleSheet(f"color:{'#374151' if allowed else '#94A3B8'}; font-size:12px;")
+            perm_row.addWidget(dot)
+            perm_row.addWidget(txt)
+            perm_row.addStretch()
+            cl.addLayout(perm_row)
+
+        cl.addStretch()
+        cl.addWidget(_wip_button(f"{users} ({count})"))
+        roles_layout.addWidget(card)
+
+    root.addLayout(roles_layout)
 
     matrix = panel()
     matrix_layout = QVBoxLayout(matrix)
@@ -980,18 +1117,32 @@ def roles_page() -> QWidget:
     header.addWidget(_wip_button("批量同步", "primary"))
     header.addWidget(_wip_button("导出记录"))
     matrix_layout.addLayout(header)
-    matrix_layout.addWidget(
-        table(
-            ["功能模块 / 权限点", "车主", "车队管理员", "交通巡查员", "风险等级"],
-            [
-                ["语义检索 (Natural Language Query)", "允许", "允许", "允许", "LOW"],
-                ["原始视频文件下载 (H.264/265)", "禁止", "允许", "允许", "MED"],
-                ["证据链多模态摘要导出", "允许", "允许", "允许", "LOW"],
-                ["系统审计日志 (Audit Log) 查看", "禁止", "禁止", "允许", "HIGH"],
-                ["多模态模型 API 参数微调", "禁止", "禁止", "禁止", "CRITICAL"],
-            ],
-        )
+
+    # Color-coded permission table
+    tbl = table(
+        ["功能模块 / 权限点", "车主", "车队管理员", "交通巡查员", "风险等级"],
+        [
+            ["语义检索 (Natural Language Query)", "✓ 允许", "✓ 允许", "✓ 允许", "LOW"],
+            ["原始视频文件下载 (H.264/265)", "✗ 禁止", "✓ 允许", "✓ 允许", "MED"],
+            ["证据链多模态摘要导出", "✓ 允许", "✓ 允许", "✓ 允许", "LOW"],
+            ["系统审计日志 (Audit Log) 查看", "✗ 禁止", "✗ 禁止", "✓ 允许", "HIGH"],
+            ["多模态模型 API 参数微调", "✗ 禁止", "✗ 禁止", "✗ 禁止", "CRITICAL"],
+        ],
     )
+    # Color cells
+    _perm_colors = {"✓ 允许": "#15803D", "✗ 禁止": "#9CA3AF"}
+    _risk_colors = {"LOW": "#15803D", "MED": "#B45309", "HIGH": "#B91C1C", "CRITICAL": "#7C3AED"}
+    for row in range(tbl.rowCount()):
+        for col in range(1, tbl.columnCount()):
+            item = tbl.item(row, col)
+            if item:
+                text = item.text()
+                from PySide6.QtGui import QColor, QBrush
+                color = _risk_colors.get(text) or _perm_colors.get(text)
+                if color:
+                    item.setForeground(QBrush(QColor(color)))
+
+    matrix_layout.addWidget(tbl)
     root.addWidget(matrix, 1)
     return page
 
