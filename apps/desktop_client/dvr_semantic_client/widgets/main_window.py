@@ -256,6 +256,14 @@ class MainWindow(QMainWindow):
         if 0 <= index < len(names):
             self.statusBar().showMessage(f"当前页面：{names[index]}")
 
+        # Refresh search panel video dropdown when entering the search page
+        if index == 1:
+            try:
+                self.videos = self.api_client.list_videos()
+                self.search_panel.set_videos(self.videos)
+            except Exception:
+                pass
+
     def _load_video_into_player(self, video: VideoRecord) -> None:
         """Hand the video to the player, using the streaming URL if available."""
         if isinstance(self.api_client, RestApiClient) and video.id:

@@ -27,7 +27,11 @@ from .schemas import (
     LoginRequest,
     LoginResponse,
     ProcessReport,
+    ReviewDecisionRequest,
+    ReviewDecisionResponse,
     ReviewRequest,
+    ReviewTaskItem,
+    ReviewTaskListResponse,
     SearchRequest,
     SearchResponse,
     UploadResponse,
@@ -335,6 +339,93 @@ def create_app() -> FastAPI:
             message=f"status={body.review_status} note={body.note[:64]}",
         )
         return out
+
+    # ---- review tasks (full decision API) ----
+
+    @app.get("/api/review/tasks", response_model=ReviewTaskListResponse)
+    def list_review_tasks(
+        status: str = "reviewing",
+        event_type: str | None = None,
+        page: int = 1,
+        page_size: int = 20,
+        ctx: auth_service.AuthContext = Depends(
+            auth_service.require_role("reviewer", "admin")
+        ),
+    ) -> ReviewTaskListResponse:
+        with session_scope() as session:
+            q = session.query(SemanticEvent).filter(SemanticEvent.review_status == status)
+            if event_type:
+                q = q.filter(SemanticEvent.event_type == event_type)
+            total = q.count()
+            events = (
+                q.order_by(SemanticEvent.created_at.desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+                .all()
+            )
+            items = [
+                ReviewTaskItem(
+                    event_id=e.id,
+                    video_id=e.video_id,
+                    event_type=e.event_type,
+                    title=e.title,
+                    confidence=e.confidence or 0.0,
+                    review_status=e.review_status or "pending",
+                    thumbnail_url=f"/media/frames/{e.video_id}/{Path(e.thumbnail_path).name}"
+                    if e.thumbnail_path else "",
+                    created_at=str(e.created_at),
+                )
+                for e in events
+            ]
+        return ReviewTaskListResponse(items=items, total=total)
+
+    @app.post(
+        "/api/review/tasks/{event_id}/decision",
+        response_model=ReviewDecisionResponse,
+    )
+    def submit_review_decision(
+        event_id: str,
+        body: ReviewDecisionRequest,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(
+            auth_service.require_role("reviewer", "admin")
+        ),
+    ) -> ReviewDecisionResponse:
+        if body.decision not in ("confirmed", "rejected", "pending"):
+            raise HTTPException(status_code=400, detail="invalid decision")
+
+        with session_scope() as session:
+            event = session.query(SemanticEvent).filter(
+                SemanticEvent.id == event_id
+            ).one_or_none()
+            if event is None:
+                raise HTTPException(status_code=404, detail="event not found")
+
+            event.review_status = body.decision
+            if body.corrected_event_type:
+                event.event_type = body.corrected_event_type
+            if body.corrected_title:
+                event.title = body.corrected_title
+            if body.corrected_tags:
+                event.tags_json = body.corrected_tags
+
+            session.flush()
+            reviewed_at = str(event.updated_at)
+
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="review.decision",
+            target_type="event",
+            target_id=event_id,
+            message=f"decision={body.decision} note={body.note[:64]}",
+        )
+        return ReviewDecisionResponse(
+            event_id=event_id,
+            review_status=body.decision,
+            reviewer_id=ctx.user_id,
+            reviewed_at=reviewed_at,
+        )
 
     @app.get("/api/events", response_model=list[EventOut])
     def list_events(video_id: str | None = None, review_status: str | None = None,
