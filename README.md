@@ -14,17 +14,16 @@
 
 > 详细任务清单见 [`docs/ni-yuchen-todolist.md`](docs/ni-yuchen-todolist.md) 和 [`docs/lv-xiaoyang-completed.md`](docs/lv-xiaoyang-completed.md)。
 
-**吕霄阳** —— 桌面客户端、完整后端服务框架、原型迁移、演示层
+**吕霄阳**（≈ 50%）—— 桌面客户端、后端服务框架、原型迁移、演示层
 - Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）
-- 完整后端服务层：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
-- SQLite 核心数据库（9 张业务表）+ 40 个自动化测试
-- Mock 数据、REST 契约对接、最终演示流程
+- 后端服务框架：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
+- SQLite 数据库（9 张业务表）+ 40 个自动化测试 + Mock 数据契约
 
-**倪羽辰** —— PostgreSQL 升级、复核接口、真实链路验证
-- ✅ **已完成**：PostgreSQL 双引擎（PG REAL[] 原生向量 + SQLite 降级，含 cosine\_similarity 存储函数）
-- ✅ **已完成**：人工复核 API（`GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库）
-- ✅ **已完成**：后端技术实现说明文档（`docs/backend-tech-notes.md`）
-- **待完成**：用真实行车视频 + 真实模型 API Key 跑通端到端演示（联调）
+**倪羽辰**（≈ 50%）—— PostgreSQL 升级、向量检索、复核接口、真实链路验证
+- ✅ PostgreSQL 双引擎（PG REAL[] 原生向量 + cosine\_similarity 存储函数 + SQLite 降级）
+- ✅ 人工复核 API（`GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库）
+- ✅ 后端技术实现说明文档（`docs/backend-tech-notes.md`，298 行）
+- **待完成**：用真实行车视频 + 真实模型 API Key 跑通端到端演示
 
 ---
 
