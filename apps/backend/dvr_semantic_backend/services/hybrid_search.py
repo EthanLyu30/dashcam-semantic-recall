@@ -1,6 +1,11 @@
 """Hybrid semantic + keyword search over SemanticEvent rows.
 
-Designed for the course-demo SQLite database. Embeddings are computed lazily:
+Supports two backends:
+- PostgreSQL: uses the ``cosine_similarity(real[], real[])`` stored function
+  defined in ``db.init_db()`` for in-database vector scoring.
+- SQLite:    computes cosine in Python (numpy) from the embedding column.
+
+Embeddings are computed lazily:
 - If ``DVR_SEMANTIC_USE_EMBEDDINGS=1`` and ``sentence_transformers`` can be
   imported, we use the ``paraphrase-multilingual-MiniLM-L12-v2`` model.
 - Otherwise we silently fall back to a deterministic 384-d hash-ngram vector
@@ -16,7 +21,9 @@ from typing import Optional
 
 import numpy as np
 
-from ..db import SearchQuery, SearchResult, SemanticEvent, session_scope
+from sqlalchemy import text
+
+from ..db import IS_SQLITE, SearchQuery, SearchResult, SemanticEvent, session_scope
 
 VECTOR_DIM = 384
 
@@ -116,7 +123,7 @@ def encode_text(text: str) -> np.ndarray:
 
 
 def encode_event(event_id: str) -> np.ndarray:
-    """Encode ``event.vector_text`` and cache the result in ``embedding_json``."""
+    """Encode ``event.vector_text`` and cache the result in ``embedding``."""
     with session_scope() as session:
         event = session.get(SemanticEvent, event_id)
         if event is None:
@@ -125,7 +132,7 @@ def encode_event(event_id: str) -> np.ndarray:
             filter(None, [event.title or "", event.summary or "", event.event_type or ""])
         )
         vec = encode_text(text)
-        event.embedding_json = [float(x) for x in vec.tolist()]
+        event.embedding = [float(x) for x in vec.tolist()]
         return vec
 
 
@@ -142,7 +149,7 @@ def ensure_embeddings(video_id: Optional[str] = None) -> int:
         events = query.all()
         targets: list[str] = []
         for ev in events:
-            emb = ev.embedding_json
+            emb = ev.embedding
             if not emb or not isinstance(emb, list) or len(emb) == 0:
                 targets.append(ev.id)
     for event_id in targets:
@@ -224,6 +231,74 @@ def _answer_text(snapshot: dict, reasons: list[str]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# PostgreSQL in-database cosine search (A2: native PG array math)
+# ---------------------------------------------------------------------------
+
+
+def _pg_vector_search(
+    session,
+    query_vec_list: list[float],
+    video_id: Optional[str],
+    top_k: int,
+) -> list[dict]:
+    """Run vector similarity search using PostgreSQL cosine_similarity().
+
+    Returns a list of dicts with keys: id, event_type, title, summary,
+    start_sec, end_sec, confidence, tags, thumbnail_path, review_status,
+    embedding, vec_score.
+    """
+    if video_id:
+        sql = text("""
+            SELECT
+                e.id, e.event_type, e.title, e.summary,
+                e.start_sec, e.end_sec, e.confidence,
+                e.tags_json, e.thumbnail_path, e.review_status, e.embedding,
+                cosine_similarity(e.embedding, CAST(:query_vec AS double precision[])) AS vec_score
+            FROM semantic_events e
+            WHERE e.embedding IS NOT NULL
+              AND array_length(e.embedding, 1) > 0
+              AND e.video_id = :video_id
+            ORDER BY vec_score DESC
+            LIMIT :top_k
+        """)
+        params = {"query_vec": query_vec_list, "video_id": video_id, "top_k": top_k * 3}
+    else:
+        sql = text("""
+            SELECT
+                e.id, e.event_type, e.title, e.summary,
+                e.start_sec, e.end_sec, e.confidence,
+                e.tags_json, e.thumbnail_path, e.review_status, e.embedding,
+                cosine_similarity(e.embedding, CAST(:query_vec AS double precision[])) AS vec_score
+            FROM semantic_events e
+            WHERE e.embedding IS NOT NULL
+              AND array_length(e.embedding, 1) > 0
+            ORDER BY vec_score DESC
+            LIMIT :top_k
+        """)
+        params = {"query_vec": query_vec_list, "top_k": top_k * 3}
+
+    rows = session.execute(sql, params).fetchall()
+
+    return [
+        {
+            "id": row.id,
+            "event_type": row.event_type,
+            "title": row.title,
+            "summary": row.summary,
+            "start_sec": int(row.start_sec or 0),
+            "end_sec": int(row.end_sec or 0),
+            "confidence": float(row.confidence or 0.0),
+            "tags": list(row.tags_json) if isinstance(row.tags_json, list) else [],
+            "thumbnail_path": row.thumbnail_path or "",
+            "review_status": row.review_status or "pending",
+            "embedding": list(row.embedding) if row.embedding else [],
+            "vec_score": float(row.vec_score) if row.vec_score else 0.0,
+        }
+        for row in rows
+    ]
+
+
+# ---------------------------------------------------------------------------
 # Hybrid search entry point
 # ---------------------------------------------------------------------------
 
@@ -241,55 +316,82 @@ def hybrid_search(
     ensure_embeddings(video_id)
 
     query_vec = encode_text(query or "")
+    query_vec_list = [float(x) for x in query_vec.tolist()]
 
-    # 2. snapshot candidate rows (so we can drop the session before scoring)
-    snapshots: list[dict] = []
-    with session_scope() as session:
-        q = session.query(SemanticEvent)
-        if video_id is not None:
-            q = q.filter(SemanticEvent.video_id == video_id)
-        for ev in q.all():
-            snapshots.append(
+    # 2. vector search: PG in-database or Python fallback
+    if not IS_SQLITE:
+        # PostgreSQL: use the cosine_similarity stored function
+        with session_scope() as session:
+            snapshots = _pg_vector_search(session, query_vec_list, video_id, top_k)
+        scored: list[dict] = []
+        for snap in snapshots:
+            vec_score = max(0.0, snap.pop("vec_score", 0.0))
+            kw_score, reasons = _keyword_score(query, snap)
+            kw_norm = min(1.0, kw_score)
+            if mode == "vector":
+                final = vec_score
+            elif mode == "keyword":
+                final = kw_norm
+            else:
+                final = 0.6 * vec_score + 0.4 * kw_norm
+            scored.append(
                 {
-                    "id": ev.id,
-                    "event_type": ev.event_type,
-                    "title": ev.title,
-                    "summary": ev.summary,
-                    "start_sec": int(ev.start_sec or 0),
-                    "end_sec": int(ev.end_sec or 0),
-                    "confidence": float(ev.confidence or 0.0),
-                    "tags": list(ev.tags_json) if isinstance(ev.tags_json, list) else [],
-                    "thumbnail_path": ev.thumbnail_path or "",
-                    "review_status": ev.review_status or "pending",
-                    "embedding": list(ev.embedding_json) if isinstance(ev.embedding_json, list) else [],
+                    "snap": snap,
+                    "final": float(final),
+                    "vec": float(vec_score),
+                    "kw": float(kw_norm),
+                    "reasons": reasons,
                 }
             )
+    else:
+        # SQLite: Python cosine fallback (original code path)
+        snapshots: list[dict] = []
+        with session_scope() as session:
+            q = session.query(SemanticEvent)
+            if video_id is not None:
+                q = q.filter(SemanticEvent.video_id == video_id)
+            for ev in q.all():
+                snapshots.append(
+                    {
+                        "id": ev.id,
+                        "event_type": ev.event_type,
+                        "title": ev.title,
+                        "summary": ev.summary,
+                        "start_sec": int(ev.start_sec or 0),
+                        "end_sec": int(ev.end_sec or 0),
+                        "confidence": float(ev.confidence or 0.0),
+                        "tags": list(ev.tags_json) if isinstance(ev.tags_json, list) else [],
+                        "thumbnail_path": ev.thumbnail_path or "",
+                        "review_status": ev.review_status or "pending",
+                        "embedding": list(ev.embedding) if isinstance(ev.embedding, list) else [],
+                    }
+                )
 
-    scored: list[dict] = []
-    for snap in snapshots:
-        emb_list = snap.get("embedding") or []
-        if emb_list:
-            emb_vec = np.asarray(emb_list, dtype=np.float32)
-        else:
-            emb_vec = np.zeros(VECTOR_DIM, dtype=np.float32)
-        vec_score = max(0.0, _cosine(query_vec, emb_vec))
-        kw_score, reasons = _keyword_score(query, snap)
-        kw_norm = min(1.0, kw_score)
-        if mode == "vector":
-            final = vec_score
-        elif mode == "keyword":
-            final = kw_norm
-        else:
-            final = 0.6 * vec_score + 0.4 * kw_norm
-        scored.append(
-            {
-                "snap": snap,
-                "final": float(final),
-                "vec": float(vec_score),
-                "kw": float(kw_norm),
-                "reasons": reasons,
-            }
-        )
+        scored = []
+        for snap in snapshots:
+            emb_list = snap.get("embedding") or []
+            if emb_list:
+                emb_vec = np.asarray(emb_list, dtype=np.float32)
+            else:
+                emb_vec = np.zeros(VECTOR_DIM, dtype=np.float32)
+            vec_score = max(0.0, _cosine(query_vec, emb_vec))
+            kw_score, reasons = _keyword_score(query, snap)
+            kw_norm = min(1.0, kw_score)
+            if mode == "vector":
+                final = vec_score
+            elif mode == "keyword":
+                final = kw_norm
+            else:
+                final = 0.6 * vec_score + 0.4 * kw_norm
+            scored.append(
+                {
+                    "snap": snap,
+                    "final": float(final),
+                    "vec": float(vec_score),
+                    "kw": float(kw_norm),
+                    "reasons": reasons,
+                }
+            )
 
     scored.sort(key=lambda item: item["final"], reverse=True)
     kept = [item for item in scored[:top_k] if item["final"] >= 0.15]

@@ -282,7 +282,7 @@ def _build_event(video_id: str, event_id: str, group: list[dict]) -> SemanticEve
         tags_json=tags_union,
         thumbnail_path=group[0]["frame_path"],
         vector_text=vector_text,
-        embedding_json=[],
+        embedding=[],
         review_status=review_status,
     )
 

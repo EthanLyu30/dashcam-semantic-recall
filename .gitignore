@@ -16,4 +16,4 @@ var/
 *.db
 *.db-journal
 .claude/
-
+*.mp4

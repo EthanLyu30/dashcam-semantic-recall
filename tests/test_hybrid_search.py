@@ -95,7 +95,7 @@ def hybrid_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
                     confidence=0.7,
                     tags_json=spec["tags"],
                     vector_text=f"{spec['title']} {spec['summary']} {' '.join(spec['tags'])}",
-                    embedding_json=[],
+                    embedding=[],
                     review_status="pending",
                 )
             )
@@ -110,9 +110,9 @@ def test_ensure_embeddings_populates_vectors(hybrid_env):
     with db.session_scope() as session:
         events = session.query(db.SemanticEvent).all()
         for ev in events:
-            assert isinstance(ev.embedding_json, list)
-            assert len(ev.embedding_json) == hybrid.VECTOR_DIM
-            assert any(abs(float(x)) > 0 for x in ev.embedding_json)
+            assert isinstance(ev.embedding, list)
+            assert len(ev.embedding) == hybrid.VECTOR_DIM
+            assert any(abs(float(x)) > 0 for x in ev.embedding)
 
 
 def test_hybrid_search_finds_illegal_parking(hybrid_env):

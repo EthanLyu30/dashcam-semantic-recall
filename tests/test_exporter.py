@@ -82,7 +82,7 @@ def _make_event(video_id: str, start_sec: int = 3, end_sec: int = 8) -> str:
                 tags_json=["pedestrian", "brake"],
                 thumbnail_path="",
                 vector_text="测试事件",
-                embedding_json=[],
+                embedding=[],
                 review_status="confirmed",
             )
         )

@@ -101,8 +101,41 @@ class ExportResponse(BaseModel):
 
 
 class ReviewRequest(BaseModel):
+    """Legacy review endpoint (deprecated in favour of ReviewDecisionRequest)."""
     review_status: str
     note: str = ""
+
+
+class ReviewDecisionRequest(BaseModel):
+    """POST /api/review/tasks/{event_id}/decision"""
+    decision: str  # "confirmed" | "rejected" | "pending"
+    corrected_event_type: str | None = None
+    corrected_title: str | None = None
+    corrected_tags: list[str] = []
+    note: str = ""
+
+
+class ReviewTaskItem(BaseModel):
+    event_id: str
+    video_id: str
+    event_type: str
+    title: str
+    confidence: float
+    review_status: str
+    thumbnail_url: str = ""
+    created_at: str = ""
+
+
+class ReviewTaskListResponse(BaseModel):
+    items: list[ReviewTaskItem]
+    total: int
+
+
+class ReviewDecisionResponse(BaseModel):
+    event_id: str
+    review_status: str
+    reviewer_id: str
+    reviewed_at: str
 
 
 class AuditLogOut(BaseModel):
