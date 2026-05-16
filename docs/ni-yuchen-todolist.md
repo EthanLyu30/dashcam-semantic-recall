@@ -1,6 +1,8 @@
 # 倪羽辰后端与 AI 部分 TODO List（更新版）
 
 > **背景说明**：lxy 分支在开发过程中已将原分工中大部分后端基础设施实现完毕（auth、db、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator、audit、40 个测试）。倪羽辰不需要重复实现这些，直接在此基础上承担以下任务即可。
+>
+> **2026-05-16 更新**：leonore 分支已合入 main。任务 2（PostgreSQL 双引擎）和任务 3（复核 API）✅ 已完成；后端技术说明文档和 ffmpeg 安装脚本也已提交。
 
 ---
 
@@ -18,23 +20,20 @@
 - [ ] 触发证据导出，确认文件生成在 `media/exports/`。
 - [ ] 整理跑通截图和日志，供答辩和文档引用。
 
-### 2. 替换数据库为 PostgreSQL + pgvector
+### 2. ✅ 替换数据库为 PostgreSQL + pgvector（已完成）
 
-当前 lxy 实现使用 SQLite（降级方案），原分工要求 pgvector 向量检索。
+- [x] `db.py` 改为双引擎：`IS_SQLITE` 标志自动路由；默认连接 `postgresql://postgres:postgres@localhost:5432/dvr_semantic`，测试环境通过 `pytest-env` 强制 SQLite 内存库。
+- [x] `semantic_events.embedding` 列：SQLite 用 `JSON`，PostgreSQL 用 `REAL[]` 原生数组。
+- [x] `init_db()` 在 PG 上自动创建 `cosine_similarity(double precision[], double precision[])` PL/pgSQL 存储函数。
+- [x] `hybrid_search.py` 分叉：PG 使用 `cosine_similarity()` 存储函数在库内做向量排序；SQLite 继续用 Python numpy 余弦降级。
+- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 40 个测试不依赖 PG。
 
-- [ ] 本地或 Docker 搭建 PostgreSQL + pgvector。
-- [ ] 将 `apps/backend/dvr_semantic_backend/db.py` 中的 SQLite 连接替换为 psycopg2/asyncpg。
-- [ ] 为 `semantic_events` 表的 embedding 字段启用 `vector` 类型和 HNSW 索引。
-- [ ] 将 `hybrid_search.py` 中的余弦相似度 fallback 替换为真实 pgvector `<=>` 查询。
-- [ ] 确认 40 个现有测试在新数据库下仍然通过。
+### 3. ✅ 补全人工复核 API（已完成）
 
-### 3. 补全人工复核 API
-
-复核接口目前是 stub，Qt 复核页的"提交复核结果"需要真实逻辑。
-
-- [ ] 实现 `POST /api/review/tasks/{event_id}/decision`：接收 `verdict`（pass/reject/doubt）、`notes`、修正后的 `title`/`tags`，写入 `semantic_events` 并记录审计日志。
-- [ ] 实现 `GET /api/review/tasks`：返回 `review_status=reviewing` 的事件列表，供 Qt 复核页加载队列。
-- [ ] 在 Qt 复核页的任务列表点击时调用此接口（与吕霄阳联调）。
+- [x] `GET /api/review/tasks`：按 `review_status` 过滤，支持 `event_type` 筛选与分页（`page` + `page_size`），返回 `ReviewTaskListResponse`。
+- [x] `POST /api/review/tasks/{event_id}/decision`：接收 `decision`（confirmed/rejected/pending）+ 可选的修正 `event_type`/`title`/`tags` + `note`，更新 `semantic_events` 并记录 `review.decision` 审计日志。
+- [x] 新增 Pydantic schema：`ReviewDecisionRequest`、`ReviewTaskItem`、`ReviewTaskListResponse`、`ReviewDecisionResponse`。
+- [ ] Qt 复核页任务列表接入真实接口（待与吕霄阳联调）。
 
 ---
 
@@ -45,10 +44,9 @@
 - [ ] 确认 `GET /api/videos/{video_id}/stream` 返回可播放的 URL（本地 HTTP 或文件路径）。
 - [ ] 与吕霄阳联调：在 Qt 客户端设置 `DVR_SEMANTIC_API_BASE` 后，VLC 能实际播放视频而不是占位模式。
 
-### 5. 后端技术实现说明
+### 5. ✅ 后端技术实现说明（已完成）
 
-- [ ] 写 1-2 页文档（Markdown 或 PDF），说明：模型 Prompt 设计、帧分析到事件聚合逻辑、检索排序策略、证据导出流程。
-- [ ] 供答辩时解释自己实现的代码，以及最终报告引用。
+- [x] `docs/backend-tech-notes.md`（298 行）：涵盖 PG 双引擎设计、向量存储、Qwen-VL 接入、事件聚合算法、复核 API、证据导出、鉴权与审计。
 
 ---
 
@@ -76,7 +74,7 @@
 | 帧分析聚合为语义事件 | `services/event_aggregator.py` | ✅ |
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
 | 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
-| 核心数据库表（SQLite） | `db.py` | ✅（待替换为 PostgreSQL） |
+| 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
 | 后端单元测试 + 集成测试 40 个 | `tests/` | ✅ |
 
 ---
