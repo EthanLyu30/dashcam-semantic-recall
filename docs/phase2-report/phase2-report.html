@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
@@ -401,7 +401,109 @@
   <div class="pagenum">02</div>
 </section>
 
-<!-- =============== 3. PROTOTYPE vs IMPLEMENTATION =============== -->
+<!-- =============== 3. REQUIREMENTS TRACEABILITY =============== -->
+<section class="slide">
+  <div class="topbar">
+    <h2>需求追踪矩阵 — SRS v3.0 FR-01 ~ FR-06 完成情况</h2>
+    <span class="badge">阶段二实现对照</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1 1 auto;min-height:0;margin-top:8px;">
+
+    <!-- FR-01 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#1D4ED8;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-01</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">视频接入与预处理</span>
+        <span class="pill g" style="flex-shrink:0;">90%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--green);font-weight:700;">✅</span><span>H.264 转码 + 30s 切片 + 1帧/3s 抽帧 + Pillow 640px 缩略图</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>格式/大小/校验和验证 + device+checksum 重复检测</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>taskId 生命周期（PENDING→PROCESSING→DONE/FAILED）+ 失败重试</span>
+        <span style="color:var(--yellow);font-weight:700;">⚠</span><span>进度推送：仅 GET /status 轮询，无 WebSocket 实时推送</span>
+      </div>
+    </div>
+
+    <!-- FR-02 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#7C3AED;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-02</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">语义分析与索引构建</span>
+        <span class="pill y" style="flex-shrink:0;">55%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--green);font-weight:700;">✅</span><span>滑窗事件聚合（时间gap≤10s + 余弦相似度≥0.7 合并为 SemanticEvent）</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>model_adapter.py 策略框架 + MockProvider 占位（低置信度→待复核标记）</span>
+        <span style="color:var(--yellow);font-weight:700;">⚠</span><span>向量 embedding → hash-ngram 降级（sentence-transformers 未安装）</span>
+        <span style="color:var(--red);font-weight:700;">✗</span><span>真实多模态调用 → 需 MODEL_API_KEY + MODEL_PROVIDER=qwen 联调</span>
+      </div>
+    </div>
+
+    <!-- FR-03 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#0891B2;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-03</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">智能检索</span>
+        <span class="pill b" style="flex-shrink:0;">85%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--green);font-weight:700;">✅</span><span>自然语言查询 + 5 类事件别名字典解析结构化意图</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>混合检索 0.6·cos + 0.4·kw，阈值 0.6，≤50 条，按置信度排序</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>结果含时间区间/摘要/标签/置信度/命中原因；意图解析失败给改写建议</span>
+        <span style="color:var(--yellow);font-weight:700;">⚠</span><span>真实向量依赖 sentence-transformers；当前以 hash-ngram 降级运行</span>
+      </div>
+    </div>
+
+    <!-- FR-04 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#DC2626;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-04</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">精准回放</span>
+        <span class="pill r" style="flex-shrink:0;">35%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--green);font-weight:700;">✅</span><span>Qt6 播放器 UI 全部完成：时间轴 + 控制条 + 详情面板已渲染</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>HttpApiClient 接口已设计（当前 MockApiClient 数据替代）</span>
+        <span style="color:var(--red);font-weight:700;">✗</span><span>VLC 真实跳转：DVR_DISABLE_VLC=1，点击结果无法定位到事件时间点</span>
+        <span style="color:var(--red);font-weight:700;">✗</span><span>Qt ↔ 后端未联调：数据全部来自 Mock，非真实 API 响应</span>
+      </div>
+    </div>
+
+    <!-- FR-05 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#15803D;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-05</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">证据导出与日志管理</span>
+        <span class="pill g" style="flex-shrink:0;">95%</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--green);font-weight:700;">✅</span><span>FFmpeg 精确裁剪视频段 + 帧截图 + 文本摘要 + zip 打包落库</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>exportId+eventId 24h 去重，失败记录保留原因，重试生成新 exportId</span>
+        <span style="color:var(--green);font-weight:700;">✅</span><span>操作审计日志（login/upload/search/export）；管理员按时间/用户/类型查询</span>
+        <span style="color:var(--yellow);font-weight:700;">⚠</span><span>当前仅支持单事件导出；SRS 的"受控批量导出"未实现</span>
+      </div>
+    </div>
+
+    <!-- FR-06 -->
+    <div class="panel" style="padding:10px 13px;">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;">
+        <span style="background:#64748B;color:#fff;font-family:monospace;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:5px;flex-shrink:0;">FR-06</span>
+        <span style="font-weight:700;font-size:12.5px;color:var(--text);flex:1;">第三方平台接口预留</span>
+        <span class="pill i" style="flex-shrink:0;">预留</span>
+      </div>
+      <div style="display:grid;grid-template-columns:14px 1fr;gap:2px 5px;font-size:10.5px;line-height:1.55;color:var(--text);">
+        <span style="color:var(--yellow);font-weight:700;">⚠</span><span>接口边界已在 SRS 中定义（外部监管平台 / 车端终端 / 对象存储）</span>
+        <span style="color:var(--red);font-weight:700;">✗</span><span>SRS 明确标注"预留，不在本阶段实现范围"，本次零实现</span>
+        <span style="color:var(--blue);font-weight:700;">→</span><span>待阶段三评估是否接入腾讯 COS / 腾讯云视频 / 外部监管平台</span>
+      </div>
+    </div>
+
+  </div>
+  <div class="dots"><span></span><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span></div>
+  <div class="pagenum">03</div>
+</section>
+
+<!-- =============== 4. PROTOTYPE vs IMPLEMENTATION =============== -->
 <section class="slide">
   <h2>原型 → 真实 Qt6 客户端（直接对照）</h2>
   <div class="subtitle">左边是阶段一的设计稿，右边是阶段二落到 Qt6 后实际渲染的截图。视觉系统 1:1 对齐，数据由真实 API 驱动。</div>
@@ -434,7 +536,7 @@
     </div>
   </div>
   <div class="dots"><span></span><span></span><span class="b"></span><span class="r"></span><span class="y"></span></div>
-  <div class="pagenum">03</div>
+  <div class="pagenum">04</div>
 </section>
 
 <!-- =============== 4. ARCHITECTURE WITH SVG =============== -->
@@ -539,7 +641,7 @@
     </svg>
   </div>
   <div class="dots"><span></span><span></span><span></span><span class="b"></span><span class="r"></span></div>
-  <div class="pagenum">04</div>
+  <div class="pagenum">05</div>
 </section>
 
 <!-- =============== 5. MEDIA PIPELINE WITH TERMINAL =============== -->
@@ -590,7 +692,7 @@
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span class="b"></span></div>
-  <div class="pagenum">05</div>
+  <div class="pagenum">06</div>
 </section>
 
 <!-- =============== 6. MODEL ADAPTER + AGGREGATION =============== -->
@@ -685,7 +787,7 @@
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span class="i"></span></div>
-  <div class="pagenum">06</div>
+  <div class="pagenum">07</div>
 </section>
 
 <!-- =============== 7. HYBRID SEARCH =============== -->
@@ -726,7 +828,7 @@
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span class="y"></span></div>
-  <div class="pagenum">07</div>
+  <div class="pagenum">08</div>
 </section>
 
 <!-- =============== 8. EXPORT WITH ZIP =============== -->
@@ -767,7 +869,7 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
-  <div class="pagenum">08</div>
+  <div class="pagenum">09</div>
 </section>
 
 <!-- =============== 9. DESKTOP UI — REAL SCREENSHOT =============== -->
@@ -779,7 +881,7 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
   </div>
   <div class="muted" style="margin-top:6px;font-size:12px;text-align:center;">由 <code>tools/capture_screenshots.py</code> 自动抓取 · flat nav + 紫蓝品牌芯片 · 推荐查询胶囊 · 3 张置信度色块卡片 · 深色视频卡 + 嵌入式时间轴 · 三色 metric（置信度/相关度/复核状态）</div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
-  <div class="pagenum">09</div>
+  <div class="pagenum">10</div>
 </section>
 
 <!-- =============== 9b. (legacy mockup retained, hidden) ============== -->
@@ -885,7 +987,7 @@ exp-bc12a-001 | <span class="ok">success</span> | var/media/exports/.../package.
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
-  <div class="pagenum">09</div>
+  <div class="pagenum">10</div>
 </section>
 
 <!-- =============== 10. TEST MATRIX + SCREENSHOT WALL =============== -->
@@ -948,7 +1050,7 @@ test_backend_search      <span class="ok">2 ✓</span>
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="b"></span></div>
-  <div class="pagenum">10</div>
+  <div class="pagenum">11</div>
 </section>
 
 <!-- =============== 11. HONEST GAP LIST =============== -->
@@ -1034,7 +1136,7 @@ test_backend_search      <span class="ok">2 ✓</span>
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="r"></span></div>
-  <div class="pagenum">11</div>
+  <div class="pagenum">12</div>
 </section>
 
 <!-- =============== 12. DEMO ROADMAP =============== -->
@@ -1085,7 +1187,7 @@ test_backend_search      <span class="ok">2 ✓</span>
     </div>
   </div>
   <div class="dots"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span class="g"></span></div>
-  <div class="pagenum">12</div>
+  <div class="pagenum">13</div>
 </section>
 
 </body>
