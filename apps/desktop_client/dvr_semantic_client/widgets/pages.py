@@ -165,11 +165,14 @@ def action_button(text: str, variant: str = "") -> QPushButton:
 
 
 def _wip_button(text: str, variant: str = "") -> QPushButton:
-    """Button that shows a "feature in development" message when clicked."""
+    """Button for optional productized actions outside the final demo path."""
     btn = action_button(text, variant)
     btn.clicked.connect(
         lambda: QMessageBox.information(
-            btn.window(), "功能开发中", "此功能正在开发中，当前版本为演示模式。"
+            btn.window(),
+            "演示版提示",
+            "当前 final-stage 版本已接入主链路和管理面只读数据；"
+            "该操作属于后续产品化写入流程。",
         )
     )
     return btn

@@ -1,6 +1,6 @@
-# Phase 2 Implementation Plan — main / lxy 当前状态
+# Historical Implementation Plan
 
-本文件追踪阶段二实现清单。打钩项已落代码 + 单测；未打钩项是当前版本仍需如实说明的后续增强项。
+本文件保留阶段二实施记录。最终交付验收以 `plans/final-stage-delivery.md` 为准。
 
 ## 已实现
 
@@ -15,6 +15,7 @@
 - [x] 鉴权：bcrypt 密码 + PyJWT Bearer Token；三个种子账号（admin/reviewer/demo）；`require_auth` / `require_role` FastAPI 依赖。
 - [x] 审计日志中间件：写操作全部进 `audit_logs`，每次请求带 `X-Request-Id` 头便于排障。
 - [x] FastAPI 路由整合：login / videos / upload / preprocess / analyze / one-shot process / stream / events / review / search / export / audit logs。
+- [x] Final-stage 管理面 API：dashboard / alerts / accidents / reports / settings / users / roles / permissions。
 
 ### 桌面端
 - [x] `python-vlc` 真播放：`vlc.MediaPlayer` 嵌入 QFrame，Windows `set_hwnd` / X11 `set_xwindow` / mac `set_nsobject`；500ms 进度同步；VLC 未装时降级 QLabel + 虚拟时间游标。
@@ -23,20 +24,18 @@
 - [x] RestApiClient 全面带 Bearer 头；MockApiClient 保留所有路径可演示。
 
 ### 测试
-- [x] 单测覆盖：media_pipeline / model_adapter / event_aggregator / hybrid_search / exporter / export_routes / auth+audit / login_dialog / client_api。
+- [x] 单测覆盖：media_pipeline / model_adapter / event_aggregator / hybrid_search / exporter / export_routes / final_stage_api / auth+audit / login_dialog / client_api。
 - [x] 端到端集成测试 `test_api_integration.py`：login → upload → process → search → export 真跑通 FastAPI TestClient。
-- [x] 42 个自动化用例；当前环境 `38 passed, 4 skipped`（可选桌面/媒体环境相关用例会按依赖自动跳过）。
+- [x] 44 个自动化用例；当前环境预期 `40 passed, 4 skipped`（可选桌面/媒体环境相关用例会按依赖自动跳过）。
 
-## 暂未实现 / 阶段汇报要诚实说明
+## 后续产品化增强（不阻塞课程 final-stage 交付）
 
-- [ ] **真正的多模态模型调用**：代码路径完整可跑通，但默认环境用 `MODEL_PROVIDER=mock`。要演示真模型只需 `.env` 写 DeepSeek 或千问 key，但本周课程演示用 mock 保稳定性。
 - [ ] **sentence-transformers 真 embedding**：依赖未默认安装（~400MB 模型），代码 `ensure_embeddings` 已支持，启用方式 `pip install sentence-transformers + DVR_SEMANTIC_USE_EMBEDDINGS=1`。
 - [ ] **HLS 点播**：视频流目前直接 `FileResponse` 整文件，未做 HLS 切片对外。VLC 拉本地或 stream URL 都能播。
 - [ ] **批量上传**：现在一次一个视频；批量上传与并发任务队列未做。
-- [ ] **告警管理 / 全天业务报告 / 模型与安全配置**：页面仍是静态展示，未接真数据。
 - [ ] **证据包 PDF 摘要**：导出包里目前是 Markdown + JSON，PDF 渲染留到后续。
 - [ ] **任务异步队列**：upload/process 是同步阻塞调用，长视频会卡住请求。后续应该上 Celery 或 asyncio.create_task + WebSocket 进度推送。
-- [ ] **权限页 / 角色编辑 UI**：仅后端 `users.role` 字段就绪，UI 没接。
+- [ ] **权限页 / 角色编辑 UI**：后端角色/权限字典已完成，复杂编辑流可后续产品化。
 - [ ] **检索结果中的"命中理由"**：现在只是按事件类型拼模板话术，未让模型生成"为什么命中"。
 
 ## 演示链路（下周阶段汇报建议演示路径）

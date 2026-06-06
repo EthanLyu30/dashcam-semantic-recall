@@ -977,8 +977,13 @@ Response:
 
 返回缩略图、关键帧、切片视频、导出文件等媒体资源。后端应校验路径，禁止任意文件读取。
 
-## 15. 倪羽辰实现优先级
+## 15. Final-stage 实现状态
 
-1. 先实现 `auth`、`videos`、`tasks/status`、`search`、`events`、`export` 六组接口，保证主链路可联调。
-2. 再实现 `review`、`logs`、`dashboard`，补齐复核和演示看板。
-3. `alerts`、`accidents`、`reports`、`settings`、`users/roles` 第一阶段允许由吕霄阳侧 mock 数据支撑页面演示；主链路稳定后再逐步真实化。
+`main` 当前 final-stage 版本已实现以下接口组：
+
+1. 主链路：`auth`、`videos`、`process/analyze`、`search`、`events`、`export`、`audit`。
+2. 复核链路：`GET /api/review/tasks`、`POST /api/review/tasks/{event_id}/decision`。
+3. 管理面：`dashboard`、`alerts`、`accidents`、`reports`、`settings`、`users`、`roles`、`permissions`。
+4. 媒体资源：`/media/**` 静态挂载和 `GET /api/videos/{video_id}/stream`。
+
+管理面接口由现有核心表实时派生，不额外引入迁移表；后续生产化可再把 alerts/settings/report jobs 独立成持久化模块。
