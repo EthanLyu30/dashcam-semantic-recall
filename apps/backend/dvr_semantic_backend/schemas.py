@@ -163,6 +163,163 @@ class AuditLogOut(BaseModel):
     created_at: str
 
 
+class CountItem(BaseModel):
+    key: str
+    label: str
+    count: int
+
+
+class DashboardOverviewResponse(BaseModel):
+    processed_video_count: int
+    semantic_query_count: int
+    identified_event_count: int
+    pending_review_count: int
+    engine_status: str
+    model_nodes: dict[str, Any]
+
+
+class DashboardTrendResponse(BaseModel):
+    days: list[str]
+    event_counts: list[int]
+    query_counts: list[int]
+    worker_load: list[float]
+
+
+class DashboardDistributionResponse(BaseModel):
+    items: list[CountItem]
+
+
+class ReviewFeedItem(BaseModel):
+    event_id: str
+    title: str
+    confidence: float
+    created_at: str
+
+
+class ReviewFeedResponse(BaseModel):
+    items: list[ReviewFeedItem]
+
+
+class AlertSummaryResponse(BaseModel):
+    open_count: int
+    today_count: int
+    resolved_count: int
+    avg_response_minutes: float
+
+
+class AlertItem(BaseModel):
+    id: str
+    event_id: str
+    title: str
+    severity: str
+    status: str
+    created_at: str
+
+
+class AlertListResponse(BaseModel):
+    items: list[AlertItem]
+    total: int
+
+
+class ActionStatusResponse(BaseModel):
+    id: str
+    status: str
+
+
+class AccidentItem(BaseModel):
+    id: str
+    event_id: str
+    title: str
+    risk_level: str
+    summary: str
+    created_at: str
+
+
+class AccidentListResponse(BaseModel):
+    items: list[AccidentItem]
+
+
+class AccidentDetailResponse(AccidentItem):
+    video_id: str
+    start_sec: int
+    end_sec: int
+    confidence: float
+    tags: list[str]
+    evidence_ready: bool = False
+
+
+class AccidentSummaryResponse(BaseModel):
+    accident_id: str
+    summary: str
+    updated_at: str
+
+
+class DailyReportResponse(BaseModel):
+    date: str
+    processed_video_count: int
+    identified_event_count: int
+    semantic_query_count: int
+    evidence_export_count: int
+    pending_review_count: int
+    event_distribution: list[CountItem]
+    risk_summary: str
+
+
+class ReportExportResponse(BaseModel):
+    report_id: str
+    status: str
+    export_path: str
+
+
+class ModelSettingsResponse(BaseModel):
+    provider: str
+    model_name: str
+    base_url: str
+    api_key_configured: bool
+    use_embeddings: bool
+    media_root: str
+    db_engine: str
+
+
+class ModelTestResponse(BaseModel):
+    provider: str
+    status: str
+    message: str
+
+
+class SecuritySettingsResponse(BaseModel):
+    bearer_auth_enabled: bool
+    audit_enabled: bool
+    jwt_ttl_min: int
+    roles: list[str]
+
+
+class UserOut(BaseModel):
+    id: str
+    username: str
+    role: str
+    display_name: str
+    created_at: str
+
+
+class UserListResponse(BaseModel):
+    items: list[UserOut]
+
+
+class RoleOut(BaseModel):
+    id: str
+    name: str
+    permissions: list[str]
+
+
+class RoleListResponse(BaseModel):
+    items: list[RoleOut]
+
+
+class PermissionListResponse(BaseModel):
+    permissions: list[str]
+
+
 class EnvelopeError(BaseModel):
     request_id: str
     code: str

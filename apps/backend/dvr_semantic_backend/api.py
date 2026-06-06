@@ -19,8 +19,18 @@ from .db import (
     session_scope,
 )
 from .schemas import (
+    AccidentDetailResponse,
+    AccidentListResponse,
+    AccidentSummaryResponse,
+    ActionStatusResponse,
     AnalysisReport,
+    AlertListResponse,
+    AlertSummaryResponse,
     AuditLogOut,
+    DashboardDistributionResponse,
+    DashboardOverviewResponse,
+    DashboardTrendResponse,
+    DailyReportResponse,
     EventOut,
     ExportListItem,
     ExportListResponse,
@@ -28,15 +38,23 @@ from .schemas import (
     ExportResponse,
     LoginRequest,
     LoginResponse,
+    ModelSettingsResponse,
+    ModelTestResponse,
+    PermissionListResponse,
     ProcessReport,
+    ReportExportResponse,
     ReviewDecisionRequest,
     ReviewDecisionResponse,
+    ReviewFeedResponse,
     ReviewRequest,
     ReviewTaskItem,
     ReviewTaskListResponse,
+    RoleListResponse,
+    SecuritySettingsResponse,
     SearchRequest,
     SearchResponse,
     UploadResponse,
+    UserListResponse,
     VideoListResponse,
     VideoOut,
 )
@@ -44,6 +62,7 @@ from .services import audit as audit_service
 from .services import auth as auth_service
 from .services import event_aggregator
 from .services import exporter as exporter_service
+from .services import final_stage
 from .services import hybrid_search
 from .services import media_pipeline
 
@@ -121,6 +140,36 @@ def create_app() -> FastAPI:
     @app.get("/health")
     def health() -> dict[str, str]:
         return {"status": "ok", "version": app.version}
+
+    # ---- dashboard / operational views ----
+    @app.get("/api/dashboard/overview", response_model=DashboardOverviewResponse)
+    def dashboard_overview(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return final_stage.dashboard_overview()
+
+    @app.get("/api/dashboard/trends", response_model=DashboardTrendResponse)
+    def dashboard_trends(
+        days: int = 7,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return final_stage.dashboard_trends(days=days)
+
+    @app.get(
+        "/api/dashboard/event-distribution",
+        response_model=DashboardDistributionResponse,
+    )
+    def dashboard_distribution(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> DashboardDistributionResponse:
+        return DashboardDistributionResponse(items=final_stage.event_distribution())
+
+    @app.get("/api/dashboard/review-feed", response_model=ReviewFeedResponse)
+    def dashboard_review_feed(
+        limit: int = 20,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> ReviewFeedResponse:
+        return ReviewFeedResponse(items=final_stage.review_feed(limit=limit))
 
     # ---- auth ----
     @app.post("/api/auth/login", response_model=LoginResponse)
@@ -547,6 +596,171 @@ def create_app() -> FastAPI:
                 for r in rows
             ]
         )
+
+    # ---- alerts / accidents / reports ----
+    @app.get("/api/alerts/summary", response_model=AlertSummaryResponse)
+    def alerts_summary(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return final_stage.alert_summary()
+
+    @app.get("/api/alerts", response_model=AlertListResponse)
+    def list_alerts(
+        status: str | None = None,
+        event_type: str | None = None,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return final_stage.list_alerts(status=status, event_type=event_type)
+
+    @app.post("/api/alerts/{alert_id}/ack", response_model=ActionStatusResponse)
+    def ack_alert(
+        alert_id: str,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, str]:
+        try:
+            result = final_stage.update_alert(alert_id, "acknowledged")
+        except ValueError:
+            raise HTTPException(status_code=404, detail="alert not found")
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="alert.ack",
+            target_type="alert",
+            target_id=alert_id,
+        )
+        return result
+
+    @app.post("/api/alerts/{alert_id}/resolve", response_model=ActionStatusResponse)
+    def resolve_alert(
+        alert_id: str,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, str]:
+        try:
+            result = final_stage.update_alert(alert_id, "resolved")
+        except ValueError:
+            raise HTTPException(status_code=404, detail="alert not found")
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="alert.resolve",
+            target_type="alert",
+            target_id=alert_id,
+        )
+        return result
+
+    @app.get("/api/accidents", response_model=AccidentListResponse)
+    def list_accidents(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> AccidentListResponse:
+        return AccidentListResponse(items=final_stage.list_accidents())
+
+    @app.get("/api/accidents/{accident_id}", response_model=AccidentDetailResponse)
+    def accident_detail(
+        accident_id: str,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        try:
+            return final_stage.accident_detail(accident_id)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="accident not found")
+
+    @app.post(
+        "/api/accidents/{accident_id}/summary",
+        response_model=AccidentSummaryResponse,
+    )
+    def generate_accident_summary(
+        accident_id: str,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, str]:
+        try:
+            result = final_stage.accident_summary(accident_id)
+        except ValueError:
+            raise HTTPException(status_code=404, detail="accident not found")
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="accident.summary",
+            target_type="accident",
+            target_id=accident_id,
+        )
+        return result
+
+    @app.get("/api/reports/daily", response_model=DailyReportResponse)
+    def daily_report(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return final_stage.daily_report()
+
+    @app.post("/api/reports/daily/export", response_model=ReportExportResponse)
+    def export_daily_report(
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, str]:
+        result = final_stage.export_daily_report()
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="report.daily.export",
+            target_type="report",
+            target_id=result["report_id"],
+        )
+        return result
+
+    # ---- settings / users / roles ----
+    @app.get("/api/settings/model", response_model=ModelSettingsResponse)
+    def model_settings(
+        ctx: auth_service.AuthContext = Depends(
+            auth_service.require_role("admin", "reviewer")
+        ),
+    ) -> dict[str, Any]:
+        return final_stage.model_settings()
+
+    @app.post("/api/settings/model/test", response_model=ModelTestResponse)
+    def model_test(
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(
+            auth_service.require_role("admin", "reviewer")
+        ),
+    ) -> dict[str, str]:
+        result = final_stage.model_test()
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="settings.model.test",
+            target_type="settings",
+            target_id="model",
+            message=f"provider={result['provider']} status={result['status']}",
+        )
+        return result
+
+    @app.get("/api/settings/security", response_model=SecuritySettingsResponse)
+    def security_settings(
+        ctx: auth_service.AuthContext = Depends(
+            auth_service.require_role("admin", "reviewer")
+        ),
+    ) -> dict[str, Any]:
+        return final_stage.security_settings()
+
+    @app.get("/api/users", response_model=UserListResponse)
+    def list_users(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
+    ) -> UserListResponse:
+        return UserListResponse(items=final_stage.list_users())
+
+    @app.get("/api/roles", response_model=RoleListResponse)
+    def list_roles(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
+    ) -> RoleListResponse:
+        return RoleListResponse(items=final_stage.roles())
+
+    @app.get("/api/permissions", response_model=PermissionListResponse)
+    def list_permissions(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
+    ) -> PermissionListResponse:
+        return PermissionListResponse(permissions=final_stage.permissions())
 
     # ---- audit ----
     @app.get("/api/audit/logs", response_model=list[AuditLogOut])

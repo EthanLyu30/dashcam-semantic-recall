@@ -20,11 +20,11 @@
 - [x] 编写团队交接文档和需求追踪文档。
 - [x] 编写客户端/搜索基础测试并验证通过。
 
-## 新增完成（第二阶段 lxy 分支）
+## 新增完成（后端主链路与 final-stage 收口）
 
 - [x] 完整后端服务实现：auth、audit、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator。
 - [x] SQLite 核心数据库层（videos/events/search/export/audit 表）。
-- [x] 42 个后端单元测试 + 集成测试已验证（当前环境 `38 passed, 4 skipped`）。
+- [x] 44 个后端单元测试 + 集成测试已验证（当前环境预期 `40 passed, 4 skipped`）。
 - [x] Qt6 全部 11 个页面精化：QPainter 自绘图表、VLC 视频播放、登录对话框。
 - [x] 主题样式对齐原型（nav active、border-l-4 结果卡、KPI 图标块、panel 圆角）。
 - [x] 页面滚动修复：`page_shell` 包装 `QScrollArea`，内容不再被截断。

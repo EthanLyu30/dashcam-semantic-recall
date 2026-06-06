@@ -2,7 +2,7 @@
 
 > **项目英文名**：`dashcam-semantic-recall`
 > **仓库地址**：<https://github.com/EthanLyu30/dashcam-semantic-recall>
-> **当前状态**：`main` 为集成主干（已合入 lxy + leonore 两个阶段二分支）
+> **当前状态**：`main` 为 final-stage 集成主干，桌面端 + 后端主链路 + 管理面 API 已形成最终交付版
 
 本项目是苏州大学综合项目实践课题——**基于多模态大模型的行车记录仪视频语义检索与精准回放系统**——的实现仓库。系统把长时段行车记录仪视频转换成可被自然语言检索的语义事件，让用户用一句"找一下白色车违停的片段"就能跳到对应时间点，并导出包含视频片段、截图、摘要的证据包。
 
@@ -10,28 +10,24 @@
 
 ---
 
-## 项目分工
+## 最终交付分工
 
 > 详细任务清单见 [`docs/ni-yuchen-todolist.md`](docs/ni-yuchen-todolist.md) 和 [`docs/lv-xiaoyang-completed.md`](docs/lv-xiaoyang-completed.md)。
 
-**吕霄阳**（≈ 50%）—— 桌面客户端、后端服务框架、原型迁移、演示层
-- Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）
-- 后端服务框架：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
-- SQLite/PostgreSQL 双引擎数据库（9 张业务表）+ 42 个自动化测试 + Mock 数据契约
+**吕霄阳**（≈ 60%）—— 桌面端体验、原型迁移、主链路集成、交付文档与演示闭环
+- Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）。
+- 语义检索工作台：搜索、结果卡片、事件详情、时间轴、VLC 精准回放、证据导出入口。
+- FastAPI 主链路服务框架与集成：auth / audit / media pipeline / model adapter / hybrid search / exporter / event aggregation。
+- README、API 契约、需求追踪、最终交付说明和阶段汇报材料维护。
 
-**倪羽辰**（≈ 50%）—— PostgreSQL 升级、向量检索、复核接口、真实链路验证
-- ✅ PostgreSQL 双引擎（PG REAL[] 原生向量 + cosine\_similarity 存储函数 + SQLite 降级）
-- ✅ 人工复核 API（`GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库）
-- ✅ 后端技术实现说明文档（`docs/backend-tech-notes.md`，298 行）
-- **待完成**：用真实行车视频 + 真实模型 API Key 跑通端到端演示
+**倪羽辰**（≈ 40%）—— 数据库/检索增强、复核链路、真实后端验证与技术说明
+- PostgreSQL 双引擎（PG `REAL[]` 原生向量 + `cosine_similarity()` 存储函数 + SQLite 降级）。
+- 人工复核 API（`GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库）。
+- 后端技术实现说明文档（`docs/backend-tech-notes.md`）和真实模型/真实视频联调支撑。
 
 ---
 
-## 阶段二已实现（`main` 分支当前状态）
-
-阶段一已完成（保留）：原型复刻、Qt6 多页面、Mock 数据契约。
-
-阶段二（lxy + leonore 均已合入 main）新增：
+## 最终交付能力总览（`main` 当前状态）
 
 | 模块 | 内容 | 贡献者 |
 |---|---|---|
@@ -45,13 +41,14 @@
 | 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 | 吕霄阳 |
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 42 个自动化用例；当前环境 `38 passed, 4 skipped`，含端到端 `test_api_integration.py` 与导出列表路由回归；pytest-env 隔离 | 吕霄阳（42个）/ 倪羽辰（测试隔离） |
+| 测试 | 44 个自动化用例；当前环境 `40 passed, 4 skipped`，含端到端、导出列表、final-stage 管理面 API；pytest-env 隔离 | 吕霄阳（44个）/ 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
-| 按钮响应 | 所有展示型按钮接入 `_wip_button()`，点击弹"功能开发中"提示 | 吕霄阳 |
+| 按钮响应 | 所有展示型按钮接入 final-stage 演示提示，区分主链路与后续产品化写入流程 | 吕霄阳 |
 | 后端技术说明 | `docs/backend-tech-notes.md`（298 行）涵盖架构/向量/Qwen/聚合/导出 | 倪羽辰 |
+| Final-stage 管理面 API | dashboard / alerts / accidents / reports / settings / users / roles / permissions 均有真实后端响应 | 吕霄阳（框架）/ 倪羽辰（数据口径） |
 
-详细进度与剩余事项见 `plans/IMPL_PLAN.md`，需求实现状态见 `docs/requirements-trace.md`。
+最终验收清单见 `plans/final-stage-delivery.md`，需求实现状态见 `docs/requirements-trace.md`。
 
 ---
 
@@ -180,12 +177,12 @@ python apps/desktop_client/main.py
 ```powershell
 # 接 DeepSeek-VL
 $env:MODEL_PROVIDER="deepseek"
-$env:MODEL_API_KEY="sk-xxxxx"
+$env:MODEL_API_KEY="<your-local-key>"
 $env:MODEL_BASE_URL="https://api.deepseek.com/v1"
 
 # 或接通义千问 Qwen-VL
 $env:MODEL_PROVIDER="qwen"
-$env:MODEL_API_KEY="sk-xxxxx"
+$env:MODEL_API_KEY="<your-local-key>"
 $env:MODEL_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
 
 # 之后正常启动后端
@@ -202,7 +199,7 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-当前验证输出：`38 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
+当前验证输出：`40 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
 
 测试覆盖：
 
@@ -216,6 +213,7 @@ python -m pytest -q
 | `test_export_routes.py` | `/api/exports` 契约响应 + 未知事件导出 404 |
 | `test_auth_audit.py` | JWT 闭环 + bcrypt + 角色 + 审计日志 |
 | `test_api_integration.py` | 端到端 login→upload→process→search→export |
+| `test_final_stage_api.py` | dashboard / alerts / accidents / reports / settings / users / roles |
 | `test_login_dialog.py` | PySide6 登录对话框（headless 环境跳过） |
 | `test_client_api.py` / `test_backend_search.py` | 已有契约保持兼容 |
 
@@ -234,16 +232,16 @@ python -m pytest -q
 | 混合检索（向量召回 + 关键词） | ✅ 真跑 | PG 模式走 `cosine_similarity` 存储函数；SQLite 走 numpy 余弦；装了 `sentence-transformers` 走真向量，否则用 hash-ngram fallback |
 | 人工复核 API | ✅ 真跑 | `GET /review/tasks` + `POST /review/tasks/{id}/decision`，支持修正字段 + 写审计日志 |
 | 证据导出 zip 打包 | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/` |
-| 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；配 `MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-...` 后走真请求 |
+| 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；本机设置 `MODEL_PROVIDER=qwen/deepseek` + `MODEL_API_KEY` 后走真请求 |
 | VLC 视频回放 | ✅ 真跑 | 客户端用 `python-vlc` 真嵌入播放；未装 VLC 自动降级占位 |
 | 桌面客户端默认数据源 | mock | 未设置 `DVR_SEMANTIC_API_BASE` 时用 `apps/desktop_client/dvr_semantic_client/api.py` 的 `MockApiClient` 演示数据 |
 
 ### 想要"真后端 + 真视频 + 真视觉模型"全链路跑通，4 步：
 
 ```powershell
-# 1. 启 backend（默认 mock 模型适配器；下一步会切真模型）
+# 1. 启 backend（final demo 可切 DeepSeek；不要把 key 提交到 git）
 $env:MODEL_PROVIDER = "qwen"          # 或 "deepseek"
-$env:MODEL_API_KEY  = "sk-xxxxxxxx"   # 通义千问的 dashscope key，或 deepseek key
+$env:MODEL_API_KEY  = "<your-local-key>"   # 本机环境变量；不要写进 README / 代码 / 提交
 # $env:MODEL_NAME   = "qwen-vl-plus"  # 可选，默认 qwen-vl-plus / deepseek-vl
 python -m apps.backend.main           # 监听 8000
 
@@ -259,7 +257,7 @@ python apps/desktop_client/main.py
 
 ### 不想花钱调真模型，只想看演示？
 
-直接 `python apps/desktop_client/main.py`（不设置 `DVR_SEMANTIC_API_BASE`），全部走 mock，5 秒就能看到完整 UI 联动。**这也是阶段二汇报演示推荐的路径**——稳定、确定性、不依赖外网。
+直接 `python apps/desktop_client/main.py`（不设置 `DVR_SEMANTIC_API_BASE`），全部走 mock，5 秒就能看到完整 UI 联动。**这是离线兜底演示路径**——稳定、确定性、不依赖外网；final demo 建议至少准备一段真实视频，用 DeepSeek/Qwen 环境变量跑一次真实链路。
 
 ---
 
@@ -300,13 +298,14 @@ dashcam-semantic-recall/
 │               └── pages.py            # 11 个原型页面
 ├── docs/
 │   ├── prototype-source/           # 阶段一原型 (HTML+Tailwind)
-│   ├── phase2-report/              # 阶段二汇报 (HTML PPT + 截图)
+│   ├── phase2-report/              # 历史阶段汇报归档 (HTML PPT + 截图)
 │   ├── requirements-trace.md       # 需求实现追踪
 │   └── api-contract.md
 ├── plans/
-│   ├── IMPL_PLAN.md                # 阶段二实施清单
+│   ├── IMPL_PLAN.md                # 历史实施清单
+│   ├── final-stage-delivery.md     # 最终交付验收清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 42 个自动化测试
+├── tests/                          # 44 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）
@@ -354,7 +353,7 @@ A：登录入口已从导航栏移除。设置 `DVR_SEMANTIC_API_BASE` 后启动
 - 阶段一报告：`D:\苏大\综合项目实践\output\1stage-report-dashcam-ai.pdf`
 - 开题报告：`D:\苏大\综合项目实践\output\opening-report-dashcam-ai.pptx`
 - 交互原型源码：`docs/prototype-source/`
-- 阶段二汇报 PPT：`docs/phase2-report/phase2-report.html`（浏览器打开）
+- 阶段二汇报 PPT 归档：`docs/phase2-report/phase2-report.html`（浏览器打开）
 - 后端技术实现说明：`docs/backend-tech-notes.md`（倪羽辰撰写，供答辩引用）
 
 ---

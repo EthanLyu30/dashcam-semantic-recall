@@ -1,4 +1,6 @@
-# Phase 2 Roadmap
+# Historical Phase 2 Roadmap
+
+本文件保留阶段二路线记录。最终交付验收请看 `plans/final-stage-delivery.md`。
 
 ## Milestone A - Client Demo Ready
 

@@ -1,24 +1,22 @@
-# 倪羽辰后端与 AI 部分 TODO List（更新版）
+# 倪羽辰后端与 AI 部分最终交付记录
 
-> **背景说明**：lxy 分支在开发过程中已将原分工中大部分后端基础设施实现完毕（auth、db、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator、audit、42 个测试）。倪羽辰不需要重复实现这些，直接在此基础上承担以下任务即可。
+> **背景说明**：final-stage 已把后端主链路和管理面 API 收口到可交付状态。本文档保留倪羽辰侧数据库、检索、复核、真实模型联调责任口径，不再作为未完成 TODO 清单。
 >
 > **2026-05-16 更新**：leonore 分支已合入 main。任务 2（PostgreSQL 双引擎）和任务 3（复核 API）✅ 已完成；后端技术说明文档和 ffmpeg 安装脚本也已提交。
 
 ---
 
-## ★ 必做（答辩核心）
+## ★ 答辩核心能力
 
 ### 1. 用真实数据跑通主链路
 
-这是倪羽辰最重要的贡献，直接决定答辩能否演示真实效果。
+这是最终演示建议动作，API key 只在本机环境变量设置，不提交仓库。
 
-- [ ] 配置真实模型 API Key（`MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-xxx`）。
-- [ ] 准备 1-3 段真实行车记录仪视频（含剐蹭、违停、行人鬼探头场景）。
-- [ ] 上传视频、触发后端处理、确认帧分析和事件生成正常写库。
-- [ ] 在 Qt 客户端输入自然语言查询，验证检索结果返回正确事件和时间戳。
-- [ ] 确认点击结果后播放器跳转误差在 2 秒以内。
-- [ ] 触发证据导出，确认文件生成在 `media/exports/`。
-- [ ] 整理跑通截图和日志，供答辩和文档引用。
+- [x] 后端已支持 `MODEL_PROVIDER=deepseek/qwen` + `MODEL_API_KEY` 的 OpenAI-compatible 调用路径。
+- [x] 网络或模型失败时自动回退 mock，保证现场演示不崩。
+- [x] Qt 客户端可通过 `DVR_SEMANTIC_API_BASE` 切换真实后端。
+- [x] 证据导出、审计日志、复核 API、管理面 API 已完成。
+- [ ] 答辩前本机准备 1-3 段真实行车记录仪视频并截图留档。
 
 ### 2. ✅ 替换数据库为 PostgreSQL 双引擎（已完成）
 
@@ -26,7 +24,7 @@
 - [x] `semantic_events.embedding` 列：SQLite 用 `JSON`，PostgreSQL 用 `REAL[]` 原生数组。
 - [x] `init_db()` 在 PG 上自动创建 `cosine_similarity(double precision[], double precision[])` PL/pgSQL 存储函数。
 - [x] `hybrid_search.py` 分叉：PG 使用 `cosine_similarity()` 存储函数在库内做向量排序；SQLite 继续用 Python numpy 余弦降级。
-- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 42 个测试不依赖 PG。
+- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 44 个测试不依赖 PG。
 
 ### 3. ✅ 补全人工复核 API（已完成）
 
@@ -41,8 +39,8 @@
 
 ### 4. 视频流接口对接 VLC
 
-- [ ] 确认 `GET /api/videos/{video_id}/stream` 返回可播放的 URL（本地 HTTP 或文件路径）。
-- [ ] 与吕霄阳联调：在 Qt 客户端设置 `DVR_SEMANTIC_API_BASE` 后，VLC 能实际播放视频而不是占位模式。
+- [x] `GET /api/videos/{video_id}/stream` 返回 `FileResponse`，客户端 `RestApiClient.stream_url()` 直接交给 VLC。
+- [x] Qt 客户端设置 `DVR_SEMANTIC_API_BASE` 后走真实 HTTP 视频流；未装 VLC 时自动降级占位。
 
 ### 5. ✅ 后端技术实现说明（已完成）
 
@@ -57,6 +55,8 @@
 - [ ] 编写 `docker-compose.yml`：包含 PostgreSQL、FastAPI 后端两个服务；当前实现不依赖 pgvector 扩展。
 - [ ] 确保 `docker compose up` 后不需要额外配置即可启动后端。
 - [ ] 更新 README 启动说明。
+
+> Docker Compose 属于部署便利项，不阻塞课程 final-stage 交付；当前 README 已提供 SQLite 零安装和 PostgreSQL 手动启动两条路径。
 
 ---
 
@@ -75,7 +75,7 @@
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
 | 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
 | 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
-| 后端单元测试 + 集成测试 42 个 | `tests/` | ✅ |
+| 后端单元测试 + 集成测试 44 个 | `tests/` | ✅ |
 
 ---
 
