@@ -37,7 +37,7 @@ python apps/desktop_client/main.py
 - **不做也行**：当前封面就足够"汇报感"。
 
 ### shot 02-test-output.png — pytest 真输出
-- **场景**：终端跑 `python -m pytest -v --tb=short`，截到 `40 passed, 4 skipped` 那一行。
+- **场景**：终端跑 `python -m pytest -v --tb=short`，截到 `42 passed, 4 skipped` 那一行。
 - **替换位置**：PPT slide 10 右侧的"pytest 实际输出"终端块。
 - **小诀窍**：用 Windows Terminal 黑色主题截，跟 PPT 里的终端样式接得上。
 

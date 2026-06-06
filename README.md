@@ -41,7 +41,7 @@
 | 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 | 吕霄阳 |
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 44 个自动化用例；当前环境 `40 passed, 4 skipped`，含端到端、导出列表、final-stage 管理面 API；pytest-env 隔离 | 吕霄阳（44个）/ 倪羽辰（测试隔离） |
+| 测试 | 46 个自动化用例；当前环境 `42 passed, 4 skipped`，含端到端、导出列表、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳（46个）/ 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
 | 按钮响应 | 所有展示型按钮接入 final-stage 演示提示，区分主链路与后续产品化写入流程 | 吕霄阳 |
@@ -199,7 +199,15 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-当前验证输出：`40 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
+当前验证输出：`42 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
+
+后端启动后，可额外运行 final-stage REST smoke：
+
+```powershell
+python tools/final_demo_smoke.py --base-url http://127.0.0.1:8000
+```
+
+该脚本检查登录、dashboard、alerts、accidents、reports、settings、users、roles、permissions 和审计日志接口；不会读取或打印模型 API key。
 
 测试覆盖：
 
@@ -215,7 +223,7 @@ python -m pytest -q
 | `test_api_integration.py` | 端到端 login→upload→process→search→export |
 | `test_final_stage_api.py` | dashboard / alerts / accidents / reports / settings / users / roles |
 | `test_login_dialog.py` | PySide6 登录对话框（headless 环境跳过） |
-| `test_client_api.py` / `test_backend_search.py` | 已有契约保持兼容 |
+| `test_client_api.py` / `test_backend_search.py` | 客户端 mock/REST 契约、final-stage REST client、后端搜索兼容 |
 
 ---
 
@@ -305,7 +313,7 @@ dashcam-semantic-recall/
 │   ├── IMPL_PLAN.md                # 历史实施清单
 │   ├── final-stage-delivery.md     # 最终交付验收清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 44 个自动化测试
+├── tests/                          # 46 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）

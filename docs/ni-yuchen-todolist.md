@@ -24,7 +24,7 @@
 - [x] `semantic_events.embedding` 列：SQLite 用 `JSON`，PostgreSQL 用 `REAL[]` 原生数组。
 - [x] `init_db()` 在 PG 上自动创建 `cosine_similarity(double precision[], double precision[])` PL/pgSQL 存储函数。
 - [x] `hybrid_search.py` 分叉：PG 使用 `cosine_similarity()` 存储函数在库内做向量排序；SQLite 继续用 Python numpy 余弦降级。
-- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 44 个测试不依赖 PG。
+- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 46 个测试不依赖 PG。
 
 ### 3. ✅ 补全人工复核 API（已完成）
 
@@ -75,7 +75,7 @@
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
 | 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
 | 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
-| 后端单元测试 + 集成测试 44 个 | `tests/` | ✅ |
+| 自动化测试 46 个 | `tests/` | ✅ |
 
 ---
 
