@@ -22,6 +22,8 @@ from .schemas import (
     AnalysisReport,
     AuditLogOut,
     EventOut,
+    ExportListItem,
+    ExportListResponse,
     ExportRequest,
     ExportResponse,
     LoginRequest,
@@ -500,7 +502,7 @@ def create_app() -> FastAPI:
                 include_snapshot=body.include_snapshot,
                 include_report=body.include_report,
             )
-        except KeyError:
+        except (KeyError, ValueError):
             raise HTTPException(status_code=404, detail="event not found")
         except Exception as exc:
             audit_service.log_action(
@@ -528,19 +530,23 @@ def create_app() -> FastAPI:
             export_path=result["export_path"],
         )
 
-    @app.get("/api/exports", response_model=list[ExportResponse])
+    @app.get("/api/exports", response_model=ExportListResponse)
     def list_exports(event_id: str | None = None,
-                     ctx: auth_service.AuthContext = Depends(auth_service.require_auth)) -> list[ExportResponse]:
+                     ctx: auth_service.AuthContext = Depends(auth_service.require_auth)) -> ExportListResponse:
         rows = exporter_service.list_exports(event_id=event_id)
-        return [
-            ExportResponse(
-                event_id=r["event_id"],
-                export_id=r["export_id"],
-                status=r["status"],
-                export_path=r["export_path"],
-            )
-            for r in rows
-        ]
+        return ExportListResponse(
+            items=[
+                ExportListItem(
+                    id=r["id"],
+                    event_id=r["event_id"],
+                    export_type=r["export_type"],
+                    status=r["status"],
+                    export_path=r["export_path"],
+                    created_at=r["created_at"],
+                )
+                for r in rows
+            ]
+        )
 
     # ---- audit ----
     @app.get("/api/audit/logs", response_model=list[AuditLogOut])

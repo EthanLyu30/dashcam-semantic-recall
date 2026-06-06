@@ -17,7 +17,7 @@
 **吕霄阳**（≈ 50%）—— 桌面客户端、后端服务框架、原型迁移、演示层
 - Qt6 桌面端复刻 DVR-Semantic 交互原型（11 个页面全量落地）
 - 后端服务框架：auth / audit / media\_pipeline / model\_adapter / hybrid\_search / exporter / event\_aggregator
-- SQLite 数据库（9 张业务表）+ 40 个自动化测试 + Mock 数据契约
+- SQLite/PostgreSQL 双引擎数据库（9 张业务表）+ 42 个自动化测试 + Mock 数据契约
 
 **倪羽辰**（≈ 50%）—— PostgreSQL 升级、向量检索、复核接口、真实链路验证
 - ✅ PostgreSQL 双引擎（PG REAL[] 原生向量 + cosine\_similarity 存储函数 + SQLite 降级）
@@ -45,7 +45,7 @@
 | 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 | 吕霄阳 |
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 40 个测试全部通过，含端到端 `test_api_integration.py`；pytest-env 隔离 | 吕霄阳（40个）/ 倪羽辰（测试隔离） |
+| 测试 | 42 个自动化用例；当前环境 `38 passed, 4 skipped`，含端到端 `test_api_integration.py` 与导出列表路由回归；pytest-env 隔离 | 吕霄阳（42个）/ 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
 | 按钮响应 | 所有展示型按钮接入 `_wip_button()`，点击弹"功能开发中"提示 | 吕霄阳 |
@@ -75,7 +75,7 @@ python --version    # 应当 ≥ 3.10
 
 **选项 A — 用 PostgreSQL（推荐，支持真向量检索）**：
 ```powershell
-# Windows 安装 PG + pgvector：https://www.postgresql.org/download/windows/
+# Windows 安装 PostgreSQL：https://www.postgresql.org/download/windows/
 # 建库（psql -U postgres）：
 #   CREATE DATABASE dvr_semantic;
 # 运行后端时 init_db() 会自动建表并注册 cosine_similarity 函数
@@ -202,7 +202,7 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-预期输出：`40 passed in ~25s`。
+当前验证输出：`38 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
 
 测试覆盖：
 
@@ -213,6 +213,7 @@ python -m pytest -q
 | `test_event_aggregator.py` | 帧分析驱动 + 滑窗合并 + 状态推进 |
 | `test_hybrid_search.py` | encode + ensure_embeddings + 关键词重排 |
 | `test_exporter.py` | 真 ffmpeg 切片 + zip 打包验证 |
+| `test_export_routes.py` | `/api/exports` 契约响应 + 未知事件导出 404 |
 | `test_auth_audit.py` | JWT 闭环 + bcrypt + 角色 + 审计日志 |
 | `test_api_integration.py` | 端到端 login→upload→process→search→export |
 | `test_login_dialog.py` | PySide6 登录对话框（headless 环境跳过） |
@@ -235,7 +236,7 @@ python -m pytest -q
 | 证据导出 zip 打包 | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/` |
 | 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；配 `MODEL_PROVIDER=qwen` + `MODEL_API_KEY=sk-...` 后走真请求 |
 | VLC 视频回放 | ✅ 真跑 | 客户端用 `python-vlc` 真嵌入播放；未装 VLC 自动降级占位 |
-| 桌面客户端默认数据源 | mock | 不传 `--base-url` 时用 `apps/desktop_client/dvr_semantic_client/mock_client.py` 的演示数据 |
+| 桌面客户端默认数据源 | mock | 未设置 `DVR_SEMANTIC_API_BASE` 时用 `apps/desktop_client/dvr_semantic_client/api.py` 的 `MockApiClient` 演示数据 |
 
 ### 想要"真后端 + 真视频 + 真视觉模型"全链路跑通，4 步：
 
@@ -247,17 +248,18 @@ $env:MODEL_API_KEY  = "sk-xxxxxxxx"   # 通义千问的 dashscope key，或 deep
 python -m apps.backend.main           # 监听 8000
 
 # 2. 另开一个 PowerShell 启客户端，连真后端
-python tools/run_qt_client.py --base-url http://localhost:8000
+$env:DVR_SEMANTIC_API_BASE="http://localhost:8000"
+python apps/desktop_client/main.py
 
 # 3. 用客户端登录（默认账户 admin / admin123），到「视频流」页面上传一段 mp4
-#    ffmpeg 抽帧 + 通义/DeepSeek 视觉理解会真打远程 API，处理完状态变 "searchable"
+#    ffmpeg 抽帧 + 通义/DeepSeek 视觉理解会真打远程 API，处理完状态变 "indexed"
 
 # 4. 回「检索」页面，输入自然语言查询，看到的就是真模型识别的事件
 ```
 
 ### 不想花钱调真模型，只想看演示？
 
-直接 `python tools/run_qt_client.py`（不带 `--base-url`），全部走 mock，5 秒就能看到完整 UI 联动。**这也是阶段二汇报演示推荐的路径**——稳定、确定性、不依赖外网。
+直接 `python apps/desktop_client/main.py`（不设置 `DVR_SEMANTIC_API_BASE`），全部走 mock，5 秒就能看到完整 UI 联动。**这也是阶段二汇报演示推荐的路径**——稳定、确定性、不依赖外网。
 
 ---
 
@@ -304,7 +306,7 @@ dashcam-semantic-recall/
 ├── plans/
 │   ├── IMPL_PLAN.md                # 阶段二实施清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 40 个自动化测试
+├── tests/                          # 42 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）

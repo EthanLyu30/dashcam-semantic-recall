@@ -13,7 +13,7 @@ def isolated_backend(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     """Reload the backend modules against an isolated sqlite file."""
     db_path = tmp_path / "auth_audit.db"
     monkeypatch.setenv("DVR_SEMANTIC_DB_URL", f"sqlite:///{db_path.as_posix()}")
-    monkeypatch.setenv("DVR_SEMANTIC_JWT_SECRET", "unit-test-secret")
+    monkeypatch.setenv("DVR_SEMANTIC_JWT_SECRET", "unit-test-secret-32-bytes-ok-for-jwt-tests")
     monkeypatch.setenv("DVR_SEMANTIC_JWT_TTL_MIN", "30")
 
     # Drop any cached backend modules so they re-read the env vars on import.

@@ -1,6 +1,6 @@
 # 倪羽辰后端与 AI 部分 TODO List（更新版）
 
-> **背景说明**：lxy 分支在开发过程中已将原分工中大部分后端基础设施实现完毕（auth、db、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator、audit、40 个测试）。倪羽辰不需要重复实现这些，直接在此基础上承担以下任务即可。
+> **背景说明**：lxy 分支在开发过程中已将原分工中大部分后端基础设施实现完毕（auth、db、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator、audit、42 个测试）。倪羽辰不需要重复实现这些，直接在此基础上承担以下任务即可。
 >
 > **2026-05-16 更新**：leonore 分支已合入 main。任务 2（PostgreSQL 双引擎）和任务 3（复核 API）✅ 已完成；后端技术说明文档和 ffmpeg 安装脚本也已提交。
 
@@ -20,13 +20,13 @@
 - [ ] 触发证据导出，确认文件生成在 `media/exports/`。
 - [ ] 整理跑通截图和日志，供答辩和文档引用。
 
-### 2. ✅ 替换数据库为 PostgreSQL + pgvector（已完成）
+### 2. ✅ 替换数据库为 PostgreSQL 双引擎（已完成）
 
 - [x] `db.py` 改为双引擎：`IS_SQLITE` 标志自动路由；默认连接 `postgresql://postgres:postgres@localhost:5432/dvr_semantic`，测试环境通过 `pytest-env` 强制 SQLite 内存库。
 - [x] `semantic_events.embedding` 列：SQLite 用 `JSON`，PostgreSQL 用 `REAL[]` 原生数组。
 - [x] `init_db()` 在 PG 上自动创建 `cosine_similarity(double precision[], double precision[])` PL/pgSQL 存储函数。
 - [x] `hybrid_search.py` 分叉：PG 使用 `cosine_similarity()` 存储函数在库内做向量排序；SQLite 继续用 Python numpy 余弦降级。
-- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 40 个测试不依赖 PG。
+- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 42 个测试不依赖 PG。
 
 ### 3. ✅ 补全人工复核 API（已完成）
 
@@ -54,7 +54,7 @@
 
 ### 6. Docker Compose 一键启动
 
-- [ ] 编写 `docker-compose.yml`：包含 PostgreSQL、pgvector 插件、FastAPI 后端三个服务。
+- [ ] 编写 `docker-compose.yml`：包含 PostgreSQL、FastAPI 后端两个服务；当前实现不依赖 pgvector 扩展。
 - [ ] 确保 `docker compose up` 后不需要额外配置即可启动后端。
 - [ ] 更新 README 启动说明。
 
@@ -75,7 +75,7 @@
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
 | 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
 | 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
-| 后端单元测试 + 集成测试 40 个 | `tests/` | ✅ |
+| 后端单元测试 + 集成测试 42 个 | `tests/` | ✅ |
 
 ---
 

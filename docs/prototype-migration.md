@@ -33,7 +33,7 @@ python apps/desktop_client/prototype_shell.py
 | `人工复核中心.html` | 低置信事件复核页 | `/api/review/tasks`, `/api/review/tasks/{event_id}/decision`, `/api/events/{id}/labels` |
 | `告警管理中心.html` | 告警列表与确认页 | `/api/alerts/summary`, `/api/alerts`, `/api/alerts/{id}/ack`, `/api/alerts/{id}/resolve` |
 | `事故摘要预览.html` | 事故/风险摘要页 | `/api/accidents`, `/api/accidents/{id}`, `/api/accidents/{id}/summary` |
-| `证据与日志归档.html` | 证据包与日志页 | `/api/events/{id}/export`, `/api/exports`, `/api/logs/audit`, `/api/logs/system` |
+| `证据与日志归档.html` | 证据包与日志页 | `/api/events/{id}/export`, `/api/exports`, `/api/audit/logs` |
 | `全天业务报告.html` | 日报页 | `/api/reports/daily`, `/api/reports/daily/export` |
 | `模型与安全配置.html` | 模型参数和安全设置页 | `/api/settings/model`, `/api/settings/model/test`, `/api/settings/security` |
 | `角色与权限管理.html` | 用户、角色、权限页 | `/api/users`, `/api/roles`, `/api/permissions` |
@@ -53,5 +53,5 @@ python apps/desktop_client/prototype_shell.py
 1. 已完成：把 11 个原型页面完整接入仓库作为 UI 参考。
 2. 已完成：提供原型参考运行入口，方便开发时对照。
 3. 已完成：提供 Qt6 多页面工作台，按原型复现概览、检索、视频流、复核、告警、事故、证据日志、报告、配置、权限、登录页面。
-4. 下一步：把原型按钮逐步绑定到真实后端接口。
-5. 下一步：后端完成后用 `DVR_SEMANTIC_API_BASE` 切换为真实数据。
+4. 继续事项：把复核、告警、报告、配置、权限等展示型页面逐步绑定到真实后端接口。
+5. 继续事项：使用 `DVR_SEMANTIC_API_BASE` 切换真实后端，配真实视频和模型 API Key 做答辩样例验证。

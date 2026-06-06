@@ -100,6 +100,19 @@ class ExportResponse(BaseModel):
     export_path: str
 
 
+class ExportListItem(BaseModel):
+    id: str
+    event_id: str
+    export_type: str
+    status: str
+    export_path: str
+    created_at: str = ""
+
+
+class ExportListResponse(BaseModel):
+    items: list[ExportListItem]
+
+
 class ReviewRequest(BaseModel):
     """Legacy review endpoint (deprecated in favour of ReviewDecisionRequest)."""
     review_status: str

@@ -24,7 +24,7 @@
 
 - [x] 完整后端服务实现：auth、audit、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator。
 - [x] SQLite 核心数据库层（videos/events/search/export/audit 表）。
-- [x] 40 个后端单元测试 + 集成测试全部通过。
+- [x] 42 个后端单元测试 + 集成测试已验证（当前环境 `38 passed, 4 skipped`）。
 - [x] Qt6 全部 11 个页面精化：QPainter 自绘图表、VLC 视频播放、登录对话框。
 - [x] 主题样式对齐原型（nav active、border-l-4 结果卡、KPI 图标块、panel 圆角）。
 - [x] 页面滚动修复：`page_shell` 包装 `QScrollArea`，内容不再被截断。
@@ -35,8 +35,8 @@
 
 ## 吕霄阳后续只需联调/完善的事项
 
-- [ ] 等倪羽辰完成 PostgreSQL + pgvector 替换后，确认检索结果质量。
-- [ ] 等倪羽辰完成复核 API 后，在 Qt 复核页的任务列表接入真实数据（`GET /api/review/tasks`）。
+- [ ] 使用真实行车视频 + 真实模型 API Key 确认检索结果质量。
+- [ ] 在 Qt 复核页的任务列表接入真实数据（`GET /api/review/tasks` 已完成）。
 - [ ] 设置 `DVR_SEMANTIC_API_BASE` 切换到真实后端，端到端验证搜索 → 播放 → 导出流程。
 - [ ] 视频库页"检索 / 更多"操作列改成真实跳转按钮（目前是纯文字）。
 - [ ] 答辩演示脚本准备。

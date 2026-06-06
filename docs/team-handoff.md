@@ -20,21 +20,18 @@ The current repository implements the client-side contribution first:
 
 The full prototype can run without desktop dependencies through the prototype runner. The Qt scaffold can run against mock data after installing `desktop` dependencies, and can call a real REST server when `DVR_SEMANTIC_API_BASE` is set.
 
-## 倪羽辰 Remaining Scope
+## Backend / AI Current Scope
 
-Backend and AI implementation should fill the contracts without changing the client DTOs unless a contract change is agreed.
+The backend foundation is now implemented and tested:
 
-Required core tasks:
+1. Upload, metadata probing, transcoding, 30s slicing, frame extraction, thumbnails, and clip export.
+2. Structured multimodal adapter with deterministic mock mode plus OpenAI-compatible DeepSeek-VL / Qwen-VL mode.
+3. SQLAlchemy persistence for videos, segments, frame analysis, semantic events, queries, results, exports, users, roles, and audit logs.
+4. PostgreSQL `REAL[]` vector search through `cosine_similarity()` with SQLite + numpy fallback for tests and quick demos.
+5. Evidence package generation with `clip.mp4`, `snapshot.jpg`, `report.json`, `report.md`, and `package.zip`.
+6. Login, role checks, audit middleware, review task list, review decision API, and 42 automated tests.
 
-1. Implement video upload and task creation.
-2. Use ffmpeg for metadata extraction, transcoding, slicing, keyframe extraction, thumbnails, and clip export.
-3. Implement multimodal model adapter with structured JSON output.
-4. Persist videos, segments, frame analysis, semantic events, queries, results, exports, users, roles, and logs.
-5. Implement hybrid semantic retrieval with pgvector plus keyword fallback.
-6. Implement evidence export package generation and audit records.
-7. Add backend integration tests and endpoint tests.
-
-Dashboard, report, alert, settings, user, and role pages may stay on mock data during the first backend milestone. They are not blockers for 倪羽辰's first delivery.
+Remaining handoff work is focused on real-world validation: run 1-3 real dashcam videos with a real model API key, capture screenshots/logs, confirm VLC seek accuracy within 2 seconds, and decide whether dashboard/report/alert/settings/user-role pages need real data before final defense.
 
 ## Integration Contract
 
