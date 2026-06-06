@@ -208,7 +208,7 @@
 - test_auth_audit.py：JWT 闭环 + bcrypt 校验 + 角色 + 审计写读 — 8 PASS
 - test_api_integration.py：login → upload → process → search → export — 1 PASS
 - test_login_dialog.py：PySide6 LoginDialog 构造（headless 跳过）— 1 SKIP（橙粗体）
-- test_client_api.py / test_backend_search.py：已有契约保持兼容 — 6 PASS
+- test_client_api.py / test_backend_search.py：客户端 mock/REST/final-stage 契约保持兼容 — 8 PASS
 
 表头浅灰小写大写字母排版（letter-spacing 0.04em），表行交替仅靠 1px 底分隔，避免厚重感。
 ```

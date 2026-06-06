@@ -20,7 +20,15 @@ python -m compileall apps tests
 python -m pytest -q
 ```
 
-当前本机验证口径：`40 passed, 4 skipped`。跳过项与可选桌面/媒体环境有关，不影响后端主链路和 final-stage API 验收。
+当前本机验证口径：`42 passed, 4 skipped`。跳过项与可选桌面/媒体环境有关，不影响后端主链路和 final-stage API 验收。
+
+后端启动后可运行 REST smoke：
+
+```powershell
+python tools/final_demo_smoke.py --base-url http://127.0.0.1:8000
+```
+
+该脚本覆盖登录、dashboard、alerts、accidents、reports、settings、users、roles、permissions 和审计日志；它不会读取或输出模型 API key。
 
 ## Final Demo 路径
 

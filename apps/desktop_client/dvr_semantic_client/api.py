@@ -43,6 +43,18 @@ class ApiClient(Protocol):
     def export_event(self, event_id: str, export_type: str = "package") -> ExportResponse:
         ...
 
+    def dashboard_overview(self) -> dict[str, Any]:
+        ...
+
+    def daily_report(self) -> dict[str, Any]:
+        ...
+
+    def model_settings(self) -> dict[str, Any]:
+        ...
+
+    def list_roles(self) -> dict[str, Any]:
+        ...
+
 
 KEYWORD_ALIASES: dict[str, tuple[str, ...]] = {
     "scratch": ("剐蹭", "刮蹭", "碰撞", "擦碰", "scratch"),
@@ -144,6 +156,55 @@ class MockApiClient:
             "status": "analyzed",
         }
 
+    def dashboard_overview(self) -> dict[str, Any]:
+        return {
+            "processed_video_count": len(self._videos),
+            "semantic_query_count": 0,
+            "identified_event_count": len(self._events),
+            "pending_review_count": sum(
+                1 for event in self._events if event.review_status in {"pending", "reviewing"}
+            ),
+            "engine_status": "demo",
+            "model_nodes": {
+                "online": 1,
+                "total": 1,
+                "provider": "mock",
+                "api_key_configured": False,
+            },
+        }
+
+    def daily_report(self) -> dict[str, Any]:
+        return {
+            "date": "2026-03-27",
+            "processed_video_count": len(self._videos),
+            "identified_event_count": len(self._events),
+            "semantic_query_count": 0,
+            "evidence_export_count": 0,
+            "pending_review_count": 0,
+            "event_distribution": [],
+            "risk_summary": "Mock 演示数据已加载，可离线展示检索与回放流程。",
+        }
+
+    def model_settings(self) -> dict[str, Any]:
+        return {
+            "provider": "mock",
+            "model_name": "MockAdapter",
+            "base_url": "",
+            "api_key_configured": False,
+            "use_embeddings": False,
+            "media_root": "./var/media",
+            "db_engine": "memory-demo",
+        }
+
+    def list_roles(self) -> dict[str, Any]:
+        return {
+            "items": [
+                {"id": "admin", "name": "管理员", "permissions": ["*"]},
+                {"id": "reviewer", "name": "审核人员", "permissions": ["event:review"]},
+                {"id": "user", "name": "普通用户", "permissions": ["search:create"]},
+            ]
+        }
+
 
 class RestApiClient:
     def __init__(self, base_url: str, timeout_sec: float = 8.0, token: str = "") -> None:
@@ -163,11 +224,27 @@ class RestApiClient:
             kwargs["headers"] = self._headers()
         return requests.get(f"{self.base_url}{path}", **kwargs)
 
+    def _get_json(self, path: str) -> dict[str, Any]:
+        response = self._get(path)
+        response.raise_for_status()
+        payload = response.json() or {}
+        if isinstance(payload, dict):
+            return payload
+        return {"items": payload}
+
     def _post_json(self, path: str, payload: dict[str, Any]) -> requests.Response:
         kwargs: dict[str, Any] = {"timeout": self.timeout_sec, "json": payload}
         if self.token:
             kwargs["headers"] = self._headers()
         return requests.post(f"{self.base_url}{path}", **kwargs)
+
+    def _post_json_response(self, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
+        response = self._post_json(path, payload or {})
+        response.raise_for_status()
+        data = response.json() or {}
+        if isinstance(data, dict):
+            return data
+        return {"items": data}
 
     # --- auth --------------------------------------------------------------
     def login(self, username: str, password: str) -> dict[str, Any]:
@@ -185,9 +262,7 @@ class RestApiClient:
 
     # --- videos ------------------------------------------------------------
     def list_videos(self) -> tuple[VideoRecord, ...]:
-        response = self._get("/api/videos")
-        response.raise_for_status()
-        payload = response.json()
+        payload = self._get_json("/api/videos")
         items = payload.get("items", ()) if isinstance(payload, dict) else payload
         return tuple(
             VideoRecord.from_json(item)
@@ -259,6 +334,55 @@ class RestApiClient:
         response = self._post_json(f"/api/events/{event_id}/export", payload)
         response.raise_for_status()
         return ExportResponse.from_json(response.json())
+
+    # --- final-stage operational APIs -------------------------------------
+    def dashboard_overview(self) -> dict[str, Any]:
+        return self._get_json("/api/dashboard/overview")
+
+    def dashboard_trends(self, days: int = 7) -> dict[str, Any]:
+        return self._get_json(f"/api/dashboard/trends?days={int(days)}")
+
+    def event_distribution(self) -> dict[str, Any]:
+        return self._get_json("/api/dashboard/event-distribution")
+
+    def review_feed(self, limit: int = 20) -> dict[str, Any]:
+        return self._get_json(f"/api/dashboard/review-feed?limit={int(limit)}")
+
+    def alerts_summary(self) -> dict[str, Any]:
+        return self._get_json("/api/alerts/summary")
+
+    def list_alerts(self) -> dict[str, Any]:
+        return self._get_json("/api/alerts")
+
+    def list_accidents(self) -> dict[str, Any]:
+        return self._get_json("/api/accidents")
+
+    def list_exports(self) -> dict[str, Any]:
+        return self._get_json("/api/exports")
+
+    def daily_report(self) -> dict[str, Any]:
+        return self._get_json("/api/reports/daily")
+
+    def export_daily_report(self) -> dict[str, Any]:
+        return self._post_json_response("/api/reports/daily/export")
+
+    def model_settings(self) -> dict[str, Any]:
+        return self._get_json("/api/settings/model")
+
+    def model_test(self) -> dict[str, Any]:
+        return self._post_json_response("/api/settings/model/test")
+
+    def security_settings(self) -> dict[str, Any]:
+        return self._get_json("/api/settings/security")
+
+    def list_users(self) -> dict[str, Any]:
+        return self._get_json("/api/users")
+
+    def list_roles(self) -> dict[str, Any]:
+        return self._get_json("/api/roles")
+
+    def list_permissions(self) -> dict[str, Any]:
+        return self._get_json("/api/permissions")
 
 
 def event_to_json(event: SemanticEvent) -> dict[str, object]:

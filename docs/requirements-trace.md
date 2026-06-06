@@ -18,4 +18,4 @@
 | NFR PostgreSQL 向量检索 | 已实现 | PG `REAL[]` + `cosine_similarity()` 存储函数；SQLite JSON + numpy 降级 | 倪羽辰 |
 | 真多模态模型接入 | 已实现配置路径 | OpenAI 兼容协议，DeepSeek/Qwen key 通过本机环境变量启用，失败自动回退 mock | 倪羽辰 |
 
-测试覆盖：44 个自动化测试；当前环境预期 `40 passed, 4 skipped`。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles。
+测试覆盖：46 个自动化测试；当前环境 `42 passed, 4 skipped`。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles；`test_client_api.py` 覆盖 final-stage REST client。

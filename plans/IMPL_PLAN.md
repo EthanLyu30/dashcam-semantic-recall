@@ -26,7 +26,7 @@
 ### 测试
 - [x] 单测覆盖：media_pipeline / model_adapter / event_aggregator / hybrid_search / exporter / export_routes / final_stage_api / auth+audit / login_dialog / client_api。
 - [x] 端到端集成测试 `test_api_integration.py`：login → upload → process → search → export 真跑通 FastAPI TestClient。
-- [x] 44 个自动化用例；当前环境预期 `40 passed, 4 skipped`（可选桌面/媒体环境相关用例会按依赖自动跳过）。
+- [x] 46 个自动化用例；当前环境 `42 passed, 4 skipped`（可选桌面/媒体环境相关用例会按依赖自动跳过）。
 
 ## 后续产品化增强（不阻塞课程 final-stage 交付）
 
