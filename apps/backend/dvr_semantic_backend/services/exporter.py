@@ -344,6 +344,7 @@ def list_exports(event_id: Optional[str] = None, limit: int = 50) -> list[dict]:
         return [
             {
                 "id": r.id,
+                "export_id": r.id,
                 "event_id": r.event_id,
                 "operator_id": r.operator_id,
                 "export_type": r.export_type,

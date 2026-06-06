@@ -28,7 +28,7 @@ def isolated_env(tmp_path, monkeypatch):
     monkeypatch.setenv("DVR_SEMANTIC_DB_URL", f"sqlite:///{db_path.as_posix()}")
     monkeypatch.setenv("MEDIA_ROOT", str(media_root))
     monkeypatch.setenv("MODEL_PROVIDER", "mock")
-    monkeypatch.setenv("DVR_SEMANTIC_JWT_SECRET", "test-secret-keep-it-stable")
+    monkeypatch.setenv("DVR_SEMANTIC_JWT_SECRET", "test-secret-keep-it-stable-32-bytes-ok")
 
     # Force re-import of modules that captured env at import time.
     import importlib

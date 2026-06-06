@@ -39,7 +39,7 @@ Content-Type: multipart/form-data
 
 ```text
 VideoStatus:
-uploaded | preprocessing | preprocessing_failed | analyzing | analyze_failed | searchable | archived
+uploaded | preprocessing | preprocessing_failed | analyzing | analyze_failed | indexed | searchable | archived
 
 TaskStatus:
 queued | running | success | failed | canceled
@@ -159,20 +159,15 @@ Request:
 }
 ```
 
-Response:
+当前实现 Response:
 
 ```json
 {
-  "access_token": "jwt-token",
-  "token_type": "Bearer",
-  "expires_in": 7200,
-  "user": {
-    "id": "usr-001",
-    "username": "admin",
-    "real_name": "管理员",
-    "role": "admin",
-    "permissions": ["video:read", "video:upload", "event:review"]
-  }
+  "token": "jwt-token",
+  "user_id": "usr-001",
+  "username": "admin",
+  "role": "admin",
+  "display_name": "管理员"
 }
 ```
 
@@ -717,7 +712,7 @@ Response:
 
 ### POST `/api/events/{event_id}/export`
 
-创建证据导出任务。
+当前实现为同步创建证据导出包。
 
 Request:
 
@@ -738,8 +733,8 @@ Response:
 {
   "event_id": "evt-scratch-001",
   "export_id": "exp-evt-scratch-001",
-  "status": "queued",
-  "export_path": "media/exports/evt-scratch-001.zip"
+  "status": "success",
+  "export_path": "D:/.../var/media/exports/evt-scratch-001/package.zip"
 }
 ```
 
@@ -772,7 +767,7 @@ Response:
 
 下载导出文件。返回二进制文件流。
 
-### GET `/api/logs/audit`
+### GET `/api/audit/logs`
 
 操作日志。
 

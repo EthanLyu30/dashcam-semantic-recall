@@ -37,7 +37,7 @@ Owner: 倪羽辰
 - ffmpeg metadata, slicing, frames, thumbnails.
 - Multimodal model adapter.
 - Structured event extraction.
-- pgvector hybrid search.
+- PostgreSQL `REAL[]` vector search with SQLite fallback.
 - Evidence package export.
 
 Verification:
@@ -45,4 +45,3 @@ Verification:
 - Sample 2-hour video processing.
 - Three demo queries: scratch, illegal parking, abnormal stop.
 - Playback seek accuracy within 2 seconds.
-

@@ -223,7 +223,7 @@
 
 左卡《技术性未实现》标题用红色，5 条红圆点 li：
   真多模态模型调用：演示走 mock；接 DeepSeek/千问只需填 .env 中的 KEY
-  pgvector / PostgreSQL：用 SQLite + 内存余弦等价替代
+  PostgreSQL 向量检索：PG REAL[] + cosine_similarity 已完成；SQLite + numpy 自动降级
   sentence-transformers 真 embedding：默认未装，hash-ngram 兜底
   HLS 点播 / 异步任务队列：当前同步 FileResponse，长视频会阻塞
   PDF 摘要：导出包里目前是 Markdown + JSON
@@ -259,7 +259,7 @@
 
 右卡《阶段三计划》6 条 li：
   蓝·接真模型：填入 DeepSeek 或千问 API KEY，比较两家精度
-  蓝·向量库：SQLite-vector / pgvector 二选一，正式上 embedding
+  蓝·向量库：PG REAL[] / SQLite fallback 二选一，正式上 embedding
   绿·异步任务队列：长视频处理走后台 + WebSocket 进度推
   绿·辅助页面：告警/报告/复核/权限 全部接真数据
   黄·指标埋点：检索响应时间、模型成本、导出耗时

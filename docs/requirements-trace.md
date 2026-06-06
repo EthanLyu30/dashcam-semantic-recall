@@ -1,6 +1,6 @@
 # Requirements Trace
 
-最后更新：2026-05-11（lxy 分支阶段二）
+最后更新：2026-06-06（main / lxy 当前交付状态）
 
 | 需求 | 当前状态 | 主要落点 | 责任人 |
 | --- | --- | --- | --- |
@@ -9,11 +9,11 @@
 | FR-03 自然语言检索 | 已实现 | `services/hybrid_search.py`、`POST /api/search`；向量降级 + 关键词混合 | 吕霄阳 |
 | FR-04 精准回放 | 已实现 | `widgets/video_player.py` 真 VLC 播放 + seek_to_event；`GET /api/videos/{id}/stream` | 吕霄阳 |
 | FR-05 搜索结果展示 + 时间轴 | 已实现 | `widgets/search_panel.py` + `widgets/timeline.py` + `EventOut.rank_no/similarity_score/answer_text` | 吕霄阳 |
-| FR-06 证据导出 | 已实现 | `services/exporter.py` 真 ffmpeg 切片 + zip 打包；`POST /api/events/{id}/export` | 吕霄阳 |
+| FR-06 证据导出 | 已实现 | `services/exporter.py` 真 ffmpeg 切片 + zip 打包；`POST /api/events/{id}/export`；`GET /api/exports` 契约列表 | 吕霄阳 |
 | FR-07 操作日志 / 查询留痕 | 已实现 | `services/audit.py`、`audit_logs` 表、`X-Request-Id` 中间件、`GET /api/audit/logs` | 吕霄阳 |
 | NFR 鉴权 + 角色 | 已实现 | `services/auth.py` bcrypt + PyJWT；`require_auth` / `require_role` | 吕霄阳 |
 | NFR 异步任务队列 | 未实现 | 后续 Celery / asyncio queue | 倪羽辰 |
-| NFR pgvector / PostgreSQL | 未实现（SQLite 等价替代） | 切换只改 DATABASE_URL | 倪羽辰 |
+| NFR PostgreSQL 向量检索 | 已实现 | PG `REAL[]` + `cosine_similarity()` 存储函数；SQLite JSON + numpy 降级 | 倪羽辰 |
 | 真多模态模型接入 | 代码就绪，演示走 mock | OpenAI 兼容协议，填 `MODEL_API_KEY` 即可启用 | 倪羽辰 |
 
-测试覆盖：39 通过 + 1 跳过（PySide6 headless）。端到端 `test_api_integration.py` 串通 login → upload → process → search → export。
+测试覆盖：42 个自动化测试；当前环境 `38 passed, 4 skipped`。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports` 响应契约和未知事件导出 404。
