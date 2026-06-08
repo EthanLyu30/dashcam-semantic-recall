@@ -6,15 +6,17 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .db import (
     AuditLog,
     EventExport,
+    FrameAnalysis,
     SemanticEvent,
     Video,
+    VideoSegment,
     init_db,
     session_scope,
 )
@@ -39,6 +41,8 @@ from .schemas import (
     ExportListResponse,
     ExportRequest,
     ExportResponse,
+    IntegrationEventItem,
+    IntegrationEventListResponse,
     LoginRequest,
     LoginResponse,
     ModelSettingsResponse,
@@ -52,6 +56,7 @@ from .schemas import (
     ReviewRequest,
     ReviewTaskItem,
     ReviewTaskListResponse,
+    RetryResponse,
     RoleListResponse,
     SecuritySettingsResponse,
     SearchRequest,
@@ -60,6 +65,7 @@ from .schemas import (
     UserListResponse,
     VideoListResponse,
     VideoOut,
+    VideoStatusResponse,
 )
 from .services import audit as audit_service
 from .services import auth as auth_service
@@ -68,6 +74,38 @@ from .services import exporter as exporter_service
 from .services import final_stage
 from .services import hybrid_search
 from .services import media_pipeline
+
+
+# SRS NFR-03 caps a single upload at 10 GB; configurable for smaller deployments.
+_DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024 * 1024
+
+
+def _max_upload_bytes() -> int:
+    raw = os.getenv("DVR_SEMANTIC_MAX_UPLOAD_BYTES", "").strip()
+    if raw:
+        try:
+            value = int(raw)
+            if value > 0:
+                return value
+        except ValueError:
+            pass
+    return _DEFAULT_MAX_UPLOAD_BYTES
+
+
+def _event_to_integration_item(e: SemanticEvent) -> IntegrationEventItem:
+    return IntegrationEventItem(
+        event_id=e.id,
+        video_id=e.video_id,
+        event_type=e.event_type or "",
+        title=e.title or "",
+        summary=e.summary or "",
+        start_sec=int(e.start_sec or 0),
+        end_sec=int(e.end_sec or 0),
+        confidence=float(e.confidence or 0.0),
+        tags=list(e.tags_json) if isinstance(e.tags_json, list) else [],
+        review_status=e.review_status or "pending",
+        created_at=str(e.created_at) if getattr(e, "created_at", None) else "",
+    )
 
 
 def _video_to_out(v: Video) -> VideoOut:
@@ -108,6 +146,7 @@ def _event_to_out(event: SemanticEvent, similarity: float = 0.0, rank_no: int = 
 
 def create_app() -> FastAPI:
     init_db()
+    auth_service.enforce_secret_policy()
     auth_service.ensure_seed_users()
 
     app = FastAPI(
@@ -116,9 +155,19 @@ def create_app() -> FastAPI:
         description="REST contract for the DVR-Semantic desktop client.",
     )
 
+    # Only expose the non-sensitive image directories as public static assets.
+    # Raw uploads (originals/segments), evidence packages (exports) and daily
+    # reports must NOT be reachable without auth, so they stay off the static
+    # mount and are served through authenticated routes / signed URLs instead.
     media_root = media_pipeline.media_root()
-    media_root.mkdir(parents=True, exist_ok=True)
-    app.mount("/media", StaticFiles(directory=str(media_root)), name="media")
+    for public_sub in ("frames", "thumbnails"):
+        sub_dir = media_root / public_sub
+        sub_dir.mkdir(parents=True, exist_ok=True)
+        app.mount(
+            f"/media/{public_sub}",
+            StaticFiles(directory=str(sub_dir)),
+            name=f"media-{public_sub}",
+        )
 
     @app.middleware("http")
     async def attach_request_id(request: Request, call_next):
@@ -232,7 +281,23 @@ def create_app() -> FastAPI:
         title: str = Form(""),
         ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
     ) -> UploadResponse:
-        contents = await file.read()
+        # Stream the upload in chunks with a hard size cap so a huge file cannot
+        # exhaust process memory (SRS NFR-03 capacity / NFR-05 input validation).
+        max_bytes = _max_upload_bytes()
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"file exceeds the {max_bytes // (1024*1024)} MiB upload limit",
+                )
+            chunks.append(chunk)
+        contents = b"".join(chunks)
         if not contents:
             raise HTTPException(status_code=400, detail="empty file")
         video_title = title or file.filename or "Untitled"
@@ -330,6 +395,15 @@ def create_app() -> FastAPI:
             media_pipeline.run_preprocess(video_id)
             stats = event_aggregator.run_full_analysis(video_id)
         except Exception as exc:
+            audit_service.log_action(
+                request_id=request.state.request_id,
+                user_id=ctx.user_id,
+                action="video.process",
+                target_type="video",
+                target_id=video_id,
+                result_code="02001",
+                message=str(exc),
+            )
             raise HTTPException(status_code=500, detail=str(exc))
         with session_scope() as session:
             v = session.query(Video).filter(Video.id == video_id).one_or_none()
@@ -349,8 +423,131 @@ def create_app() -> FastAPI:
             status=status,
         )
 
+    @app.get("/api/videos/{video_id}/status", response_model=VideoStatusResponse)
+    def video_status(
+        video_id: str,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> VideoStatusResponse:
+        """Progress snapshot for polling (FR-01): status + segment/frame/event counts."""
+        with session_scope() as session:
+            v = session.query(Video).filter(Video.id == video_id).one_or_none()
+            if v is None:
+                raise HTTPException(status_code=404, detail="video not found")
+            segments = (
+                session.query(VideoSegment)
+                .filter(VideoSegment.video_id == video_id)
+                .count()
+            )
+            frames_total = (
+                session.query(FrameAnalysis)
+                .filter(FrameAnalysis.video_id == video_id)
+                .count()
+            )
+            frames_analyzed = (
+                session.query(FrameAnalysis)
+                .filter(
+                    FrameAnalysis.video_id == video_id,
+                    FrameAnalysis.analyze_status == "done",
+                )
+                .count()
+            )
+            events = (
+                session.query(SemanticEvent)
+                .filter(SemanticEvent.video_id == video_id)
+                .count()
+            )
+            return VideoStatusResponse(
+                video_id=video_id,
+                process_status=v.process_status or "unknown",
+                fail_reason=v.fail_reason or "",
+                duration_sec=int(v.duration_sec or 0),
+                segments=segments,
+                frames_total=frames_total,
+                frames_analyzed=frames_analyzed,
+                events=events,
+            )
+
+    @app.post("/api/videos/{video_id}/retry", response_model=RetryResponse)
+    def retry_video(
+        video_id: str,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("reviewer", "admin")),
+    ) -> RetryResponse:
+        """Idempotently re-run preprocess + analyze for a failed video (NFR-02)."""
+        with session_scope() as session:
+            v = session.query(Video).filter(Video.id == video_id).one_or_none()
+            if v is None:
+                raise HTTPException(status_code=404, detail="video not found")
+        try:
+            media_pipeline.run_preprocess(video_id)
+            stats = event_aggregator.run_full_analysis(video_id)
+        except Exception as exc:
+            audit_service.log_action(
+                request_id=request.state.request_id,
+                user_id=ctx.user_id,
+                action="video.retry",
+                target_type="video",
+                target_id=video_id,
+                result_code="02001",
+                message=f"retry failed: {exc}",
+            )
+            raise HTTPException(status_code=500, detail=f"retry failed: {exc}")
+        with session_scope() as session:
+            v = session.query(Video).filter(Video.id == video_id).one_or_none()
+            status = v.process_status if v else "unknown"
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="video.retry",
+            target_type="video",
+            target_id=video_id,
+            message=f"retried frames={stats.get('frames_analyzed',0)} events={stats.get('events_created',0)}",
+        )
+        return RetryResponse(
+            video_id=video_id,
+            process_status=status,
+            frames_analyzed=stats.get("frames_analyzed", 0),
+            events_created=stats.get("events_created", 0),
+            retried=True,
+        )
+
+    @app.get("/api/videos/{video_id}/stream-ticket")
+    def stream_ticket(
+        video_id: str,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        with session_scope() as session:
+            v = session.query(Video).filter(Video.id == video_id).one_or_none()
+            if v is None:
+                raise HTTPException(status_code=404, detail="video not found")
+        token = auth_service.issue_resource_token(video_id, scope="stream")
+        return {
+            "url": f"/api/videos/{video_id}/stream?token={token}",
+            "expires_in": auth_service._DEFAULT_RESOURCE_TTL_SEC,
+        }
+
     @app.get("/api/videos/{video_id}/stream")
-    def stream_video(video_id: str):
+    def stream_video(
+        video_id: str,
+        token: str = "",
+        authorization: str = Header(default=""),
+    ):
+        # Accept either a normal bearer token (programmatic clients) or a signed,
+        # short-lived stream token in the query string. VLC opens the URL
+        # directly and cannot attach an Authorization header, so the desktop
+        # client fetches a ticket first (see /stream-ticket).
+        authorized = False
+        header = (authorization or "").strip()
+        if header.lower().startswith("bearer "):
+            try:
+                auth_service.decode_token(header[len("bearer ") :].strip())
+                authorized = True
+            except ValueError:
+                authorized = False
+        if not authorized and auth_service.verify_resource_token(token, video_id, "stream"):
+            authorized = True
+        if not authorized:
+            raise HTTPException(status_code=401, detail="missing or invalid stream credentials")
         with session_scope() as session:
             v = session.query(Video).filter(Video.id == video_id).one_or_none()
             if v is None or not v.source_path:
@@ -808,5 +1005,65 @@ def create_app() -> FastAPI:
                        )) -> list[AuditLogOut]:
         rows = audit_service.recent_logs(limit=limit)
         return [AuditLogOut(**r) for r in rows]
+
+    # ---- FR-06: third-party integration surface (API-Key authenticated) ----
+    # Read-only event feed for external systems (e.g. an insurance or fleet
+    # platform). Disabled unless DVR_SEMANTIC_INTEGRATION_API_KEYS is set, so it
+    # is opt-in and never open by default.
+    @app.get(
+        "/api/integration/events",
+        response_model=IntegrationEventListResponse,
+    )
+    def integration_events(
+        request: Request,
+        event_type: str = "",
+        limit: int = 50,
+        api_key: str = Depends(auth_service.require_api_key),
+    ) -> IntegrationEventListResponse:
+        limit = max(1, min(int(limit or 50), 200))
+        with session_scope() as session:
+            q = session.query(SemanticEvent).filter(
+                SemanticEvent.review_status == "confirmed"
+            )
+            if event_type:
+                q = q.filter(SemanticEvent.event_type == event_type)
+            total = q.count()
+            rows = q.order_by(SemanticEvent.created_at.desc()).limit(limit).all()
+            items = [_event_to_integration_item(e) for e in rows]
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=None,
+            action="integration.events.list",
+            target_type="integration",
+            message=f"api-key feed returned {len(items)} events",
+        )
+        return IntegrationEventListResponse(items=items, total=total)
+
+    @app.get(
+        "/api/integration/events/{event_id}",
+        response_model=IntegrationEventItem,
+    )
+    def integration_event_detail(
+        event_id: str,
+        request: Request,
+        api_key: str = Depends(auth_service.require_api_key),
+    ) -> IntegrationEventItem:
+        with session_scope() as session:
+            e = session.query(SemanticEvent).filter(
+                SemanticEvent.id == event_id,
+                SemanticEvent.review_status == "confirmed",
+            ).one_or_none()
+            if e is None:
+                raise HTTPException(status_code=404, detail="event not found")
+            item = _event_to_integration_item(e)
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=None,
+            action="integration.events.detail",
+            target_type="integration",
+            target_id=event_id,
+            message="api-key event detail",
+        )
+        return item
 
     return app

@@ -299,6 +299,16 @@ class RestApiClient:
         return response.json() or {}
 
     def stream_url(self, video_id: str) -> str:
+        # The /stream route requires auth, but VLC opens the URL directly and
+        # cannot send an Authorization header. Fetch a short-lived signed ticket
+        # (authenticated via our session token) and hand VLC that signed URL.
+        try:
+            payload = self._get_json(f"/api/videos/{video_id}/stream-ticket")
+            url = payload.get("url", "") if isinstance(payload, dict) else ""
+            if url:
+                return url if url.startswith("http") else f"{self.base_url}{url}"
+        except Exception:
+            pass
         return f"{self.base_url}/api/videos/{video_id}/stream"
 
     # --- search & events ---------------------------------------------------

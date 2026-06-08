@@ -171,7 +171,7 @@ Request:
 }
 ```
 
-### POST `/api/auth/logout`
+### POST `/api/auth/logout` 🔵 规划中(planned，后端未实现)
 
 退出登录。
 
@@ -181,7 +181,7 @@ Response:
 { "success": true }
 ```
 
-### GET `/api/auth/me`
+### GET `/api/auth/me` 🔵 规划中(planned，后端未实现)
 
 获取当前用户。
 
@@ -309,7 +309,7 @@ Response:
 
 Response: `Video`
 
-### PATCH `/api/videos/{video_id}`
+### PATCH `/api/videos/{video_id}` 🔵 规划中(planned，后端未实现)
 
 修改标题、备注、保留策略等元信息。
 
@@ -322,7 +322,7 @@ Request:
 }
 ```
 
-### DELETE `/api/videos/{video_id}`
+### DELETE `/api/videos/{video_id}` 🔵 规划中(planned，后端未实现)
 
 删除视频及关联任务、事件、导出记录。课程演示可先做软删除。
 
@@ -347,9 +347,9 @@ Request:
 
 Response: `ProcessingTask`
 
-### GET `/api/videos/{video_id}/status`
+### GET `/api/videos/{video_id}/status` ✅ 已实现
 
-客户端轮询处理状态。
+客户端轮询处理进度：返回 `process_status` + `segments` / `frames_total` / `frames_analyzed` / `events` 计数，对应 `VideoStatusResponse`。
 
 Response:
 
@@ -364,7 +364,7 @@ Response:
 }
 ```
 
-### GET `/api/videos/{video_id}/segments`
+### GET `/api/videos/{video_id}/segments` 🔵 规划中(planned，后端未实现)
 
 获取视频切片列表。
 
@@ -374,7 +374,7 @@ Response:
 { "items": [ { "id": "seg-001", "start_sec": 0, "end_sec": 60, "segment_url": "/api/media/segments/seg-001.mp4" } ] }
 ```
 
-### GET `/api/videos/{video_id}/timeline`
+### GET `/api/videos/{video_id}/timeline` 🔵 规划中(planned，后端未实现)
 
 获取时间轴事件标记。
 
@@ -390,19 +390,30 @@ Response:
 }
 ```
 
-### GET `/api/videos/{video_id}/stream`
+### GET `/api/videos/{video_id}/stream` ✅ 已实现（需鉴权）
 
-返回可供 VLC/Qt 播放器加载的本地或 HTTP 播放地址。
+直接以 `FileResponse` 返回视频字节流，供 VLC/Qt 播放器加载。**需鉴权**：接受
+`Authorization: Bearer <token>` 头，或查询参数 `?token=<签名 ticket>`（VLC 直连场景）。
+无凭据返回 401。
+
+### GET `/api/videos/{video_id}/stream-ticket` ✅ 已实现
+
+为无法携带 Authorization 头的播放器（VLC）签发短时效（默认 300s）签名 URL。
 
 Response:
 
 ```json
 {
-  "video_id": "vid-20260327-1422",
-  "stream_url": "/api/media/originals/VID_20260327_1422.mp4",
-  "duration_sec": 1830
+  "url": "/api/videos/vid-20260327-1422/stream?token=<signed>",
+  "expires_in": 300
 }
 ```
+
+### POST `/api/videos/{video_id}/retry` ✅ 已实现（reviewer/admin）
+
+幂等地重新执行 preprocess + analyze（NFR-02 任务恢复）。失败任务可由 reviewer/admin 重投，
+返回 `RetryResponse`（`process_status` + `frames_analyzed` + `events_created` + `retried`）。
+普通 user 调用返回 403，未知视频返回 404。
 
 ## 6. 语义检索中心
 
@@ -452,7 +463,7 @@ Response:
 }
 ```
 
-### GET `/api/search/history`
+### GET `/api/search/history` 🔵 规划中(planned，后端未实现)
 
 查询历史。
 
@@ -574,7 +585,7 @@ Response:
 }
 ```
 
-### PATCH `/api/events/{event_id}/labels`
+### PATCH `/api/events/{event_id}/labels` 🔵 规划中(planned，后端未实现)
 
 修改事件标签。
 
@@ -789,11 +800,11 @@ Response:
 }
 ```
 
-### GET `/api/exports/{export_id}`
+### GET `/api/exports/{export_id}` 🔵 规划中(planned，后端未实现)
 
-导出详情和状态。
+导出详情和状态。（当前用 `GET /api/exports?event_id=...` 列表替代）
 
-### GET `/api/exports/{export_id}/download`
+### GET `/api/exports/{export_id}/download` 🔵 规划中(planned，后端未实现)
 
 下载导出文件。返回二进制文件流。
 
@@ -829,7 +840,7 @@ Response:
 }
 ```
 
-### GET `/api/logs/system`
+### GET `/api/logs/system` 🔵 规划中(planned，后端未实现)
 
 系统日志，用于排查模型调用、转码、检索异常。
 
@@ -906,7 +917,7 @@ Response:
 }
 ```
 
-### PATCH `/api/settings/model`
+### PATCH `/api/settings/model` 🔵 规划中(planned，后端未实现)
 
 更新模型配置。
 
@@ -940,7 +951,7 @@ Response:
 
 安全配置。
 
-### PATCH `/api/settings/security`
+### PATCH `/api/settings/security` 🔵 规划中(planned，后端未实现)
 
 更新安全配置。
 
@@ -950,7 +961,7 @@ Response:
 
 用户列表。
 
-### POST `/api/users`
+### POST `/api/users` 🔵 规划中(planned，后端未实现)
 
 创建用户。
 
@@ -965,11 +976,11 @@ Request:
 }
 ```
 
-### PATCH `/api/users/{user_id}`
+### PATCH `/api/users/{user_id}` 🔵 规划中(planned，后端未实现)
 
 更新用户资料、角色、启用状态。
 
-### DELETE `/api/users/{user_id}`
+### DELETE `/api/users/{user_id}` 🔵 规划中(planned，后端未实现)
 
 禁用或删除用户。
 
@@ -989,11 +1000,11 @@ Response:
 }
 ```
 
-### POST `/api/roles`
+### POST `/api/roles` 🔵 规划中(planned，后端未实现)
 
 创建角色。
 
-### PATCH `/api/roles/{role_id}`
+### PATCH `/api/roles/{role_id}` 🔵 规划中(planned，后端未实现)
 
 更新角色权限。
 
@@ -1003,17 +1014,38 @@ Response:
 
 ## 14. 媒体资源
 
-### GET `/api/media/{path}`
+### GET `/media/frames/{...}` · `/media/thumbnails/{...}` ✅ 已实现（公开静态）
 
-返回缩略图、关键帧、切片视频、导出文件等媒体资源。后端应校验路径，禁止任意文件读取。
+仅公开**非敏感图片**（关键帧、缩略图）两个子目录的静态挂载。原始视频
+（`originals`/`segments`）、证据 zip（`exports`）、日报（`reports`）**不再**经
+静态挂载暴露，须走带鉴权的路由（如 `GET /api/videos/{id}/stream` + ticket）。
 
-## 15. Final-stage 实现状态
+## 15. 第三方集成接口（FR-06，API-Key 鉴权）✅ 已实现
+
+对外只读事件接口，供保险/车队等第三方系统拉取已复核确认的事件。通过
+`X-Api-Key` 头鉴权，密钥来自环境变量 `DVR_SEMANTIC_INTEGRATION_API_KEYS`
+（逗号分隔，可配多把）；未配置时整组接口返回 503（默认关闭，opt-in）。
+
+### GET `/api/integration/events?event_type=&limit=50`
+
+返回 `review_status=confirmed` 的事件列表（`IntegrationEventListResponse`，`limit` 上限 200）。
+
+### GET `/api/integration/events/{event_id}`
+
+返回单条已确认事件（`IntegrationEventItem`）；未确认或不存在返回 404。
+
+错误：缺失/错误 key → 401；未配置集成 key → 503。
+
+## 16. Final-stage 实现状态
 
 `main` 当前 final-stage 版本已实现以下接口组：
 
-1. 主链路：`auth`、`videos`、`process/analyze`、`search`、`events`、`export`（单事件 + 24h 去重 + `POST /api/exports/batch` 批量）、`audit`。
+1. 主链路：`auth`、`videos`、`process/analyze`、`status`、`retry`、`search`、`events`、`export`（单事件 + 24h 去重 + `POST /api/exports/batch` 批量）、`audit`。
 2. 复核链路：`GET /api/review/tasks`、`POST /api/review/tasks/{event_id}/decision`。
-3. 管理面：`dashboard`、`alerts`、`accidents`、`reports`、`settings`、`users`、`roles`、`permissions`。
-4. 媒体资源：`/media/**` 静态挂载和 `GET /api/videos/{video_id}/stream`。
+3. 管理面：`dashboard`、`alerts`、`accidents`、`reports`、`settings`（只读 GET）、`users`/`roles`/`permissions`（只读 GET）。
+4. 媒体与回放：`/media/frames`、`/media/thumbnails` 公开静态；`GET /api/videos/{id}/stream`（鉴权 + 签名 ticket）。
+5. 第三方集成：`GET /api/integration/events`、`/api/integration/events/{id}`（API-Key）。
+
+**仅契约、后端未实现（标注 🔵 规划中）**：`auth/logout`、`auth/me`、`videos` 的 PATCH/DELETE/segments/timeline、`search/history`、`events/{id}/labels`、`exports/{id}` 及 `/download`、`logs/system`、`settings` 的 PATCH、`users`/`roles` 的写操作。读者请以本节与各端点标记为准，不要把契约示例当作现状。
 
 管理面接口由现有核心表实时派生，不额外引入迁移表；后续生产化可再把 alerts/settings/report jobs 独立成持久化模块。

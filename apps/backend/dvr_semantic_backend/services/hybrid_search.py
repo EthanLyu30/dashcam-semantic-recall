@@ -28,11 +28,14 @@ from ..db import IS_SQLITE, SearchQuery, SearchResult, SemanticEvent, session_sc
 VECTOR_DIM = 384
 
 KEYWORD_ALIASES: dict[str, tuple[str, ...]] = {
-    "scratch": ("剐蹭", "刮蹭", "碰撞", "擦碰"),
-    "illegal_parking": ("违停", "停车", "占道"),
-    "road_obstacle": ("障碍", "施工", "围挡", "路障"),
-    "abnormal_stop": ("异常停车", "急停", "急刹", "鸣笛"),
-    "pedestrian_risk": ("行人", "横穿", "鬼探头"),
+    # Each tuple mixes the canonical noun with common natural-language phrasings
+    # so queries like "车被蹭了一下" still hit the right category even though the
+    # exact category noun ("剐蹭") never appears.
+    "scratch": ("剐蹭", "刮蹭", "碰撞", "擦碰", "蹭", "刮花", "刮伤", "划痕", "蹭到", "刮到"),
+    "illegal_parking": ("违停", "违章停车", "占道", "乱停", "乱停车", "占用车道", "停在路边"),
+    "road_obstacle": ("障碍", "施工", "围挡", "路障", "障碍物", "挡路", "掉落物", "路面有"),
+    "abnormal_stop": ("异常停车", "急停", "急刹", "鸣笛", "猛踩刹车", "突然停车", "急刹车"),
+    "pedestrian_risk": ("行人", "横穿", "鬼探头", "冲到路上", "窜出", "突然冲出", "有人跑", "过马路"),
 }
 
 _PUNCT_CHARS = set(" \t\r\n，。、！？!?,.;:；：\"'“”‘’()（）[]【】《》<>")

@@ -40,13 +40,16 @@
 | 人工复核 API | `GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库 | 倪羽辰 |
 | 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包；24h 去重复用；受控批量导出（`POST /api/exports/batch`，≤50，失败隔离） | 吕霄阳（批量 + 路由）/ 倪羽辰（24h 去重） |
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
+| 安全加固 | `/stream` 改为鉴权（Bearer 头或短时效签名 ticket，供 VLC 直连）；`/media` 仅公开 `frames`/`thumbnails`，原视频/证据/日报不再静态暴露；上传 10GB 上限（可配 `DVR_SEMANTIC_MAX_UPLOAD_BYTES`，超限 413）；生产环境（`DVR_SEMANTIC_ENV=production`）强制设置非默认 `DVR_SEMANTIC_JWT_SECRET` 否则拒绝启动 | 吕霄阳 |
+| 任务可靠性 (NFR-02) | 模型调用失败自动重试（指数退避，可配 `DVR_SEMANTIC_RETRY_ATTEMPTS`）；`POST /api/videos/{id}/retry` 幂等重投失败任务（reviewer/admin）；`GET /api/videos/{id}/status` 进度轮询 | 倪羽辰 |
+| 第三方接口 (FR-06) | `GET /api/integration/events[/{id}]` 对外只读已确认事件，`X-Api-Key` 鉴权（`DVR_SEMANTIC_INTEGRATION_API_KEYS`，未配置默认关闭返回 503） | 倪羽辰 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 51 个自动化用例；当前环境 `45 passed, 6 skipped`，含端到端、导出列表、24h 去重、批量导出、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳 / 倪羽辰（测试隔离） |
+| 测试 | 84 个自动化用例；当前环境 `78 passed, 6 skipped`，含端到端、导出列表、24h 去重、批量导出、流鉴权/上传上限/JWT 策略安全回归、重试与第三方接口、自然语言检索召回与性能基准、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳 / 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
 | 按钮响应 | 所有展示型按钮接入 final-stage 演示提示，区分主链路与后续产品化写入流程 | 吕霄阳 |
 | 后端技术说明 | `docs/backend-tech-notes.md`（298 行）涵盖架构/向量/Qwen/聚合/导出 | 倪羽辰 |
-| Final-stage 管理面 API | dashboard / alerts / accidents / reports / settings / users / roles / permissions 均有真实后端响应 | 吕霄阳（框架）/ 倪羽辰（数据口径） |
+| Final-stage 管理面 API | dashboard / alerts / accidents / reports / settings / users / roles / permissions 后端只读接口均有真实数据库派生响应，已被 `test_final_stage_api.py` 与 `final_demo_smoke` 覆盖；**桌面端对应管理页目前仍为静态原型布局，尚未与这些接口联调**（检索/视频流/回放页已真实联调） | 吕霄阳（框架）/ 倪羽辰（数据口径） |
 
 最终验收清单见 `plans/final-stage-delivery.md`，需求实现状态见 `docs/requirements-trace.md`。
 
@@ -199,7 +202,7 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-当前验证输出：`45 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。
+当前验证输出：`78 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。
 
 后端启动后，可额外运行 final-stage REST smoke：
 
@@ -313,7 +316,7 @@ dashcam-semantic-recall/
 │   ├── IMPL_PLAN.md                # 历史实施清单
 │   ├── final-stage-delivery.md     # 最终交付验收清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 51 个自动化测试
+├── tests/                          # 84 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）

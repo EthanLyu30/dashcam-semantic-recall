@@ -24,7 +24,7 @@
 
 - [x] 完整后端服务实现：auth、audit、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator。
 - [x] SQLite 核心数据库层（videos/events/search/export/audit 表）。
-- [x] 51 个自动化测试已验证（当前环境 `45 passed, 6 skipped`）。
+- [x] 84 个自动化测试已验证（当前环境 `78 passed, 6 skipped`）。
 - [x] Qt6 全部 11 个页面精化：QPainter 自绘图表、VLC 视频播放、登录对话框。
 - [x] 主题样式对齐原型（nav active、border-l-4 结果卡、KPI 图标块、panel 圆角）。
 - [x] 页面滚动修复：`page_shell` 包装 `QScrollArea`，内容不再被截断。
@@ -39,6 +39,17 @@
 - [x] 批量导出客户端方法：`RestApiClient.export_batch()`。
 - [x] 批量导出测试：`test_exporter.test_export_batch_exports_multiple_events`、`test_export_routes.test_batch_export_route_isolates_failures` / `test_batch_export_empty_request_returns_400`。
 - [x] 同步更新 README / api-contract / requirements-trace / final-stage-delivery 文档。
+
+## 最终阶段新增（P0 安全加固，对抗性审计后收口）
+
+- [x] `/api/videos/{id}/stream` 增加鉴权：接受 Bearer 头或短时效签名 ticket（`/stream-ticket`），供 VLC 直连仍受控（修复 SEC-03）。
+- [x] `/media` 静态挂载收窄为仅 `frames` / `thumbnails`，原视频 / 分段 / 证据 zip / 日报不再无鉴权静态暴露（修复 SEC-02）。
+- [x] 上传增加分块读取 + 大小上限（默认 10GB，`DVR_SEMANTIC_MAX_UPLOAD_BYTES` 可配，超限 413），消除内存型 DoS（修复 SEC-04）。
+- [x] JWT 默认密钥策略：生产环境（`DVR_SEMANTIC_ENV=production`）强制非默认密钥否则拒绝启动，开发环境告警（修复 SEC-01）。
+- [x] 桌面端 `RestApiClient.stream_url()` 改为先取签名 ticket。
+- [x] 安全回归测试：`tests/test_security_hardening.py`（9 个用例）。
+- [x] FR-01 进度轮询：`GET /api/videos/{id}/status` 返回 process_status + 分段/帧/事件计数。
+- [x] CQ-07：`/process` 失败分支补审计日志，与 preprocess/analyze 对齐。
 
 ## 吕霄阳后续只需联调/完善的事项
 

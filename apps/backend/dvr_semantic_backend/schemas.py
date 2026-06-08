@@ -346,6 +346,50 @@ class PermissionListResponse(BaseModel):
     permissions: list[str]
 
 
+class VideoStatusResponse(BaseModel):
+    """Processing progress for a single video (FR-01 progress polling)."""
+
+    video_id: str
+    process_status: str
+    fail_reason: str = ""
+    duration_sec: int = 0
+    segments: int = 0
+    frames_total: int = 0
+    frames_analyzed: int = 0
+    events: int = 0
+
+
+class RetryResponse(BaseModel):
+    """Result of re-triggering a failed video processing task (NFR-02)."""
+
+    video_id: str
+    process_status: str
+    frames_analyzed: int = 0
+    events_created: int = 0
+    retried: bool = True
+
+
+class IntegrationEventItem(BaseModel):
+    """Read-only event view exposed to authorised third-party systems (FR-06)."""
+
+    event_id: str
+    video_id: str
+    event_type: str
+    title: str
+    summary: str
+    start_sec: int
+    end_sec: int
+    confidence: float
+    tags: list[str] = Field(default_factory=list)
+    review_status: str
+    created_at: str = ""
+
+
+class IntegrationEventListResponse(BaseModel):
+    items: list[IntegrationEventItem]
+    total: int
+
+
 class EnvelopeError(BaseModel):
     request_id: str
     code: str

@@ -23,6 +23,8 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
 
+from . import retry
+
 logger = logging.getLogger(__name__)
 
 # The five business event categories plus "normal".
@@ -224,6 +226,9 @@ class OpenAICompatibleAdapter:
         self._timeout = timeout
         self._client: Any = None  # lazy-initialised
         self._lock = Lock()
+        # Auto-retry transient model API failures before falling back (NFR-02).
+        self._max_retries = retry.default_attempts()
+        self._retry_base_delay = retry.default_base_delay()
 
     # -- public API ------------------------------------------------------
 
@@ -252,13 +257,17 @@ class OpenAICompatibleAdapter:
         ]
 
         try:
-            response = client.chat.completions.create(
-                model=self._model_name,
-                messages=messages,
-                timeout=self._timeout,
+            response = retry.call_with_retry(
+                lambda: client.chat.completions.create(
+                    model=self._model_name,
+                    messages=messages,
+                    timeout=self._timeout,
+                ),
+                attempts=self._max_retries,
+                base_delay=self._retry_base_delay,
             )
         except Exception as exc:
-            logger.warning("model_adapter: request failed: %s", exc)
+            logger.warning("model_adapter: request failed after retries: %s", exc)
             return self._fallback_label({"error": f"request_failed: {exc}"})
 
         content = self._extract_content(response)

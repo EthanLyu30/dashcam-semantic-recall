@@ -6,6 +6,7 @@ must surface clearly so the route layer can translate them into HTTP errors.
 """
 from __future__ import annotations
 
+import logging
 import os
 import uuid
 from dataclasses import dataclass
@@ -18,9 +19,16 @@ from fastapi import Header, HTTPException
 
 from ..db import User, init_db, session_scope
 
+logger = logging.getLogger(__name__)
+
 _ALLOWED_ROLES = ("user", "reviewer", "admin")
 _DEFAULT_JWT_SECRET = "dvr-semantic-dev-secret-change-me"
 _DEFAULT_TTL_MIN = 720  # 12 hours
+
+# Short-lived signed tokens for direct-fetch resources (e.g. video stream URLs
+# handed to VLC, which cannot send an Authorization header). Default 5 min so the
+# URL is effectively a time-limited download link (SRS NFR-05).
+_DEFAULT_RESOURCE_TTL_SEC = 300
 
 # bcrypt accepts at most 72 bytes; we hash longer secrets through SHA-256 first
 # so users are never surprised by silent truncation.
@@ -36,6 +44,70 @@ class AuthContext:
 
 def _jwt_secret() -> str:
     return os.getenv("DVR_SEMANTIC_JWT_SECRET", _DEFAULT_JWT_SECRET).strip() or _DEFAULT_JWT_SECRET
+
+
+def using_default_jwt_secret() -> bool:
+    """True when no (or empty) ``DVR_SEMANTIC_JWT_SECRET`` is configured.
+
+    The default secret ships in this public source tree, so anyone can forge an
+    ``admin`` token while it is in use. Callers (e.g. ``create_app``) use this to
+    warn in dev and fail-closed in production.
+    """
+    return _jwt_secret() == _DEFAULT_JWT_SECRET
+
+
+def enforce_secret_policy() -> None:
+    """Warn on the default JWT secret; refuse to start in production.
+
+    Production is signalled by ``DVR_SEMANTIC_ENV=production`` (case-insensitive).
+    In any other environment we only log a warning so the local demo keeps
+    working out of the box.
+    """
+    if not using_default_jwt_secret():
+        return
+    env = os.getenv("DVR_SEMANTIC_ENV", "").strip().lower()
+    if env in ("prod", "production"):
+        raise RuntimeError(
+            "DVR_SEMANTIC_JWT_SECRET must be set to a non-default value in "
+            "production. Generate one with: python -c \"import secrets; "
+            "print(secrets.token_urlsafe(48))\""
+        )
+    logger.warning(
+        "JWT is using the built-in default secret; tokens are forgeable. "
+        "Set DVR_SEMANTIC_JWT_SECRET before any non-local deployment."
+    )
+
+
+def issue_resource_token(
+    resource_id: str, scope: str, ttl_seconds: int = _DEFAULT_RESOURCE_TTL_SEC
+) -> str:
+    """Mint a short-lived signed token bound to a single resource + scope.
+
+    Used for URLs fetched by clients that cannot attach an Authorization header
+    (e.g. a video stream URL opened directly by VLC).
+    """
+    now = datetime.now(tz=timezone.utc)
+    payload = {
+        "res": resource_id,
+        "scope": scope,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(seconds=max(1, ttl_seconds))).timestamp()),
+    }
+    token = jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+    if isinstance(token, bytes):  # pragma: no cover - PyJWT<2 safety net
+        token = token.decode("utf-8")
+    return token
+
+
+def verify_resource_token(token: str, resource_id: str, scope: str) -> bool:
+    """Validate a resource token's signature, expiry, resource id and scope."""
+    if not token:
+        return False
+    try:
+        payload = jwt.decode(token, _jwt_secret(), algorithms=["HS256"])
+    except jwt.InvalidTokenError:
+        return False
+    return payload.get("res") == resource_id and payload.get("scope") == scope
 
 
 def _jwt_ttl_minutes() -> int:
@@ -186,6 +258,33 @@ def require_role(*allowed_roles: str) -> Callable[..., AuthContext]:
 
     dependency.__name__ = f"require_role_{'_'.join(allowed)}"
     return dependency
+
+
+def integration_api_keys() -> tuple[str, ...]:
+    """Configured API keys for the FR-06 third-party integration surface."""
+    raw = os.getenv("DVR_SEMANTIC_INTEGRATION_API_KEYS", "")
+    return tuple(k.strip() for k in raw.split(",") if k.strip())
+
+
+def integration_enabled() -> bool:
+    return bool(integration_api_keys())
+
+
+def require_api_key(x_api_key: str = Header(default="", alias="X-Api-Key")) -> str:
+    """FastAPI dependency: authenticate a third-party caller via ``X-Api-Key``.
+
+    Returns 503 when no integration keys are configured (feature off), 401 when
+    the supplied key is missing or wrong. Comparison is constant-time.
+    """
+    import hmac
+
+    keys = integration_api_keys()
+    if not keys:
+        raise HTTPException(status_code=503, detail="third-party integration not configured")
+    provided = (x_api_key or "").strip()
+    if provided and any(hmac.compare_digest(provided, key) for key in keys):
+        return provided
+    raise HTTPException(status_code=401, detail="invalid or missing API key")
 
 
 _SEED_USERS = (

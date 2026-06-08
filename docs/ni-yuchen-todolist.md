@@ -39,7 +39,7 @@
 
 ### 4. 视频流接口对接 VLC
 
-- [x] `GET /api/videos/{video_id}/stream` 返回 `FileResponse`，客户端 `RestApiClient.stream_url()` 直接交给 VLC。
+- [x] `GET /api/videos/{video_id}/stream` 返回 `FileResponse`；最终阶段已加鉴权，客户端 `RestApiClient.stream_url()` 先取 `/stream-ticket` 签名 URL 再交给 VLC。
 - [x] Qt 客户端设置 `DVR_SEMANTIC_API_BASE` 后走真实 HTTP 视频流；未装 VLC 时自动降级占位。
 
 ### 5. ✅ 后端技术实现说明（已完成）
@@ -54,6 +54,32 @@
 - [x] `export_package(..., force=False)` 默认走去重，`force=True` 强制重新生成；返回新增 `reused` 字段。
 - [x] 接口 `POST /api/events/{id}/export` 透传 `force` 并回传 `reused`，审计日志记录 `reused=...`。
 - [x] 测试：`test_exporter.test_export_package_dedups_within_window`、`test_export_routes.test_export_reuses_recent_package`。
+
+### 7. ✅ 文档诚实度对齐（最终阶段新增，已完成）
+
+对抗性审计发现部分文档口径强于实现，已据实修正：
+
+- [x] `requirements-trace.md` / README：FR-08/FR-09 标注「后端已实现 / 桌面端管理页未联调」；新增 NFR-05 资源保护与 NFR-04「性能未实测」行。
+- [x] `api-contract.md`：19 个仅契约/未实现端点逐条标注 🔵 规划中，Section 16 增加「已实现 vs 仅契约」对照。
+- [x] 测试计数同步为 84 个（`78 passed, 6 skipped`）。
+
+### 8. ✅ FR-06 第三方接口（最终阶段新增，已完成）
+
+- [x] `GET /api/integration/events[/{id}]`：对外只读已确认事件，`X-Api-Key` 鉴权（constant-time 比较）。
+- [x] 密钥来自 `DVR_SEMANTIC_INTEGRATION_API_KEYS`（逗号分隔多把）；未配置整组返回 503（默认关闭）。
+- [x] 审计留痕 `integration.events.list/detail`；测试 `tests/test_integration_api.py`。
+
+### 9. ✅ NFR-02 任务可靠性 / 重试（最终阶段新增，已完成）
+
+- [x] `services/retry.py`：有限次指数退避，`sleep` 可注入便于测试；已接入模型 API 调用（失败先重试再回退 mock）。
+- [x] `POST /api/videos/{id}/retry`：reviewer/admin 幂等重投失败任务；`GET /api/videos/{id}/status` 进度轮询。
+- [x] 测试 `tests/test_retry.py`、`tests/test_status_retry_routes.py`。
+
+### 10. ✅ 检索召回质量 + 性能基准（最终阶段新增，已完成）
+
+- [x] `hybrid_search.KEYWORD_ALIASES` 扩充自然语句同义词；`tests/test_search_recall.py` 用不含类别名词的自然语句断言 top-1 + 负样本。
+- [x] `tests/test_perf_benchmark.py`：300 条事件检索 <4s（NFR-04 检索阈值）。
+- [ ] 真实负载压测（2h/4K 预处理≤8min、50 并发/10RPS、跳转≤1s）仍需真机环境，列为后续。
 
 ---
 
@@ -84,7 +110,7 @@
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
 | 证据导出（snapshot/clip/package + 批量 + 24h 去重） | `services/exporter.py` | ✅ lxy 批量导出 + 倪羽辰 24h 去重 |
 | 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
-| 自动化测试 51 个 | `tests/` | ✅ |
+| 自动化测试 84 个 | `tests/` | ✅ |
 
 ---
 
