@@ -87,13 +87,17 @@ class SearchPanel(QFrame):
         self.result_layout.setSpacing(10)
         self.result_layout.addStretch()
 
+        self.result_container.setObjectName("resultContainer")
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.scroll.setWidget(self.result_container)
         self.scroll.setMinimumWidth(430)
+        # Scope the white background to the container only — a bare
+        # ``QWidget { background:#FFFFFF }`` here would cascade onto child
+        # buttons/cards and clobber their styling.
         self.scroll.setStyleSheet(
             "QScrollArea { background: #FFFFFF; border: none; }"
-            "QWidget { background: #FFFFFF; }"
+            "#resultContainer { background: #FFFFFF; }"
         )
 
         layout = QVBoxLayout(self)
@@ -101,7 +105,10 @@ class SearchPanel(QFrame):
         layout.setSpacing(0)
 
         search_box = QWidget()
-        search_box.setStyleSheet("QWidget { background: #FFFFFF; }")
+        search_box.setObjectName("searchBox")
+        # Scope to this widget only — a bare ``QWidget { background }`` would
+        # cascade to the 检索 button and make its white text invisible on white.
+        search_box.setStyleSheet("#searchBox { background: #FFFFFF; }")
         search_layout = QVBoxLayout(search_box)
         search_layout.setContentsMargins(24, 22, 24, 22)
         search_layout.setSpacing(12)

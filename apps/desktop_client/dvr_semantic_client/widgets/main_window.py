@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         return frame
 
     def _build_pages(self) -> None:
-        self.stack.addWidget(overview_page())
+        self.stack.addWidget(overview_page(self.api_client))
         self.stack.addWidget(self._build_search_workspace())
         self.stack.addWidget(video_library_page(self.api_client))
         self.stack.addWidget(review_page())
@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
         right_layout.setContentsMargins(24, 24, 24, 24)
         right_layout.setSpacing(18)
         right_layout.addWidget(self.player, 3)
-        self.detail.setMaximumHeight(290)
+        self.detail.setMaximumHeight(200)
         right_layout.addWidget(self.detail, 1)
 
         splitter.addWidget(right_panel)

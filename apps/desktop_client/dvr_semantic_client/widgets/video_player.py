@@ -21,52 +21,47 @@ from ..models import SemanticEvent, VideoRecord, format_time
 
 
 class _PrototypeSurface(QLabel):
-    """Video placeholder that mirrors the HTML prototype when VLC is unavailable."""
+    """Clean dark video placeholder (a soft gradient + play glyph + caption).
+
+    Deliberately draws no external screenshot — earlier builds blitted a stock
+    traffic photo here, which read as a confusing "stitched screenshot".
+    """
 
     def __init__(self, text: str, parent: QWidget | None = None) -> None:
         super().__init__(text, parent)
-        self._pixmap = QPixmap()
 
-    def set_scene_image(self, path: Path) -> None:
-        if path.exists():
-            self._pixmap = QPixmap(str(path))
-            self.update()
+    def set_scene_image(self, path: Path) -> None:  # kept for call-site compatibility
+        return None
 
     def paintEvent(self, event) -> None:  # type: ignore[override]
-        if self._pixmap.isNull():
-            super().paintEvent(event)
-            return
+        from PySide6.QtGui import QBrush, QLinearGradient
 
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         target = self.rect()
-        scaled = self._pixmap.scaled(
-            target.size(),
-            Qt.AspectRatioMode.KeepAspectRatioByExpanding,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        x = (scaled.width() - target.width()) // 2
-        y = (scaled.height() - target.height()) // 2
-        painter.drawPixmap(-x, -y, scaled)
-        painter.fillRect(target, QColor(2, 6, 23, 125))
 
-        painter.setBrush(QColor(0, 0, 0, 120))
+        grad = QLinearGradient(target.topLeft(), target.bottomRight())
+        grad.setColorAt(0.0, QColor("#0B1220"))
+        grad.setColorAt(1.0, QColor("#020617"))
         painter.setPen(Qt.PenStyle.NoPen)
-        center = target.center()
-        painter.drawEllipse(center, 34, 34)
-        painter.setBrush(QColor("#FFFFFF"))
-        points = QPolygon([
-            center + QPoint(-8, -14),
-            center + QPoint(-8, 14),
-            center + QPoint(16, 0),
-        ])
-        painter.drawPolygon(points)
+        painter.setBrush(QBrush(grad))
+        painter.drawRoundedRect(target, 18, 18)
 
-        painter.setPen(QColor("#CBD5E1"))
-        font = QFont("Microsoft YaHei UI", 11)
-        font.setBold(True)
+        center = target.center()
+        painter.setBrush(QColor(255, 255, 255, 22))
+        painter.drawEllipse(center, 38, 38)
+        painter.setBrush(QColor(255, 255, 255, 230))
+        painter.drawPolygon(QPolygon([
+            center + QPoint(-10, -16),
+            center + QPoint(-10, 16),
+            center + QPoint(18, 0),
+        ]))
+
+        painter.setPen(QColor("#94A3B8"))
+        font = QFont("Microsoft YaHei UI", 10)
         painter.setFont(font)
-        painter.drawText(target.adjusted(24, 24, -24, -24), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignLeft, self.text())
+        caption = target.adjusted(24, center.y() + 56 - target.top(), -24, -20)
+        painter.drawText(caption, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop, self.text())
 
 class VideoPlayerPanel(QFrame):
     """视频回放面板。
@@ -98,7 +93,7 @@ class VideoPlayerPanel(QFrame):
         # 视频画面承载面板（VLC 可以将 surface 直接绑到原生窗口）
         self.video_frame = QFrame()
         self.video_frame.setObjectName("videoSurface")
-        self.video_frame.setMinimumHeight(420)
+        self.video_frame.setMinimumHeight(200)
         self.video_frame.setStyleSheet(
             "#videoSurface { background: #020617; border-radius: 18px; "
             "border: 1px solid #1E293B; }"
@@ -118,17 +113,12 @@ class VideoPlayerPanel(QFrame):
             "border: 1px solid #1E293B; color: #CBD5E1; "
             "font-size: 16px; padding: 28px; line-height: 1.6; }"
         )
-        scene_path = (
-            Path(__file__).resolve().parents[4]
-            / "docs"
-            / "prototype-source"
-            / "images"
-            / "交通场景.jpg"
-        )
-        self.surface_label.set_scene_image(scene_path)
-
         # 用 QStackedLayout 在 video_frame 和占位 Label 之间切换
         self.surface_container = QWidget()
+        # Transparent so the dark right-panel shows through the surface's rounded
+        # corners (otherwise the global light background leaks as white corners).
+        self.surface_container.setStyleSheet("background: transparent;")
+        self.surface_container.setMinimumHeight(220)
         self._surface_stack = QStackedLayout(self.surface_container)
         self._surface_stack.setContentsMargins(0, 0, 0, 0)
         self._surface_stack.addWidget(self.video_frame)
@@ -196,6 +186,7 @@ class VideoPlayerPanel(QFrame):
 
         # 时间轴 slot：默认空，主窗口可调用 attach_timeline 注入
         self._timeline_host = QWidget()
+        self._timeline_host.setStyleSheet("background: transparent;")
         self._timeline_slot = QVBoxLayout(self._timeline_host)
         self._timeline_slot.setContentsMargins(0, 6, 0, 0)
         self._timeline_slot.setSpacing(4)

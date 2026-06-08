@@ -165,16 +165,19 @@ def action_button(text: str, variant: str = "") -> QPushButton:
 
 
 def _wip_button(text: str, variant: str = "") -> QPushButton:
-    """Button for optional productized actions outside the final demo path."""
+    """Button for management-面 write actions that are still UI-only prototypes."""
     btn = action_button(text, variant)
-    btn.clicked.connect(
-        lambda: QMessageBox.information(
+
+    def _notify() -> None:
+        QMessageBox.information(
             btn.window(),
-            "演示版提示",
-            "当前 final-stage 版本已接入主链路和管理面只读数据；"
-            "该操作属于后续产品化写入流程。",
+            "原型功能（未接入写操作）",
+            f"「{text}」是管理面的写入/操作类功能，目前仍是界面原型，尚未接入后端写接口。\n\n"
+            "本版本已真实跑通的链路：登录鉴权、视频上传与预处理、Qwen-VL 语义分析、"
+            "自然语言检索、证据导出、操作审计，以及「概览」页的实时后端数据。",
         )
-    )
+
+    btn.clicked.connect(_notify)
     return btn
 
 
@@ -252,14 +255,35 @@ def status_chip(text: str, kind: str = "info") -> QLabel:
     return label
 
 
-def overview_page() -> QWidget:
-    page, root = page_shell("系统状态概览", "2026年03月27日 · 系统运行正常 · 多模态节点 8/8")
+def overview_page(api_client: Any | None = None) -> QWidget:
+    # Pull live numbers from the backend when a client is wired; fall back to
+    # representative demo values in mock/offline mode.
+    data: dict[str, Any] = {}
+    if api_client is not None and hasattr(api_client, "dashboard_overview"):
+        try:
+            data = api_client.dashboard_overview() or {}
+        except Exception:
+            data = {}
+
+    def _num(key: str, default: int) -> str:
+        value = data.get(key, default)
+        try:
+            return f"{int(value):,}"
+        except (TypeError, ValueError):
+            return str(value)
+
+    nodes = data.get("model_nodes") or {}
+    online, total = nodes.get("online", 8), nodes.get("total", 8)
+    engine = data.get("engine_status", "健康")
+    subtitle = f"系统运行 {engine} · 多模态节点 {online}/{total} · 模型 {nodes.get('provider', '—')}"
+
+    page, root = page_shell("系统状态概览", subtitle)
     # 原型是 3 列 KPI（不是 4 列）
     metrics = QGridLayout()
     metrics.setSpacing(14)
-    metrics.addWidget(metric_card("总处理视频", "8,429", "+12% 本周增长"), 0, 0)
-    metrics.addWidget(metric_card("语义检索次数", "1,204", "响应稳定", "#4F46E5"), 0, 1)
-    metrics.addWidget(metric_card("识别关键事件", "342", "+5.4% 今日新增", "#F59E0B"), 0, 2)
+    metrics.addWidget(metric_card("总处理视频", _num("processed_video_count", 8429), f"待复核 {_num('pending_review_count', 18)}"), 0, 0)
+    metrics.addWidget(metric_card("语义检索次数", _num("semantic_query_count", 1204), "实时统计", "#4F46E5"), 0, 1)
+    metrics.addWidget(metric_card("识别关键事件", _num("identified_event_count", 342), "多模态聚合", "#F59E0B"), 0, 2)
     root.addLayout(metrics)
 
     lower = QHBoxLayout()

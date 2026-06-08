@@ -1,10 +1,9 @@
 """Programmatic app logo (no binary asset needed).
 
-Distinctive, on-theme mark: a dashcam point-of-view road in perspective,
-converging to a glowing amber focal point — the "recalled moment" the semantic
-search surfaces. The dashed centre line doubles as a film/timeline strip
-(dashcam ⇄ dashes ⇄ frames). Reads down to 16 px because the road trapezoid and
-the amber focal dot stay legible at small sizes.
+A clean, modern mark: a camera/dashcam **focus viewfinder** — four rounded
+corner brackets framing a central play glyph — set on a glossy squircle. It
+reads as "camera framing + playback/recall", stays crisp from 16px to 256px,
+and avoids the generic-magnifier cliché.
 """
 from __future__ import annotations
 
@@ -22,8 +21,14 @@ from PySide6.QtGui import (
 )
 
 
-def _lerp(a: QPointF, b: QPointF, t: float) -> QPointF:
-    return QPointF(a.x() + (b.x() - a.x()) * t, a.y() + (b.y() - a.y()) * t)
+def _bracket(path: QPainterPath, cx: float, cy: float, hx: float, hy: float, arm: float) -> None:
+    """Add an L-shaped corner bracket whose elbow is at (cx,cy).
+
+    hx/hy are +/-1 indicating which way the two arms extend.
+    """
+    path.moveTo(cx + hx * arm, cy)
+    path.lineTo(cx, cy)
+    path.lineTo(cx, cy + hy * arm)
 
 
 def make_logo_pixmap(size: int = 64) -> QPixmap:
@@ -34,71 +39,58 @@ def make_logo_pixmap(size: int = 64) -> QPixmap:
     p = QPainter(pm)
     p.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
-    # --- rounded "dusk drive" tile ---
-    tile = QRectF(0, 0, s, s)
-    bg = QLinearGradient(0, 0, s, s)
-    bg.setColorAt(0.0, QColor("#4F46E5"))   # indigo (sky)
-    bg.setColorAt(0.55, QColor("#2563EB"))  # blue
-    bg.setColorAt(1.0, QColor("#0F2A6B"))   # deep navy (foreground road)
+    # --- glossy squircle tile ---
+    tile = QRectF(s * 0.02, s * 0.02, s * 0.96, s * 0.96)
+    radius = s * 0.30
+    grad = QLinearGradient(tile.topLeft(), tile.bottomRight())
+    grad.setColorAt(0.0, QColor("#6366F1"))   # indigo
+    grad.setColorAt(1.0, QColor("#2563EB"))   # blue
     p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QBrush(bg))
-    p.drawRoundedRect(tile, s * 0.28, s * 0.28)
+    p.setBrush(QBrush(grad))
+    p.drawRoundedRect(tile, radius, radius)
 
-    # Clip subsequent road art to the rounded tile.
+    # soft top-left gloss for depth
+    gloss = QRadialGradient(QPointF(tile.left() + s * 0.30, tile.top() + s * 0.24), s * 0.6)
+    gloss.setColorAt(0.0, QColor(255, 255, 255, 60))
+    gloss.setColorAt(1.0, QColor(255, 255, 255, 0))
     clip = QPainterPath()
-    clip.addRoundedRect(tile, s * 0.28, s * 0.28)
+    clip.addRoundedRect(tile, radius, radius)
     p.setClipPath(clip)
+    p.setBrush(QBrush(gloss))
+    p.drawRect(tile)
+    p.setClipping(False)
 
-    vp = QPointF(s * 0.50, s * 0.34)          # vanishing point
-    bl = QPointF(s * 0.18, s * 1.02)          # road base left
-    br = QPointF(s * 0.82, s * 1.02)          # road base right
-    tl = _lerp(bl, vp, 0.82)                   # road top-left (near VP)
-    tr = _lerp(br, vp, 0.82)                   # road top-right
+    cx, cy = s * 0.5, s * 0.5
+    half = s * 0.255           # inner frame half-size
+    arm = s * 0.135            # bracket arm length
 
-    # --- road surface trapezoid ---
-    road = QPainterPath()
-    road.moveTo(bl)
-    road.lineTo(br)
-    road.lineTo(tr)
-    road.lineTo(tl)
-    road.closeSubpath()
-    p.setBrush(QColor(255, 255, 255, 38))
-    p.drawPath(road)
-
-    # --- lane edges (converging) ---
-    edge = QPen(QColor(255, 255, 255, 200))
-    edge.setWidthF(max(1.2, s * 0.045))
-    edge.setCapStyle(Qt.PenCapStyle.RoundCap)
-    p.setPen(edge)
-    p.drawLine(bl, tl)
-    p.drawLine(br, tr)
-
-    # --- dashed centre line (timeline / frames motif) ---
-    dash = QPen(QColor(255, 255, 255, 235))
-    dash.setWidthF(max(1.4, s * 0.055))
-    dash.setCapStyle(Qt.PenCapStyle.RoundCap)
-    p.setPen(dash)
-    base_mid = QPointF(s * 0.50, s * 1.00)
-    for t0, t1 in ((0.05, 0.20), (0.34, 0.49), (0.62, 0.74)):
-        p.drawLine(_lerp(base_mid, vp, t0), _lerp(base_mid, vp, t1))
-
-    # --- amber focal point: the "recalled moment" ---
-    glow = QRadialGradient(vp, s * 0.20)
-    glow.setColorAt(0.0, QColor(251, 191, 36, 200))
-    glow.setColorAt(1.0, QColor(251, 191, 36, 0))
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QBrush(glow))
-    p.drawEllipse(vp, s * 0.20, s * 0.20)
-
-    ring = QPen(QColor("#FBBF24"))
-    ring.setWidthF(max(1.0, s * 0.03))
-    p.setPen(ring)
+    # --- four focus brackets ---
+    brackets = QPainterPath()
+    _bracket(brackets, cx - half, cy - half, +1, +1, arm)  # top-left
+    _bracket(brackets, cx + half, cy - half, -1, +1, arm)  # top-right
+    _bracket(brackets, cx - half, cy + half, +1, -1, arm)  # bottom-left
+    _bracket(brackets, cx + half, cy + half, -1, -1, arm)  # bottom-right
+    pen = QPen(QColor(255, 255, 255, 235))
+    pen.setWidthF(max(1.6, s * 0.072))
+    pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    p.setPen(pen)
     p.setBrush(Qt.BrushStyle.NoBrush)
-    p.drawEllipse(vp, s * 0.115, s * 0.115)
+    p.drawPath(brackets)
 
-    p.setPen(Qt.PenStyle.NoPen)
+    # --- centre play triangle (rounded) ---
+    tri = QPainterPath()
+    r = s * 0.135
+    tri.moveTo(cx - r * 0.62, cy - r)
+    tri.lineTo(cx - r * 0.62, cy + r)
+    tri.lineTo(cx + r * 0.95, cy)
+    tri.closeSubpath()
+    play_pen = QPen(QColor("#FFFFFF"))
+    play_pen.setWidthF(max(1.2, s * 0.05))
+    play_pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    p.setPen(play_pen)
     p.setBrush(QColor("#FFFFFF"))
-    p.drawEllipse(vp, s * 0.052, s * 0.052)
+    p.drawPath(tri)
 
     p.end()
     return pm
