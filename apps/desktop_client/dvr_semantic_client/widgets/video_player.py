@@ -99,10 +99,10 @@ class VideoPlayerPanel(QFrame):
             "border: 1px solid #1E293B; }"
         )
         if self._vlc_available:
+            # Only mark the surface itself native. Previously we also set
+            # WA_DontCreateNativeAncestors, which left the embedded VLC window
+            # unclipped by its Qt ancestors so it overpainted the controls below.
             self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
-            self.video_frame.setAttribute(
-                Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True
-            )
 
         # 占位 Label，未加载视频或 VLC 不可用时显示
         self.surface_label = _PrototypeSurface(self._placeholder_text("idle"))
@@ -118,7 +118,10 @@ class VideoPlayerPanel(QFrame):
         # Transparent so the dark right-panel shows through the surface's rounded
         # corners (otherwise the global light background leaks as white corners).
         self.surface_container.setStyleSheet("background: transparent;")
-        self.surface_container.setMinimumHeight(220)
+        # Bounded band: tall enough to read the video, capped so the controls
+        # always sit clearly below it instead of being overpainted.
+        self.surface_container.setMinimumHeight(200)
+        self.surface_container.setMaximumHeight(460)
         self._surface_stack = QStackedLayout(self.surface_container)
         self._surface_stack.setContentsMargins(0, 0, 0, 0)
         self._surface_stack.addWidget(self.video_frame)

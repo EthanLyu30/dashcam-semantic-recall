@@ -9,10 +9,12 @@ from ..models import SemanticEvent, VideoRecord, format_time
 
 class EventTimeline(QWidget):
     event_selected = Signal(object)
+    seek_requested = Signal(int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setMinimumHeight(112)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._video: VideoRecord | None = None
         self._events: tuple[SemanticEvent, ...] = ()
         self._selected_id = ""
@@ -106,9 +108,15 @@ class EventTimeline(QWidget):
         painter.drawLine(int(current_x), rail_y - 30, int(current_x), rail_y + 30)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[override]
-        if self._video is None:
+        if self._video is None or self._video.duration_sec <= 0:
             return
         clicked_sec = self._second_for_x(event.position().x(), 18, self._video.duration_sec)
+        # Always scrub to the clicked position so the rail is a usable seek bar.
+        self._current_sec = clicked_sec
+        self.update()
+        self.seek_requested.emit(clicked_sec)
+
+        # If the click landed on (or very near) an event, also select it.
         nearest = None
         nearest_distance = 999999
         for semantic_event in self._events:
@@ -123,7 +131,7 @@ class EventTimeline(QWidget):
             if distance < nearest_distance:
                 nearest = semantic_event
                 nearest_distance = distance
-        if nearest is not None and nearest_distance <= max(20, self._video.duration_sec // 20):
+        if nearest is not None and nearest_distance <= max(8, self._video.duration_sec // 20):
             self.event_selected.emit(nearest)
 
     def _x_for_second(self, second: int, margin: int, duration: int) -> float:

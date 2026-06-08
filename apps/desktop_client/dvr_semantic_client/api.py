@@ -411,6 +411,25 @@ class RestApiClient:
     def list_permissions(self) -> dict[str, Any]:
         return self._get_json("/api/permissions")
 
+    # --- management write actions ----------------------------------------
+    def ack_alert(self, alert_id: str) -> dict[str, Any]:
+        return self._post_json_response(f"/api/alerts/{alert_id}/ack")
+
+    def resolve_alert(self, alert_id: str) -> dict[str, Any]:
+        return self._post_json_response(f"/api/alerts/{alert_id}/resolve")
+
+    def generate_accident_summary(self, accident_id: str) -> dict[str, Any]:
+        return self._post_json_response(f"/api/accidents/{accident_id}/summary")
+
+    def review_tasks(self) -> dict[str, Any]:
+        return self._get_json("/api/review/tasks")
+
+    def submit_review(self, event_id: str, decision: str, note: str = "") -> dict[str, Any]:
+        return self._post_json_response(
+            f"/api/review/tasks/{event_id}/decision",
+            {"decision": decision, "note": note},
+        )
+
 
 def event_to_json(event: SemanticEvent) -> dict[str, object]:
     data = asdict(event)

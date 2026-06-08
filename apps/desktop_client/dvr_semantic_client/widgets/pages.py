@@ -32,6 +32,29 @@ from PySide6.QtWidgets import (
 from .charts import BarPoint, CategoryPieChart, PieSlice, TrendBarChart
 
 
+def _safe_call(api_client: Any | None, method: str, default: Any):
+    """Call ``api_client.method()`` defensively.
+
+    Returns ``default`` when there is no client, the method is missing (e.g.
+    MockApiClient), or the call raises (offline / backend error). Lets the
+    management pages bind real backend data without breaking mock/offline mode.
+    """
+    if api_client is None:
+        return default
+    fn = getattr(api_client, method, None)
+    if fn is None:
+        return default
+    try:
+        result = fn()
+        return result if result is not None else default
+    except Exception:
+        return default
+
+
+def _has_action(api_client: Any | None, method: str) -> bool:
+    return api_client is not None and callable(getattr(api_client, method, None))
+
+
 def panel() -> QFrame:
     frame = QFrame()
     frame.setProperty("role", "panel")
@@ -567,8 +590,27 @@ def video_library_page(api_client: Any | None = None) -> QWidget:
     return VideoLibraryPage(api_client)
 
 
-def review_page() -> QWidget:
-    page, root = page_shell("人工复核中心", "2026年03月27日 · 审核员 reviewer01 · 低置信事件确认")
+def review_page(api_client: Any | None = None) -> QWidget:
+    tasks_data = (_safe_call(api_client, "review_tasks", {}) or {}).get("items", [])
+    page, root = page_shell("人工复核中心", "低置信事件人工确认（实时后端队列）")
+    _state = {"event_id": "", "title": ""}
+    _refs: dict = {}
+
+    def _conf_pct(value) -> int:
+        try:
+            return int(float(value) * 100)
+        except (TypeError, ValueError):
+            return 0
+
+    def _select(task: dict) -> None:
+        _state["event_id"] = task.get("event_id", "")
+        _state["title"] = task.get("title", "")
+        if _refs.get("surface") is not None:
+            _refs["surface"].setText(
+                f"{task.get('title','事件')}\n\n置信度 {_conf_pct(task.get('confidence'))}% · {task.get('event_type','')}"
+            )
+        if _refs.get("chip") is not None:
+            _refs["chip"].setText(f"当前: {task.get('title','—')}")
 
     body = QHBoxLayout()
     body.setSpacing(14)
@@ -580,20 +622,17 @@ def review_page() -> QWidget:
     queue_header = QHBoxLayout()
     queue_header.addWidget(title("任务队列"))
     queue_header.addStretch()
-    queue_header.addWidget(status_chip("剩余 12", "high"))
+    queue_header.addWidget(status_chip(f"剩余 {len(tasks_data)}", "high" if tasks_data else "low"))
     queue_layout.addLayout(queue_header)
-    queue_layout.addWidget(muted("置信度 < 80% 自动入队，紧急事件置顶"))
+    queue_layout.addWidget(muted("低置信事件自动入队，点击「复核」选中后在右侧提交结论"))
     tasks_widget = QWidget()
+    tasks_widget.setStyleSheet("background: transparent;")
     tasks_inner = QVBoxLayout(tasks_widget)
     tasks_inner.setContentsMargins(0, 0, 0, 0)
     tasks_inner.setSpacing(6)
-    for priority, plate, event, conf, time_str, kind in [
-        ("紧急", "沪A·88888", "疑似路口碰撞事件", "68%", "03-27 10:22", "high"),
-        ("普通", "粤B·00001", "违章掉头识别", "72%", "03-27 11:15", "mid"),
-        ("普通", "—", "施工围挡占道检测", "79%", "14:22–14:23", "mid"),
-        ("普通", "—", "异常停车与连续鸣笛", "74%", "09:15–09:16", "mid"),
-        ("存疑", "—", "夜间逆行行为记录", "71%", "21:08–21:09", "info"),
-    ]:
+    if not tasks_data:
+        tasks_inner.addWidget(muted("队列为空（或离线 / Mock 模式，连接真实后端后显示）。"))
+    for task in tasks_data:
         item_frame = QFrame()
         item_frame.setStyleSheet(
             "QFrame { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; }"
@@ -602,15 +641,19 @@ def review_page() -> QWidget:
         item_lay = QHBoxLayout(item_frame)
         item_lay.setContentsMargins(10, 8, 10, 8)
         item_lay.setSpacing(8)
-        item_lay.addWidget(status_chip(priority, kind))
+        conf = _conf_pct(task.get("confidence"))
+        item_lay.addWidget(status_chip(f"{conf}%", "high" if conf < 75 else "mid"))
         info = QVBoxLayout()
-        top_lbl = QLabel(f"{plate}  {event}")
+        top_lbl = QLabel(task.get("title", "事件"))
         top_lbl.setStyleSheet("color:#0F172A;font-size:12px;font-weight:700;")
-        bot_lbl = QLabel(f"置信度 {conf} · {time_str}")
+        bot_lbl = QLabel(f"{task.get('event_type','')} · {str(task.get('created_at',''))[:16].replace('T',' ')}")
         bot_lbl.setStyleSheet("color:#64748B;font-size:11px;")
         info.addWidget(top_lbl)
         info.addWidget(bot_lbl)
         item_lay.addLayout(info, 1)
+        pick = action_button("复核")
+        pick.clicked.connect(lambda _c=False, t=task: _select(t))
+        item_lay.addWidget(pick)
         tasks_inner.addWidget(item_frame)
     tasks_inner.addStretch()
     tasks_scroll = QScrollArea()
@@ -627,13 +670,14 @@ def review_page() -> QWidget:
     wb_title = QLabel("复核视频工作台")
     wb_title.setStyleSheet("color:#E2E8F0;font-size:16px;font-weight:800;")
     workbench_layout.addWidget(wb_title)
-    surface = QLabel("碰撞主体 (89%)\n\n02:14 / 05:00")
+    surface = QLabel("点击左侧「复核」选择一条待确认事件")
     surface.setAlignment(Qt.AlignmentFlag.AlignCenter)
     surface.setMinimumHeight(300)
     surface.setStyleSheet(
         "QLabel { background:#020617; color:#CBD5E1; border-radius:18px; "
         "border:1px solid #334155; font-size:18px; font-weight:700; }"
     )
+    _refs["surface"] = surface
     workbench_layout.addWidget(surface, 1)
     frame_row = QHBoxLayout()
     for text in ["关键帧 02:14", "遮挡帧 02:18", "远景帧 02:25"]:
@@ -655,7 +699,9 @@ def review_page() -> QWidget:
     form_header = QHBoxLayout()
     form_header.addWidget(title("复核判定与标注"))
     form_header.addStretch()
-    form_header.addWidget(status_chip("当前: 施工围挡占道", "info"))
+    current_chip = status_chip("当前: 未选择", "info")
+    _refs["chip"] = current_chip
+    form_header.addWidget(current_chip)
     form_layout.addLayout(form_header)
     form_layout.addWidget(muted("选择复核结论、补充备注，提交后写入审计日志"))
     radio_buttons = []
@@ -680,21 +726,48 @@ def review_page() -> QWidget:
     action_row = QHBoxLayout()
     action_row.addWidget(_wip_button("保存草稿"))
     action_row.addStretch()
-    action_row.addWidget(_wip_button("提交复核结果", "primary"))
+    submit_btn = action_button("提交复核结果", "primary")
+
+    def _submit() -> None:
+        if not _state["event_id"]:
+            QMessageBox.information(page.window(), "请选择任务", "请先在左侧任务队列点击「复核」选中一条事件。")
+            return
+        if not _has_action(api_client, "submit_review"):
+            QMessageBox.information(page.window(), "离线模式", "Mock 模式下不写入真实复核结论。")
+            return
+        if radio_buttons[1].isChecked():
+            decision = "rejected"
+        elif radio_buttons[2].isChecked():
+            decision = "pending"
+        else:
+            decision = "confirmed"
+        try:
+            api_client.submit_review(_state["event_id"], decision, note.toPlainText())
+            QMessageBox.information(page.window(), "提交成功", f"已写入复核结论「{decision}」：{_state['title']}")
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "提交失败", str(exc))
+
+    submit_btn.clicked.connect(_submit)
+    action_row.addWidget(submit_btn)
     form_layout.addLayout(action_row)
     body.addWidget(form, 3)
     root.addLayout(body, 1)
     return page
 
 
-def alerts_page() -> QWidget:
-    page, root = page_shell("告警管理中心", "告警引擎在线 · 2026年03月27日")
+def alerts_page(api_client: Any | None = None) -> QWidget:
+    summary = _safe_call(api_client, "alerts_summary", {}) or {}
+    page, root = page_shell("告警管理中心", "告警引擎在线 · 实时后端数据")
     metrics = QGridLayout()
     metrics.setSpacing(14)
-    metrics.addWidget(metric_card("今日严重告警", "12", "High Risk", "#EF4444"), 0, 0)
-    metrics.addWidget(metric_card("普通告警", "45", "Warning", "#F59E0B"), 0, 1)
-    metrics.addWidget(metric_card("今日已处理", "128", "Completed", "#2563EB"), 0, 2)
-    metrics.addWidget(metric_card("响应平均耗时", "1.5 min", "Efficiency", "#4F46E5"), 0, 3)
+    try:
+        avg_txt = f"{float(summary.get('avg_response_minutes', 0) or 0):.1f} min"
+    except (TypeError, ValueError):
+        avg_txt = "—"
+    metrics.addWidget(metric_card("未处理告警", str(summary.get("open_count", "—")), "Open", "#EF4444"), 0, 0)
+    metrics.addWidget(metric_card("今日告警", str(summary.get("today_count", "—")), "Today", "#F59E0B"), 0, 1)
+    metrics.addWidget(metric_card("已处理", str(summary.get("resolved_count", "—")), "Resolved", "#2563EB"), 0, 2)
+    metrics.addWidget(metric_card("平均响应", avg_txt, "Efficiency", "#4F46E5"), 0, 3)
     root.addLayout(metrics)
 
     list_panel = panel()
@@ -704,20 +777,72 @@ def alerts_page() -> QWidget:
     list_header = QHBoxLayout()
     list_header.addWidget(title("实时告警列表"))
     list_header.addStretch()
-    list_header.addWidget(_wip_button("全部"))
-    list_header.addWidget(_wip_button("严重", "primary"))
+    refresh_btn = action_button("刷新")
+    list_header.addWidget(refresh_btn)
     list_layout.addLayout(list_header)
-    list_layout.addWidget(
-        table(
-            ["告警时间", "事件类型", "视频源", "置信度", "状态", "操作"],
-            [
-                ["13:45:22", "剧烈碰撞检测", "VID_0327_112", "98.5%", "待处理", "查看 / 确认"],
-                ["13:30:15", "车辆刮擦风险", "VID_0327_109", "82.1%", "处理中", "查看"],
-                ["12:10:44", "违章停车检测", "VID_0327_088", "75.4%", "已归档", "-"],
-                ["11:42:01", "道路障碍物", "VID_0327_072", "88.7%", "待处理", "查看 / 确认"],
-            ],
-        )
-    )
+
+    rows_host = QWidget()
+    rows_host.setStyleSheet("background: transparent;")
+    rows_layout = QVBoxLayout(rows_host)
+    rows_layout.setContentsMargins(0, 0, 0, 0)
+    rows_layout.setSpacing(8)
+    list_layout.addWidget(rows_host)
+
+    sev_cn = {"high": "严重", "medium": "普通", "low": "低危"}
+    sev_kind = {"high": "high", "medium": "mid", "low": "info"}
+    status_cn = {"open": "待处理", "acknowledged": "处理中", "resolved": "已归档"}
+
+    def _do(fn, alert_id: str, ok_msg: str) -> None:
+        try:
+            fn(alert_id)
+            QMessageBox.information(page.window(), "操作成功", ok_msg)
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "操作失败", str(exc))
+        _rebuild()
+
+    def _rebuild() -> None:
+        while rows_layout.count():
+            item = rows_layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        items = (_safe_call(api_client, "list_alerts", {}) or {}).get("items", [])
+        if not items:
+            rows_layout.addWidget(muted("暂无告警（或处于离线 / Mock 模式，连接真实后端后显示）"))
+            return
+        for a in items:
+            row = QFrame()
+            row.setStyleSheet(
+                "QFrame{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;}"
+                "QLabel{background:transparent;border:none;}"
+            )
+            rl = QHBoxLayout(row)
+            rl.setContentsMargins(12, 8, 12, 8)
+            rl.setSpacing(10)
+            sev = a.get("severity", "")
+            rl.addWidget(status_chip(sev_cn.get(sev, sev or "—"), sev_kind.get(sev, "info")))
+            info = QVBoxLayout()
+            t = QLabel(a.get("title", "事件"))
+            t.setStyleSheet("color:#0F172A;font-size:13px;font-weight:700;")
+            sub = QLabel(f"{str(a.get('created_at',''))[:19].replace('T',' ')} · {a.get('event_id','')}")
+            sub.setStyleSheet("color:#64748B;font-size:11px;")
+            info.addWidget(t)
+            info.addWidget(sub)
+            rl.addLayout(info, 1)
+            st = a.get("status", "")
+            rl.addWidget(status_chip(status_cn.get(st, st or "—"), "low" if st == "resolved" else "mid"))
+            if st != "resolved" and _has_action(api_client, "ack_alert"):
+                if st == "open":
+                    ack = action_button("确认")
+                    ack.clicked.connect(lambda _c=False, i=a.get("id", ""): _do(api_client.ack_alert, i, "已确认告警"))
+                    rl.addWidget(ack)
+                res = action_button("处置", "primary")
+                res.clicked.connect(lambda _c=False, i=a.get("id", ""): _do(api_client.resolve_alert, i, "已处置告警"))
+                rl.addWidget(res)
+            rows_layout.addWidget(row)
+
+    refresh_btn.clicked.connect(_rebuild)
+    _rebuild()
     root.addWidget(list_panel, 2)
 
     lower = QHBoxLayout()
@@ -769,33 +894,35 @@ def alerts_page() -> QWidget:
     return page
 
 
-def accidents_page() -> QWidget:
-    page, root = page_shell("事故与风险发现面板", "业务视角的自动化事故摘要呈现与空间态势分布")
+def accidents_page(api_client: Any | None = None) -> QWidget:
+    page, root = page_shell("事故与风险发现面板", "业务视角的自动化事故摘要与态势分布（实时后端数据）")
     body = QHBoxLayout()
     body.setSpacing(14)
 
-    feed = QVBoxLayout()
+    feed_host = QWidget()
+    feed_host.setStyleSheet("background: transparent;")
+    feed = QVBoxLayout(feed_host)
+    feed.setContentsMargins(0, 0, 0, 0)
     feed.setSpacing(14)
-    for heading, chip, time_text, plate, summary, accent, kind in [
-        (
-            "南山区深南大道科苑立交段侧向碰撞",
-            "高危变道",
-            "14:22:15 · 2026-03-27",
-            "粤B·88888 · 94% 置信度",
-            "白色 SUV 在路口右转时未充分观察侧方来车，与直行黑色轿车发生侧向剐蹭。系统建议回放原片、建立证据包并进入归档流程。",
-            "#EF4444",
-            "high",
-        ),
-        (
-            "滨河大道行人鬼探头横穿致紧急刹车",
-            "行人鬼探头",
-            "09:15:33 · 2026-03-27",
-            "Near-miss · 87% 置信度",
-            "画面左前方绿化带区域突然跑出行人，本车触发车道偏离警告并紧急制动，最终在约 1.2 米处停稳。",
-            "#F59E0B",
-            "mid",
-        ),
-    ]:
+
+    risk_accent = {"high": "#EF4444", "medium": "#F59E0B", "low": "#22C55E"}
+    risk_kind = {"high": "high", "medium": "mid", "low": "low"}
+    risk_cn = {"high": "高危", "medium": "中危", "low": "低危"}
+
+    def _summarize(acc_id: str, label: QLabel) -> None:
+        try:
+            res = api_client.generate_accident_summary(acc_id) or {}
+            label.setText(res.get("summary", "") or "（已生成）")
+            QMessageBox.information(page.window(), "摘要已生成", "大模型事故摘要已更新。")
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "生成失败", str(exc))
+
+    items = (_safe_call(api_client, "list_accidents", {}) or {}).get("items", [])
+    if not items:
+        feed.addWidget(muted("暂无事故 / 风险记录（或处于离线 / Mock 模式，连接真实后端后显示）。"))
+    for a in items:
+        risk = a.get("risk_level", "medium")
+        accent = risk_accent.get(risk, "#F59E0B")
         card = QFrame()
         card.setProperty("role", "panel")
         card.setStyleSheet(
@@ -806,34 +933,35 @@ def accidents_page() -> QWidget:
         layout = QVBoxLayout(card)
         layout.setContentsMargins(22, 18, 22, 18)
         top = QHBoxLayout()
-        icon_lbl = QLabel("⚠" if accent == "#EF4444" else "⚡")
-        icon_lbl.setStyleSheet(
-            f"color:{accent}; font-size:20px; padding-right:6px;"
-        )
-        title_label = QLabel(heading)
+        icon_lbl = QLabel("⚠")
+        icon_lbl.setStyleSheet(f"color:{accent}; font-size:20px; padding-right:6px;")
+        title_label = QLabel(a.get("title", "风险事件"))
         title_label.setStyleSheet("color:#0F172A;font-size:16px;font-weight:800;")
         title_label.setWordWrap(True)
         top.addWidget(icon_lbl)
         top.addWidget(title_label, 1)
-        top.addWidget(status_chip(chip, kind))
+        top.addWidget(status_chip(risk_cn.get(risk, "风险"), risk_kind.get(risk, "mid")))
         layout.addLayout(top)
         time_row = QHBoxLayout()
-        time_row.addWidget(muted(time_text))
-        plate_chip = status_chip(plate, "muted")
-        time_row.addWidget(plate_chip)
+        time_row.addWidget(muted(f"{str(a.get('created_at',''))[:19].replace('T',' ')} · {a.get('event_id','')}"))
         time_row.addStretch()
         layout.addLayout(time_row)
         summary_title = QLabel("大语言模型自动浓缩摘要")
         summary_title.setStyleSheet(f"color:{accent};font-size:12px;font-weight:700;")
         layout.addWidget(summary_title)
-        layout.addWidget(muted(summary))
+        summary_lbl = muted(a.get("summary", "") or "（点击下方按钮生成摘要）")
+        layout.addWidget(summary_lbl)
         actions = QHBoxLayout()
-        actions.addWidget(_wip_button("回放原片与标注", "primary"))
+        if _has_action(api_client, "generate_accident_summary"):
+            gen = action_button("重新生成摘要", "primary")
+            gen.clicked.connect(lambda _c=False, i=a.get("id", ""), lbl=summary_lbl: _summarize(i, lbl))
+            actions.addWidget(gen)
         actions.addWidget(_wip_button("建立证据包并归档"))
         actions.addStretch()
         layout.addLayout(actions)
         feed.addWidget(card)
-    body.addLayout(feed, 3)
+    feed.addStretch()
+    body.addWidget(feed_host, 3)
 
     side = dark_panel()
     side_layout = QVBoxLayout(side)
@@ -909,14 +1037,24 @@ def evidence_page() -> QWidget:
     return page
 
 
-def daily_report_page() -> QWidget:
-    page, root = page_shell("全天业务报告", "2026年03月27日业务汇总与趋势分析")
+def daily_report_page(api_client: Any | None = None) -> QWidget:
+    report = _safe_call(api_client, "daily_report", {}) or {}
+
+    def _n(key: str, default: int) -> str:
+        v = report.get(key, default)
+        try:
+            return f"{int(v):,}"
+        except (TypeError, ValueError):
+            return str(v)
+
+    date_txt = report.get("date", "今日")
+    page, root = page_shell("全天业务报告", f"{date_txt} 业务汇总与趋势分析（实时后端数据）")
     metrics = QGridLayout()
     metrics.setSpacing(14)
-    metrics.addWidget(metric_card("处理视频", "127", "今日"), 0, 0)
-    metrics.addWidget(metric_card("关键事件", "342", "今日"), 0, 1)
-    metrics.addWidget(metric_card("检索次数", "1,204", "今日"), 0, 2)
-    metrics.addWidget(metric_card("导出证据", "89", "今日", "#F59E0B"), 0, 3)
+    metrics.addWidget(metric_card("处理视频", _n("processed_video_count", 127), date_txt), 0, 0)
+    metrics.addWidget(metric_card("关键事件", _n("identified_event_count", 342), date_txt), 0, 1)
+    metrics.addWidget(metric_card("检索次数", _n("semantic_query_count", 1204), date_txt), 0, 2)
+    metrics.addWidget(metric_card("导出证据", _n("evidence_export_count", 89), date_txt, "#F59E0B"), 0, 3)
     root.addLayout(metrics)
 
     body = QHBoxLayout()
@@ -986,55 +1124,75 @@ def daily_report_page() -> QWidget:
     summary_layout = QVBoxLayout(summary)
     summary_layout.setContentsMargins(22, 20, 22, 20)
     summary_layout.addWidget(title("业务总结"))
-    summary_layout.addWidget(muted("今日系统处理视频127个，识别关键事件342起，检索请求1204次，证据导出89份。事件主要集中在南山区和福田区，侧向碰撞和行人鬼探头为主要类型。系统运行稳定，无重大异常。"))
-    summary_layout.addWidget(_wip_button("导出PDF报告", "primary"))
+    summary_text = report.get("risk_summary") or (
+        "系统运行稳定。连接真实后端后，本段展示由当日事件聚合得到的风险总结。"
+    )
+    summary_layout.addWidget(muted(summary_text))
+    if _has_action(api_client, "export_daily_report"):
+        export_btn = action_button("导出日报", "primary")
+
+        def _export() -> None:
+            try:
+                res = api_client.export_daily_report() or {}
+                path = res.get("export_path", "") if isinstance(res, dict) else ""
+                QMessageBox.information(page.window(), "导出成功", f"全天业务日报已生成：\n{path}")
+            except Exception as exc:  # pragma: no cover - UI path
+                QMessageBox.warning(page.window(), "导出失败", str(exc))
+
+        export_btn.clicked.connect(_export)
+        summary_layout.addWidget(export_btn)
+    else:
+        summary_layout.addWidget(_wip_button("导出PDF报告", "primary"))
     right.addWidget(summary, 1)
     body.addLayout(right, 2)
     root.addLayout(body, 1)
     return page
 
 
-def settings_page() -> QWidget:
-    page, root = page_shell("系统参数与模型配置", "模型供应商、抽帧间隔、置信阈值和接口安全策略")
+def settings_page(api_client: Any | None = None) -> QWidget:
+    model_cfg = _safe_call(api_client, "model_settings", {}) or {}
+    sec_cfg = _safe_call(api_client, "security_settings", {}) or {}
+    page, root = page_shell("系统参数与模型配置", "模型、存储与接口安全策略（实时后端配置）")
     body = QVBoxLayout()
     body.setSpacing(14)
+
+    def _ro(text: str) -> QLineEdit:
+        edit = QLineEdit(str(text) if text not in (None, "") else "—")
+        edit.setReadOnly(True)
+        return edit
 
     model = panel()
     model_layout = QVBoxLayout(model)
     model_layout.setContentsMargins(22, 20, 22, 20)
     model_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
     model_layout.addWidget(title("多模态大模型引擎 (LLM/VLM)"))
-    model_layout.addWidget(muted("配置用于视频帧理解及语义标签生成的底层模型接口参数。"))
-    provider = QComboBox()
-    provider.addItems(["本地自研多模态模型 (DVR-L1)", "Qwen-VL", "OpenAI Vision", "Mock Adapter"])
-    model_layout.addWidget(muted("模型服务商"))
-    model_layout.addWidget(provider)
-    api_key = QLineEdit("••••••••••••••••••••")
-    api_key.setEchoMode(QLineEdit.EchoMode.Password)
-    model_layout.addWidget(muted("模型 API Key / 安全令牌"))
-    model_layout.addWidget(api_key)
+    model_layout.addWidget(muted("用于视频帧理解与语义标签生成的底层模型接口（后端实时配置）。"))
+    model_layout.addWidget(muted("模型服务商 / 模型"))
+    model_layout.addWidget(_ro(f"{model_cfg.get('provider','—')} · {model_cfg.get('model_name','—')}"))
     model_layout.addWidget(muted("API Endpoint"))
-    endpoint = QLineEdit("https://api.internal-dvr.net/v1/semantic")
-    model_layout.addWidget(endpoint)
-    model_layout.addWidget(muted("提示：Key 仅在服务端安全容器内解密使用。"))
+    model_layout.addWidget(_ro(model_cfg.get("base_url", "—")))
+    model_layout.addWidget(muted("模型 API Key 状态"))
+    key_ok = bool(model_cfg.get("api_key_configured", False))
+    model_layout.addWidget(status_chip(
+        "已配置（仅本机环境变量，界面不回传明文）" if key_ok else "未配置 · 走 Mock 规则分析",
+        "low" if key_ok else "mid",
+    ))
     body.addWidget(model)
 
     pipeline = panel()
     pipe_layout = QVBoxLayout(pipeline)
     pipe_layout.setContentsMargins(22, 20, 22, 20)
     pipe_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-    pipe_layout.addWidget(title("视频处理与检索阈值"))
-    for label, value in [("抽帧间隔", "5 秒"), ("Embedding 模型", "text-embedding-v3")]:
-        pipe_layout.addWidget(muted(label))
-        pipe_layout.addWidget(QLineEdit(value))
-    pipe_layout.addWidget(muted("语义识别阈值"))
-    slider = QSlider(Qt.Orientation.Horizontal)
-    slider.setRange(0, 100)
-    slider.setValue(72)
-    pipe_layout.addWidget(slider)
-    pipe_layout.addWidget(status_chip("当前阈值 0.72", "info"))
+    pipe_layout.addWidget(title("存储与向量检索"))
+    pipe_layout.addWidget(muted("向量嵌入策略"))
+    pipe_layout.addWidget(status_chip(
+        "sentence-transformers 真实嵌入" if model_cfg.get("use_embeddings") else "哈希向量降级（默认，离线可复现）",
+        "low" if model_cfg.get("use_embeddings") else "info",
+    ))
+    pipe_layout.addWidget(muted("数据库引擎"))
+    pipe_layout.addWidget(_ro(model_cfg.get("db_engine", "—")))
     pipe_layout.addWidget(muted("存储根目录 (Media Root)"))
-    pipe_layout.addWidget(QLineEdit("./var/media"))
+    pipe_layout.addWidget(_ro(model_cfg.get("media_root", "—")))
     body.addWidget(pipeline)
 
     security = panel()
@@ -1042,45 +1200,63 @@ def settings_page() -> QWidget:
     sec_layout.setContentsMargins(22, 20, 22, 20)
     sec_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
     sec_layout.addWidget(title("接口安全鉴权 (Security)"))
-    sec_layout.addWidget(status_chip("Bearer Token 模式启用", "low"))
-    for item in ["OAuth2.0 登录态校验", "证据导出审计日志", "管理员危险操作二次确认", "模型 Key 服务端解密"]:
-        check = QCheckBox(item)
-        check.setChecked(True)
-        sec_layout.addWidget(check)
+    sec_layout.addWidget(status_chip(
+        f"Bearer Token {'启用' if sec_cfg.get('bearer_auth_enabled', True) else '关闭'}", "low"))
+    sec_layout.addWidget(status_chip(
+        f"操作审计 {'启用' if sec_cfg.get('audit_enabled', True) else '关闭'}", "low"))
+    sec_layout.addWidget(muted(f"令牌有效期：{sec_cfg.get('jwt_ttl_min', '—')} 分钟"))
+    sec_layout.addWidget(muted(f"已配置角色：{', '.join(sec_cfg.get('roles', [])) or '—'}"))
     sec_layout.addStretch()
     sec_layout.addWidget(_wip_button("保存所有全局设置", "primary"))
-    sec_layout.addWidget(_wip_button("恢复出厂默认值"))
     body.addWidget(security)
     root.addLayout(body, 1)
     return page
 
 
-def roles_page() -> QWidget:
-    page, root = page_shell("角色与权限管理", "管理员、审核人员、普通用户的权限维护")
+def roles_page(api_client: Any | None = None) -> QWidget:
+    page, root = page_shell("角色与权限管理", "角色 / 权限 / 用户维护（实时后端数据）")
 
-    # Page header button
+    roles_data = (_safe_call(api_client, "list_roles", {}) or {}).get("items", [])
+    users_data = (_safe_call(api_client, "list_users", {}) or {}).get("items", [])
+    _counts: dict[str, int] = {}
+    for _u in users_data:
+        _counts[_u.get("role", "")] = _counts.get(_u.get("role", ""), 0) + 1
+
     hdr_row = QHBoxLayout()
+    hdr_row.addWidget(muted(f"共 {len(roles_data) or '—'} 个角色 · {len(users_data)} 个用户"))
     hdr_row.addStretch()
-    hdr_row.addWidget(_wip_button("新增管理员", "primary"))
+    hdr_row.addWidget(_wip_button("新增用户", "primary"))
     root.addLayout(hdr_row)
 
     roles_layout = QHBoxLayout()
     roles_layout.setSpacing(14)
 
-    _role_perms = [
-        [("✓ 查看绑定车辆视频", True), ("✓ 个人证据链导出", True),
-         ("✗ 跨车队检索", False), ("✗ 审计日志查看", False)],
-        [("✓ 车队视频管理", True), ("✓ 任务与分组管理", True),
-         ("✓ 成员授权管理", True), ("✗ 审计日志查看", False)],
-        [("✓ 跨平台视频检索", True), ("✓ 事故证据收集", True),
-         ("✓ 审计日志查看", True), ("✗ 模型参数微调", False)],
-    ]
+    _accents = ["#2563EB", "#F59E0B", "#EF4444", "#16A34A", "#7C3AED"]
+    _role_rows: list = []
+    for _i, _r in enumerate(roles_data):
+        _rid = _r.get("id", "")
+        _perms = _r.get("permissions", [])
+        if _perms == ["*"]:
+            _perm_pairs = [("✓ 全部权限（管理员）", True)]
+        else:
+            _perm_pairs = [(f"✓ {p}", True) for p in _perms[:6]]
+        _role_rows.append((
+            (_r.get("name", _rid), _rid.upper(), (_rid[:1] or "?").upper(),
+             f"系统角色 {_rid}，共 {len(_perms)} 项权限。", "用户数",
+             str(_counts.get(_rid, 0)), _accents[_i % len(_accents)], "#EFF6FF"),
+            _perm_pairs,
+        ))
+    if not _role_rows:  # offline / mock fallback
+        _role_rows = [
+            (("管理员", "ADMIN", "A", "系统管理员，全部权限。", "用户数", "1", "#2563EB", "#EFF6FF"),
+             [("✓ 全部权限（管理员）", True)]),
+            (("审核人员", "REVIEWER", "R", "复核与审计权限。", "用户数", "1", "#F59E0B", "#FFFBEB"),
+             [("✓ 事件复核", True), ("✓ 审计日志查看", True), ("✗ 用户管理", False)]),
+            (("普通用户", "USER", "U", "检索 / 上传 / 导出权限。", "用户数", "1", "#16A34A", "#F0FDF4"),
+             [("✓ 视频上传", True), ("✓ 语义检索", True), ("✗ 审计日志查看", False)]),
+        ]
 
-    for (name, code, letter, desc, users, count, accent, bg), perms in zip([
-        ("车主 / 驾驶员", "OWNER / DRIVER", "U", "仅可查看及检索与其驾驶证/行驶证绑定的车辆视频。具备个人证据链导出权限。", "管理用户列表", "124", "#2563EB", "#EFF6FF"),
-        ("车队管理员", "FLEET MANAGER", "M", "可管理车队视频源、处理任务、车辆分组与成员授权。", "管理用户列表", "8", "#F59E0B", "#FFFBEB"),
-        ("交通巡查员", "TRAFFIC INSPECTOR", "I", "具备跨平台视频检索权限，用于事故复盘及违章证据收集，受审计日志监控。", "管理用户列表", "4", "#EF4444", "#FEF2F2"),
-    ], _role_perms):
+    for (name, code, letter, desc, users, count, accent, bg), perms in _role_rows:
         card = QFrame()
         card.setStyleSheet(
             f"QFrame[role='panel'] {{ background:#FFFFFF; border:1px solid #E2E8F0; "

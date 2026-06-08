@@ -109,6 +109,9 @@ class EventDetailPanel(QFrame):
         self._metric_relevance = _MetricBlock("相关度")
         self._metric_review = _MetricBlock("复核状态")
         self._metrics_container = QWidget()
+        # Transparent so the dark panel shows in the gaps/rounded corners between
+        # the three metric blocks (otherwise the global light bg leaks as white).
+        self._metrics_container.setStyleSheet("background: transparent;")
         self._metrics_layout = QHBoxLayout(self._metrics_container)
         self._metrics_layout.setContentsMargins(0, 0, 0, 0)
         self._metrics_layout.setSpacing(8)
