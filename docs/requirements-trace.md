@@ -15,7 +15,7 @@
 | FR-09 模型配置 / 用户角色权限 | 后端已实现 / 桌面端未联调 | settings / users / roles / permissions API；密钥只读配置状态，不返回明文 | 吕霄阳 |
 | NFR 鉴权 + 角色 | 已实现 | `services/auth.py` bcrypt + PyJWT；`require_auth` / `require_role` | 吕霄阳 |
 | NFR-05 输入校验 / 资源保护 | 已加固（HTTPS 部署期提供） | `/stream` 鉴权 + 短时效签名 ticket；`/media` 仅公开 `frames`/`thumbnails`；上传 ≤10GB（`DVR_SEMANTIC_MAX_UPLOAD_BYTES`，超限 413）；生产强制非默认 `DVR_SEMANTIC_JWT_SECRET`；HTTPS 由反代终止（代码内未内建） | 吕霄阳 |
-| NFR-04 性能指标 | 检索已基准 / 其余未实测 | `test_perf_benchmark.py` 对 300 条事件断言检索 <4s；跳转≤1s/导出≤30s/2h 预处理≤8min/50 并发仍需真实负载压测，列为后续验证项 | 倪羽辰 |
+| NFR-04 性能指标 | 单请求达标 / 50 并发不达标 | 单请求检索 <4s（`test_perf_benchmark.py`，300 条事件）；`tools/load_test.py` 实测 50 并发 500 请求：p50≈2.5s、**p95≈6.9s 超 4s 预算**、错误率 0.2%，瓶颈为单 uvicorn worker + SQLite 写串行（每次检索写 SearchQuery/Result）。改善方向：多 worker（`--workers`）+ PostgreSQL + 异步化。跳转≤1s/导出≤30s/2h 预处理≤8min 仍需真机压测 | 倪羽辰 |
 | FR-03 检索召回质量 | 已加测 | `test_search_recall.py`：自然语言（不含类别名词）top-1 + 负样本断言；关键词别名扩充自然语句同义词 | 倪羽辰 |
 | FR-06 第三方接口 | 已实现（API-Key 鉴权，默认关闭） | `GET /api/integration/events[/{id}]` 只读已确认事件；`X-Api-Key` 校验，`DVR_SEMANTIC_INTEGRATION_API_KEYS` 配置，未配置返回 503 | 倪羽辰 |
 | NFR-02 任务可靠性 / 重试 | 已实现 | `services/retry.py` 指数退避（已接入模型调用）；`POST /api/videos/{id}/retry` 幂等重投失败任务（reviewer/admin） | 倪羽辰 |

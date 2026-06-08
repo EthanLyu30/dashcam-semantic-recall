@@ -18,11 +18,13 @@ def main() -> int:
 
     from .widgets.login_dialog import LoginContext, LoginDialog
     from .widgets.main_window import MainWindow
+    from .widgets.branding import make_logo_icon
 
     from PySide6.QtGui import QFont
 
     app = QApplication(sys.argv)
     app.setApplicationName("Dashcam Semantic Recall")
+    app.setWindowIcon(make_logo_icon())
 
     base_font = QFont("Microsoft YaHei UI", 10)
     base_font.setStyleStrategy(
@@ -55,6 +57,23 @@ def main() -> int:
         )
 
     window = MainWindow(api_client, login_ctx, base_url=base_url)
-    window.resize(1440, 920)
+    window.setWindowIcon(make_logo_icon())
+
+    # Size the window to FIT the available screen so the bottom of each page is
+    # never pushed off-screen (which previously made pages look un-scrollable and
+    # truncated their content). Leave a small margin and centre on screen.
+    screen = app.primaryScreen()
+    avail = screen.availableGeometry() if screen else None
+    if avail is not None:
+        w = min(1440, avail.width() - 40)
+        h = min(920, avail.height() - 40)
+        window.resize(max(960, w), max(600, h))
+        window.move(
+            avail.x() + (avail.width() - window.width()) // 2,
+            avail.y() + (avail.height() - window.height()) // 2,
+        )
+    else:
+        window.resize(1280, 800)
+    window.setMinimumSize(900, 560)
     window.show()
     return app.exec()

@@ -154,6 +154,17 @@ python apps/desktop_client/main.py
 | `reviewer` | `review123` | 审核员 | 复核相关接口 + 审计日志 |
 | `demo` | `demo123` | 普通用户 | 检索、上传、导出 |
 
+#### 方式 C：Docker Compose（PostgreSQL + 后端一键起）
+
+```powershell
+docker compose up --build
+# API: http://127.0.0.1:8000   Swagger: /docs
+```
+
+后端容器内置 ffmpeg 并连 PostgreSQL；桌面端仍在宿主机运行，按方式 B 终端 2 指向 `http://127.0.0.1:8000`。
+
+> 性能自测：后端启动后可跑 `python tools/load_test.py --requests 500 --concurrency 50` 输出吞吐/错误率/p95（NFR-04 自测，结果见 `docs/requirements-trace.md`）。
+
 ---
 
 ### 三、演示主流程（真后端模式）

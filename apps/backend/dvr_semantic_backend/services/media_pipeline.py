@@ -30,6 +30,16 @@ _CHECKSUM_PREFIX_BYTES = 4 * 1024 * 1024
 _THUMBNAIL_WIDTH = 640
 
 
+def _ffmpeg_bin() -> str:
+    """Resolve the ffmpeg executable (honours FFMPEG_BIN, else PATH)."""
+    return os.getenv("FFMPEG_BIN", "").strip() or "ffmpeg"
+
+
+def _ffprobe_bin() -> str:
+    """Resolve the ffprobe executable (honours FFPROBE_BIN, else PATH)."""
+    return os.getenv("FFPROBE_BIN", "").strip() or "ffprobe"
+
+
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
@@ -154,7 +164,7 @@ def probe_metadata(video_id: str) -> dict:
     if not source_path.exists():
         raise FileNotFoundError(f"Source missing: {source_path}")
 
-    probe = ffmpeg.probe(str(source_path))
+    probe = ffmpeg.probe(str(source_path), cmd=_ffprobe_bin())
     streams = probe.get("streams", []) or []
     video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
     fmt = probe.get("format", {}) or {}
@@ -231,7 +241,7 @@ def _ensure_mp4_source(source_path: Path, video_id: str) -> Path:
             preset="veryfast",
             pix_fmt="yuv420p",
         )
-        .run(quiet=True, overwrite_output=True)
+        .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
     )
     return mp4_path
 
@@ -270,7 +280,7 @@ def slice_video(video_id: str, segment_sec: int = 30) -> list[str]:
             reset_timestamps=1,
             c="copy",
         )
-        .run(quiet=True, overwrite_output=True)
+        .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
     )
 
     produced = sorted(out_dir.glob("seg_*.mp4"))
@@ -338,7 +348,7 @@ def extract_frames(video_id: str, interval_sec: int = 3) -> list[str]:
             vf=f"fps=1/{interval_sec}",
             **{"q:v": 3},
         )
-        .run(quiet=True, overwrite_output=True)
+        .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
     )
 
     raw_frames = sorted(out_dir.glob("_raw_*.jpg"))
@@ -405,7 +415,7 @@ def generate_thumbnail(video_id: str, at_sec: int = 5) -> str:
         ffmpeg
         .input(str(mp4_source), ss=seek_to)
         .output(str(tmp_path), vframes=1, **{"q:v": 3})
-        .run(quiet=True, overwrite_output=True)
+        .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
     )
 
     with Image.open(tmp_path) as img:

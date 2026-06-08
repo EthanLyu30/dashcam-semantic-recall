@@ -87,16 +87,14 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(96, 12, 96, 12)
         layout.setSpacing(18)
 
-        # 左：品牌 logo 块（圆角彩色方块 + 文字标题）
-        logo_chip = QLabel("DVR")
+        # 左：品牌 logo 块（程序绘制的放大镜 logo + 文字标题）
+        from .branding import make_logo_pixmap
+
+        logo_chip = QLabel()
         logo_chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_chip.setFixedSize(38, 38)
-        logo_chip.setStyleSheet(
-            "QLabel { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, "
-            "stop:0 #4F46E5, stop:1 #2563EB); color: #FFFFFF; "
-            "border-radius: 10px; font-weight: 800; font-size: 11px; "
-            "letter-spacing: 0.5px; }"
-        )
+        logo_chip.setPixmap(make_logo_pixmap(38))
+        logo_chip.setScaledContents(True)
 
         brand_name = QLabel("DVR-S")
         brand_name.setStyleSheet(

@@ -20,7 +20,7 @@ import ffmpeg
 from PIL import Image
 
 from ..db import EventExport, SemanticEvent, Video, session_scope
-from .media_pipeline import media_root
+from .media_pipeline import _ffmpeg_bin, media_root
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ def export_clip(event_id: str, padding_sec: int = 5) -> Path:
             ffmpeg
             .input(str(src), ss=start, to=end)
             .output(str(dst), c="copy")
-            .run(quiet=True, overwrite_output=True)
+            .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
         )
         if not dst.exists() or dst.stat().st_size == 0:
             raise RuntimeError("stream-copy produced empty clip")
@@ -131,7 +131,7 @@ def export_clip(event_id: str, padding_sec: int = 5) -> Path:
                 movflags="+faststart",
                 pix_fmt="yuv420p",
             )
-            .run(quiet=True, overwrite_output=True)
+            .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
         )
     return dst
 
@@ -167,7 +167,7 @@ def export_snapshot(event_id: str) -> Path:
         ffmpeg
         .input(str(src), ss=midpoint)
         .output(str(tmp_path), vframes=1, **{"q:v": 3})
-        .run(quiet=True, overwrite_output=True)
+        .run(cmd=_ffmpeg_bin(), quiet=True, overwrite_output=True)
     )
 
     if not tmp_path.exists() or tmp_path.stat().st_size == 0:

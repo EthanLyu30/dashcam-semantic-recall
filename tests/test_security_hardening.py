@@ -136,7 +136,9 @@ def test_default_secret_refused_in_production(monkeypatch: pytest.MonkeyPatch) -
     for name in list(sys.modules):
         if name.startswith("dvr_semantic_backend"):
             del sys.modules[name]
-    monkeypatch.delenv("DVR_SEMANTIC_JWT_SECRET", raising=False)
+    # Empty (not deleted) so db.py's load_dotenv(override=False) can't re-inject a
+    # value from a developer's local .env — keeps the test hermetic.
+    monkeypatch.setenv("DVR_SEMANTIC_JWT_SECRET", "")
     monkeypatch.setenv("DVR_SEMANTIC_ENV", "production")
     auth = importlib.import_module("dvr_semantic_backend.services.auth")
     assert auth.using_default_jwt_secret() is True

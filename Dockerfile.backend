@@ -1,0 +1,22 @@
+# Backend image: FastAPI + ffmpeg, PostgreSQL-ready.
+FROM python:3.11-slim
+
+# ffmpeg/ffprobe are required by the media pipeline and evidence exporter.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install dependencies first for better layer caching.
+COPY pyproject.toml README.md ./
+COPY apps ./apps
+RUN pip install --no-cache-dir ".[backend,media,ai]"
+
+ENV MEDIA_ROOT=/data/media \
+    DVR_SEMANTIC_DB_URL=postgresql://postgres:postgres@db:5432/dvr_semantic
+
+EXPOSE 8000
+
+# create_app() runs init_db()/seed on startup; --factory calls the factory.
+CMD ["uvicorn", "dvr_semantic_backend.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]

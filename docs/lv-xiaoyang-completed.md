@@ -40,6 +40,11 @@
 - [x] 批量导出测试：`test_exporter.test_export_batch_exports_multiple_events`、`test_export_routes.test_batch_export_route_isolates_failures` / `test_batch_export_empty_request_returns_400`。
 - [x] 同步更新 README / api-contract / requirements-trace / final-stage-delivery 文档。
 
+## 最终阶段新增（桌面端 UI 修复）
+
+- [x] 应用 logo：新增 `widgets/branding.py` 程序绘制放大镜 logo，设为窗口/任务栏图标（`app.setWindowIcon`）并替换顶栏文字方块，修复"缺少 logo"。
+- [x] 页面滚动/截断修复：窗口启动尺寸改为按可用屏幕自适应（`availableGeometry` 取 min 并居中 + `setMinimumSize`），避免窗口高于屏幕导致底部内容被推出屏幕外、看似无法滚动；各页 `page_shell` 的 `QScrollArea` 在视口小于内容时正常出现滚动条（offscreen 实测 scrollMax>0）。
+
 ## 最终阶段新增（P0 安全加固，对抗性审计后收口）
 
 - [x] `/api/videos/{id}/stream` 增加鉴权：接受 Bearer 头或短时效签名 ticket（`/stream-ticket`），供 VLC 直连仍受控（修复 SEC-03）。

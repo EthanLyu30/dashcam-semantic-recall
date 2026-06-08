@@ -79,19 +79,32 @@
 
 - [x] `hybrid_search.KEYWORD_ALIASES` 扩充自然语句同义词；`tests/test_search_recall.py` 用不含类别名词的自然语句断言 top-1 + 负样本。
 - [x] `tests/test_perf_benchmark.py`：300 条事件检索 <4s（NFR-04 检索阈值）。
-- [ ] 真实负载压测（2h/4K 预处理≤8min、50 并发/10RPS、跳转≤1s）仍需真机环境，列为后续。
+- [x] `tools/load_test.py` + 实跑：50 并发 500 请求实测 p50≈2.5s / **p95≈6.9s（超 4s）** / 错误率 0.2%；结论已如实写入 requirements-trace（单 worker + SQLite 写串行瓶颈）。
+- [ ] 改善并发性能：多 worker + PostgreSQL + 检索写库异步化后复测达标（后续）。
+- [ ] 2h/4K 预处理≤8min、跳转≤1s 仍需真机 + ffmpeg + 真实长视频，列为后续。
+
+### 12. ✅ ffmpeg 二进制路径可配（最终阶段新增，已完成）
+
+- [x] `media_pipeline` / `exporter` 的 `ffmpeg.probe` 与 `.run()` 改为传 `cmd=`，真正读取 `FFMPEG_BIN` / `FFPROBE_BIN` 环境变量（此前 `.env.example` 列了这两个变量但代码只认 PATH，属文档与实现不符的 bug）。
+- [x] 本机已落地可用 ffmpeg 6.0（`D:\ffmpeg\bin`），经 API 端到端验证：上传 → preprocess → analyze → `frames_analyzed=4 / events_created=1 / status=indexed`。
+
+### 11. ✅ Docker Compose 一键启动（最终阶段新增，已完成）
+
+- [x] `Dockerfile.backend`（含 ffmpeg）+ `docker-compose.yml`（postgres:16 + 后端，健康检查 + 数据卷）。
+- [x] README 增加 `docker compose up --build` 启动路径。
+- [ ] 注：本机未装 Docker，compose 文件未在本环境实跑验证（需在装有 Docker 的机器 `docker compose up` 确认）。
 
 ---
 
 ## 可选（时间充裕再做）
 
-### 6. Docker Compose 一键启动
+### 6. Docker Compose 一键启动 ✅ 已完成（见第 11 节）
 
-- [ ] 编写 `docker-compose.yml`：包含 PostgreSQL、FastAPI 后端两个服务；当前实现不依赖 pgvector 扩展。
-- [ ] 确保 `docker compose up` 后不需要额外配置即可启动后端。
-- [ ] 更新 README 启动说明。
+- [x] 编写 `docker-compose.yml`：PostgreSQL + FastAPI 后端两个服务（健康检查 + 数据卷）；不依赖 pgvector 扩展。
+- [x] `Dockerfile.backend` 内置 ffmpeg，`docker compose up --build` 即可启动后端。
+- [x] 更新 README 启动说明。
 
-> Docker Compose 属于部署便利项，不阻塞课程 final-stage 交付；当前 README 已提供 SQLite 零安装和 PostgreSQL 手动启动两条路径。
+> Docker Compose 属于部署便利项，不阻塞课程 final-stage 交付；README 现提供 SQLite 零安装、PostgreSQL 手动、Docker Compose 三条路径。
 
 ---
 
