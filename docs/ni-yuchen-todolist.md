@@ -24,7 +24,7 @@
 - [x] `semantic_events.embedding` 列：SQLite 用 `JSON`，PostgreSQL 用 `REAL[]` 原生数组。
 - [x] `init_db()` 在 PG 上自动创建 `cosine_similarity(double precision[], double precision[])` PL/pgSQL 存储函数。
 - [x] `hybrid_search.py` 分叉：PG 使用 `cosine_similarity()` 存储函数在库内做向量排序；SQLite 继续用 Python numpy 余弦降级。
-- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 46 个测试不依赖 PG。
+- [x] `pyproject.toml` 新增 `pytest-env`，`DVR_SEMANTIC_DB_URL=sqlite:///:memory:` 确保 51 个测试不依赖 PG。
 
 ### 3. ✅ 补全人工复核 API（已完成）
 
@@ -45,6 +45,15 @@
 ### 5. ✅ 后端技术实现说明（已完成）
 
 - [x] `docs/backend-tech-notes.md`（298 行）：涵盖 PG 双引擎设计、向量存储、Qwen-VL 接入、事件聚合算法、复核 API、证据导出、鉴权与审计。
+
+### 6. ✅ 证据导出 24h 去重（最终阶段新增，已完成）
+
+落实 SRS FR-05 "24h 内同事件去重，返回已有结果而非重复生成"：
+
+- [x] `services/exporter._recent_success()`：查询 `event_exports` 中同事件、`status=success`、`created_at` 在 24h 窗口内且 zip 仍在磁盘上的最近一条，命中则复用。
+- [x] `export_package(..., force=False)` 默认走去重，`force=True` 强制重新生成；返回新增 `reused` 字段。
+- [x] 接口 `POST /api/events/{id}/export` 透传 `force` 并回传 `reused`，审计日志记录 `reused=...`。
+- [x] 测试：`test_exporter.test_export_package_dedups_within_window`、`test_export_routes.test_export_reuses_recent_package`。
 
 ---
 
@@ -73,9 +82,9 @@
 | 多模态模型接入（Qwen-VL / mock） | `services/model_adapter.py` | ✅ |
 | 帧分析聚合为语义事件 | `services/event_aggregator.py` | ✅ |
 | 混合检索（向量 + 关键词） | `services/hybrid_search.py` | ✅ |
-| 证据导出（snapshot/clip/package） | `services/exporter.py` | ✅ |
+| 证据导出（snapshot/clip/package + 批量 + 24h 去重） | `services/exporter.py` | ✅ lxy 批量导出 + 倪羽辰 24h 去重 |
 | 核心数据库层（双引擎 PG/SQLite） | `db.py` | ✅ lxy 建表 → 倪羽辰升级为 PG 双引擎 |
-| 自动化测试 46 个 | `tests/` | ✅ |
+| 自动化测试 51 个 | `tests/` | ✅ |
 
 ---
 

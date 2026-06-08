@@ -335,6 +335,23 @@ class RestApiClient:
         response.raise_for_status()
         return ExportResponse.from_json(response.json())
 
+    def export_batch(
+        self,
+        event_ids: list[str],
+        include_video: bool = True,
+        include_snapshot: bool = True,
+        include_report: bool = True,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        payload = {
+            "event_ids": list(event_ids),
+            "include_video": include_video,
+            "include_snapshot": include_snapshot,
+            "include_report": include_report,
+            "force": force,
+        }
+        return self._post_json_response("/api/exports/batch", payload)
+
     # --- final-stage operational APIs -------------------------------------
     def dashboard_overview(self) -> dict[str, Any]:
         return self._get_json("/api/dashboard/overview")

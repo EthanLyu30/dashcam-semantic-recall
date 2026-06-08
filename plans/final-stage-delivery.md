@@ -10,7 +10,7 @@
 - [x] AI 模型：确定性 mock 适配器 + OpenAI-compatible DeepSeek / Qwen-VL 适配器；真实 key 通过本机环境变量注入，不提交。
 - [x] 人工复核：复核任务列表、复核决策、修正事件类型/标题/标签、审计留痕。
 - [x] 管理面 API：dashboard、alerts、accidents、reports、settings、users、roles、permissions 均由真实数据库派生。
-- [x] 导出归档：事件证据包 `clip.mp4` / `snapshot.jpg` / `report.json` / `report.md` / `package.zip`，日报 Markdown/JSON 导出。
+- [x] 导出归档：事件证据包 `clip.mp4` / `snapshot.jpg` / `report.json` / `report.md` / `package.zip`；24h 去重复用；受控批量导出 `POST /api/exports/batch`（≤50，失败隔离）；日报 Markdown/JSON 导出。
 - [x] 文档：README、API contract、requirements trace、handoff、backend notes、final-stage checklist。
 
 ## 验收命令
@@ -20,7 +20,7 @@ python -m compileall apps tests
 python -m pytest -q
 ```
 
-当前本机验证口径：`42 passed, 4 skipped`。跳过项与可选桌面/媒体环境有关，不影响后端主链路和 final-stage API 验收。
+当前本机验证口径：`45 passed, 6 skipped`（共 51 个用例）。跳过项与可选桌面/媒体环境及 ffmpeg 相关，不影响后端主链路和 final-stage API 验收。
 
 后端启动后可运行 REST smoke：
 

@@ -12,7 +12,7 @@ import json
 import shutil
 import uuid
 import zipfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
@@ -242,6 +242,49 @@ def export_report(event_id: str) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# De-duplication (FR-05: 24h 内同事件去重，返回已有结果而非重复生成)
+# ---------------------------------------------------------------------------
+
+DEDUP_WINDOW_HOURS = 24
+
+
+def _recent_success(event_id: str, within_hours: int = DEDUP_WINDOW_HOURS) -> Optional[dict]:
+    """Return the most recent successful export for ``event_id`` whose zip is
+    still on disk and was produced within ``within_hours``; else ``None``.
+
+    Implements the FR-05 requirement that repeated export requests for the same
+    event inside a 24h window reuse the existing evidence package instead of
+    re-running ffmpeg.
+    """
+    cutoff = datetime.utcnow() - timedelta(hours=within_hours)
+    with session_scope() as session:
+        row = (
+            session.query(EventExport)
+            .filter(
+                EventExport.event_id == event_id,
+                EventExport.status == "success",
+                EventExport.created_at >= cutoff,
+            )
+            .order_by(EventExport.created_at.desc())
+            .first()
+        )
+        if row is None:
+            return None
+        export_path = row.export_path or ""
+        export_id = row.id
+    # Only honour the cache hit if the artifact still exists on disk.
+    if not export_path or not Path(export_path).exists():
+        return None
+    return {
+        "export_id": export_id,
+        "event_id": event_id,
+        "status": "success",
+        "export_path": export_path,
+        "reused": True,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
 
@@ -251,10 +294,21 @@ def export_package(
     include_video: bool = True,
     include_snapshot: bool = True,
     include_report: bool = True,
+    force: bool = False,
 ) -> dict:
-    """End-to-end export: produce artifacts, zip them, persist EventExport row."""
+    """End-to-end export: produce artifacts, zip them, persist EventExport row.
+
+    Unless ``force`` is set, a successful export for the same event produced in
+    the last :data:`DEDUP_WINDOW_HOURS` hours is reused (FR-05 de-duplication).
+    The returned dict carries ``reused=True`` when a cached package is served.
+    """
     # Sanity check event exists upfront so we don't write a phantom row.
     _load_event_and_video(event_id)
+
+    if not force:
+        cached = _recent_success(event_id)
+        if cached is not None:
+            return cached
 
     export_id = _new_id("exp")
     now = datetime.utcnow()
@@ -313,6 +367,7 @@ def export_package(
             "event_id": event_id,
             "status": "success",
             "export_path": absolute_zip,
+            "reused": False,
         }
     except Exception as exc:
         reason = f"{type(exc).__name__}: {exc}"
@@ -326,6 +381,70 @@ def export_package(
         except Exception:  # pragma: no cover - status update is best-effort
             pass
         raise
+
+
+MAX_BATCH_SIZE = 50
+
+
+def export_batch(
+    event_ids: list[str],
+    operator_id: Optional[str] = None,
+    include_video: bool = True,
+    include_snapshot: bool = True,
+    include_report: bool = True,
+    force: bool = False,
+) -> dict:
+    """Controlled batch export (FR-05): export several events in one request.
+
+    Each event is exported independently via :func:`export_package` (honouring
+    24h de-duplication unless ``force``). A failure on one event does not abort
+    the others — its entry records ``status="failed"`` with the reason. The
+    batch size is capped at :data:`MAX_BATCH_SIZE` to keep the synchronous
+    request bounded.
+    """
+    if not event_ids:
+        raise ValueError("event_ids must not be empty")
+    # De-duplicate the request list while preserving order.
+    unique_ids: list[str] = list(dict.fromkeys(event_ids))
+    if len(unique_ids) > MAX_BATCH_SIZE:
+        raise ValueError(
+            f"batch too large: {len(unique_ids)} events (max {MAX_BATCH_SIZE})"
+        )
+
+    items: list[dict] = []
+    succeeded = 0
+    failed = 0
+    for event_id in unique_ids:
+        try:
+            result = export_package(
+                event_id=event_id,
+                operator_id=operator_id,
+                include_video=include_video,
+                include_snapshot=include_snapshot,
+                include_report=include_report,
+                force=force,
+            )
+            items.append(result)
+            succeeded += 1
+        except Exception as exc:  # one bad event must not sink the batch
+            items.append(
+                {
+                    "export_id": "",
+                    "event_id": event_id,
+                    "status": "failed",
+                    "export_path": "",
+                    "reused": False,
+                    "fail_reason": f"{type(exc).__name__}: {exc}",
+                }
+            )
+            failed += 1
+
+    return {
+        "total": len(unique_ids),
+        "succeeded": succeeded,
+        "failed": failed,
+        "items": items,
+    }
 
 
 def list_exports(event_id: Optional[str] = None, limit: int = 50) -> list[dict]:
@@ -363,5 +482,6 @@ __all__ = [
     "export_snapshot",
     "export_report",
     "export_package",
+    "export_batch",
     "list_exports",
 ]

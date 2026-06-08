@@ -38,10 +38,10 @@
 | 语义事件聚合 | 相邻 ≤10s 同类型帧合并，置信度阈值进复核队列 | 吕霄阳 |
 | 混合检索 | PG 库内向量排序 + Python numpy 降级；关键词重排 | 吕霄阳（框架）/ 倪羽辰（PG 路径） |
 | 人工复核 API | `GET /review/tasks` 分页 + `POST /review/tasks/{id}/decision` 修正写库 | 倪羽辰 |
-| 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包 | 吕霄阳 |
+| 证据导出 | ffmpeg 真切片 + 截图 + JSON/Markdown 摘要 + zip 打包；24h 去重复用；受控批量导出（`POST /api/exports/batch`，≤50，失败隔离） | 吕霄阳（批量 + 路由）/ 倪羽辰（24h 去重） |
 | 鉴权与审计 | bcrypt + PyJWT Bearer Token，三个种子账号，写操作全部留痕 | 吕霄阳 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 46 个自动化用例；当前环境 `42 passed, 4 skipped`，含端到端、导出列表、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳（46个）/ 倪羽辰（测试隔离） |
+| 测试 | 51 个自动化用例；当前环境 `45 passed, 6 skipped`，含端到端、导出列表、24h 去重、批量导出、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳 / 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
 | 按钮响应 | 所有展示型按钮接入 final-stage 演示提示，区分主链路与后续产品化写入流程 | 吕霄阳 |
@@ -199,7 +199,7 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-当前验证输出：`42 passed, 4 skipped`（跳过项为可选桌面/媒体环境相关用例）。
+当前验证输出：`45 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。
 
 后端启动后，可额外运行 final-stage REST smoke：
 
@@ -217,8 +217,8 @@ python tools/final_demo_smoke.py --base-url http://127.0.0.1:8000
 | `test_model_adapter.py` | mock 适配器 + OpenAI 协议解析 + 网络 fallback |
 | `test_event_aggregator.py` | 帧分析驱动 + 滑窗合并 + 状态推进 |
 | `test_hybrid_search.py` | encode + ensure_embeddings + 关键词重排 |
-| `test_exporter.py` | 真 ffmpeg 切片 + zip 打包验证 |
-| `test_export_routes.py` | `/api/exports` 契约响应 + 未知事件导出 404 |
+| `test_exporter.py` | 真 ffmpeg 切片 + zip 打包；24h 去重窗口；批量导出失败隔离 |
+| `test_export_routes.py` | `/api/exports` 契约响应 + 未知事件导出 404 + `/api/exports/batch` 批量 + 去重复用 |
 | `test_auth_audit.py` | JWT 闭环 + bcrypt + 角色 + 审计日志 |
 | `test_api_integration.py` | 端到端 login→upload→process→search→export |
 | `test_final_stage_api.py` | dashboard / alerts / accidents / reports / settings / users / roles |
@@ -239,7 +239,7 @@ python tools/final_demo_smoke.py --base-url http://127.0.0.1:8000
 | 视频上传 / ffmpeg 抽帧/切片/缩略图 | ✅ 真跑 | `apps/backend/dvr_semantic_backend/services/media_pipeline.py` 调真 ffmpeg |
 | 混合检索（向量召回 + 关键词） | ✅ 真跑 | PG 模式走 `cosine_similarity` 存储函数；SQLite 走 numpy 余弦；装了 `sentence-transformers` 走真向量，否则用 hash-ngram fallback |
 | 人工复核 API | ✅ 真跑 | `GET /review/tasks` + `POST /review/tasks/{id}/decision`，支持修正字段 + 写审计日志 |
-| 证据导出 zip 打包 | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/` |
+| 证据导出 zip 打包（单事件 / 批量 / 24h 去重） | ✅ 真跑 | 真把片段 + 关键帧 + 元数据打 zip 到 `media/exports/`；`POST /api/exports/batch` 批量导出；24h 内同事件复用已有包不重复跑 ffmpeg |
 | 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；本机设置 `MODEL_PROVIDER=qwen/deepseek` + `MODEL_API_KEY` 后走真请求 |
 | VLC 视频回放 | ✅ 真跑 | 客户端用 `python-vlc` 真嵌入播放；未装 VLC 自动降级占位 |
 | 桌面客户端默认数据源 | mock | 未设置 `DVR_SEMANTIC_API_BASE` 时用 `apps/desktop_client/dvr_semantic_client/api.py` 的 `MockApiClient` 演示数据 |
@@ -313,7 +313,7 @@ dashcam-semantic-recall/
 │   ├── IMPL_PLAN.md                # 历史实施清单
 │   ├── final-stage-delivery.md     # 最终交付验收清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 46 个自动化测试
+├── tests/                          # 51 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）

@@ -1,6 +1,6 @@
 # Requirements Trace
 
-最后更新：2026-06-06（final-stage 交付状态）
+最后更新：2026-06-08（final-stage 交付状态 + 导出去重与批量导出补齐）
 
 | 需求 | 当前状态 | 主要落点 | 责任人 |
 | --- | --- | --- | --- |
@@ -9,7 +9,7 @@
 | FR-03 自然语言检索 | 已实现 | `services/hybrid_search.py`、`POST /api/search`；向量降级 + 关键词混合 | 吕霄阳 |
 | FR-04 精准回放 | 已实现 | `widgets/video_player.py` 真 VLC 播放 + seek_to_event；`GET /api/videos/{id}/stream` | 吕霄阳 |
 | FR-05 搜索结果展示 + 时间轴 | 已实现 | `widgets/search_panel.py` + `widgets/timeline.py` + `EventOut.rank_no/similarity_score/answer_text` | 吕霄阳 |
-| FR-06 证据导出 | 已实现 | `services/exporter.py` 真 ffmpeg 切片 + zip 打包；`POST /api/events/{id}/export`；`GET /api/exports` 契约列表 | 吕霄阳 |
+| FR-06 证据导出（单事件 + 24h 去重 + 受控批量） | 已实现 | `services/exporter.py` 真 ffmpeg 切片 + zip 打包；`POST /api/events/{id}/export`（`reused`/`force`，24h 去重）；`POST /api/exports/batch`（受控批量，≤50，失败隔离）；`GET /api/exports` 契约列表 | 吕霄阳（批量导出 + 路由） / 倪羽辰（24h 去重） |
 | FR-07 操作日志 / 查询留痕 | 已实现 | `services/audit.py`、`audit_logs` 表、`X-Request-Id` 中间件、`GET /api/audit/logs` | 吕霄阳 |
 | FR-08 看板 / 告警 / 事故 / 日报 | 已实现 | `services/final_stage.py`、dashboard / alerts / accidents / reports API | 吕霄阳（框架） / 倪羽辰（数据口径） |
 | FR-09 模型配置 / 用户角色权限 | 已实现 | settings / users / roles / permissions API；密钥只读配置状态，不返回明文 | 吕霄阳 |
@@ -18,4 +18,4 @@
 | NFR PostgreSQL 向量检索 | 已实现 | PG `REAL[]` + `cosine_similarity()` 存储函数；SQLite JSON + numpy 降级 | 倪羽辰 |
 | 真多模态模型接入 | 已实现配置路径 | OpenAI 兼容协议，DeepSeek/Qwen key 通过本机环境变量启用，失败自动回退 mock | 倪羽辰 |
 
-测试覆盖：46 个自动化测试；当前环境 `42 passed, 4 skipped`。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles；`test_client_api.py` 覆盖 final-stage REST client。
+测试覆盖：51 个自动化测试；当前环境 `45 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`、`/api/exports/batch` 批量导出与 24h 去重复用；`test_exporter.py` 覆盖单事件导出、去重窗口、批量失败隔离；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles；`test_client_api.py` 覆盖 final-stage REST client。

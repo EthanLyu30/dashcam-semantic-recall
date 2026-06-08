@@ -24,7 +24,7 @@
 
 - [x] 完整后端服务实现：auth、audit、media_pipeline、model_adapter、hybrid_search、exporter、event_aggregator。
 - [x] SQLite 核心数据库层（videos/events/search/export/audit 表）。
-- [x] 46 个自动化测试已验证（当前环境 `42 passed, 4 skipped`）。
+- [x] 51 个自动化测试已验证（当前环境 `45 passed, 6 skipped`）。
 - [x] Qt6 全部 11 个页面精化：QPainter 自绘图表、VLC 视频播放、登录对话框。
 - [x] 主题样式对齐原型（nav active、border-l-4 结果卡、KPI 图标块、panel 圆角）。
 - [x] 页面滚动修复：`page_shell` 包装 `QScrollArea`，内容不再被截断。
@@ -32,6 +32,13 @@
 - [x] 无响应按钮修复：所有展示型按钮接入 `_wip_button()` 统一提示。
 - [x] Phase 2 HTML 报告（15 张截图、幻灯片框架）。
 - [x] README 中文版 + mock vs 真实对照表。
+
+## 最终阶段新增（FR-05 导出收口）
+
+- [x] 受控批量导出：`services/exporter.export_batch()` + `POST /api/exports/batch`，单次 ≤50 个事件、失败隔离、自动去重请求列表。
+- [x] 批量导出客户端方法：`RestApiClient.export_batch()`。
+- [x] 批量导出测试：`test_exporter.test_export_batch_exports_multiple_events`、`test_export_routes.test_batch_export_route_isolates_failures` / `test_batch_export_empty_request_returns_400`。
+- [x] 同步更新 README / api-contract / requirements-trace / final-stage-delivery 文档。
 
 ## 吕霄阳后续只需联调/完善的事项
 

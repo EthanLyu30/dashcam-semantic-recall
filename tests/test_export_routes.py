@@ -108,3 +108,59 @@ def test_export_unknown_event_returns_404(export_route_client) -> None:
     )
 
     assert resp.status_code == 404
+
+
+def test_batch_export_route_isolates_failures(export_route_client) -> None:
+    client, event_id, _, _ = export_route_client
+
+    # The fixture event points at a non-existent source file, so its export
+    # fails; the unknown event also fails. The route must still return 200 with
+    # a per-event breakdown rather than aborting.
+    resp = client.post(
+        "/api/exports/batch",
+        headers=_auth_headers(client),
+        json={"event_ids": [event_id, "evt-missing"]},
+    )
+
+    assert resp.status_code == 200, resp.text
+    payload = resp.json()
+    assert payload["total"] == 2
+    assert payload["succeeded"] + payload["failed"] == 2
+    assert {item["event_id"] for item in payload["items"]} == {event_id, "evt-missing"}
+    missing = next(i for i in payload["items"] if i["event_id"] == "evt-missing")
+    assert missing["status"] == "failed"
+
+
+def test_export_reuses_recent_package(export_route_client) -> None:
+    """A fresh export request returns the cached package within the dedup window."""
+    import zipfile
+
+    client, event_id, export_id, export_path = export_route_client
+    # Materialise the zip the seeded EventExport row points at so the dedup
+    # cache hit is honoured (no ffmpeg needed).
+    with zipfile.ZipFile(export_path, "w") as zf:
+        zf.writestr("report.md", "cached")
+
+    resp = client.post(
+        f"/api/events/{event_id}/export",
+        headers=_auth_headers(client),
+        json={"export_type": "package"},
+    )
+
+    assert resp.status_code == 200, resp.text
+    payload = resp.json()
+    assert payload["reused"] is True
+    assert payload["export_id"] == export_id
+    assert payload["export_path"] == str(export_path)
+
+
+def test_batch_export_empty_request_returns_400(export_route_client) -> None:
+    client, _, _, _ = export_route_client
+
+    resp = client.post(
+        "/api/exports/batch",
+        headers=_auth_headers(client),
+        json={"event_ids": []},
+    )
+
+    assert resp.status_code == 400

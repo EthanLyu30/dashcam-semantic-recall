@@ -138,6 +138,70 @@ def test_export_package_end_to_end(sample_video_bytes: bytes) -> None:
     assert any(r["id"] == result["export_id"] for r in listings)
 
 
+def test_export_package_dedups_within_window(sample_video_bytes: bytes) -> None:
+    """A second export of the same event reuses the existing package (FR-05)."""
+    video_id = media_pipeline.save_upload(
+        file_bytes=sample_video_bytes,
+        original_filename="dedup.mp4",
+        title="dedup smoke",
+        owner_id=None,
+    )
+    event_id = _make_event(video_id, start_sec=2, end_sec=6)
+
+    first = exporter.export_package(event_id)
+    assert first["status"] == "success"
+    assert first["reused"] is False
+
+    second = exporter.export_package(event_id)
+    assert second["status"] == "success"
+    assert second["reused"] is True
+    assert second["export_id"] == first["export_id"]
+    assert second["export_path"] == first["export_path"]
+
+    # force=True bypasses the cache and produces a fresh export id.
+    forced = exporter.export_package(event_id, force=True)
+    assert forced["reused"] is False
+    assert forced["export_id"] != first["export_id"]
+
+    # Only two distinct EventExport rows recorded for this event
+    # (the reused call must not write a phantom row).
+    rows = exporter.list_exports(event_id=event_id)
+    distinct_ids = {r["id"] for r in rows}
+    assert distinct_ids == {first["export_id"], forced["export_id"]}
+
+
+def test_export_batch_exports_multiple_events(sample_video_bytes: bytes) -> None:
+    """Controlled batch export handles several events and isolates failures."""
+    video_id = media_pipeline.save_upload(
+        file_bytes=sample_video_bytes,
+        original_filename="batch.mp4",
+        title="batch smoke",
+        owner_id=None,
+    )
+    event_a = _make_event(video_id, start_sec=2, end_sec=5)
+    event_b = _make_event(video_id, start_sec=6, end_sec=9)
+
+    result = exporter.export_batch([event_a, event_b, "evt-does-not-exist"])
+
+    assert result["total"] == 3
+    assert result["succeeded"] == 2
+    assert result["failed"] == 1
+
+    by_event = {item["event_id"]: item for item in result["items"]}
+    assert by_event[event_a]["status"] == "success"
+    assert by_event[event_b]["status"] == "success"
+    assert by_event["evt-does-not-exist"]["status"] == "failed"
+    assert by_event["evt-does-not-exist"]["fail_reason"]
+
+    # Empty / oversized requests are rejected.
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError):
+        exporter.export_batch([])
+    with _pytest.raises(ValueError):
+        exporter.export_batch([f"e{i}" for i in range(exporter.MAX_BATCH_SIZE + 1)])
+
+
 def test_export_package_failure_records_reason() -> None:
     init_db()
     # Insert a video pointing at a non-existent file, then an event on it.

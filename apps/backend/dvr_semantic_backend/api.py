@@ -27,6 +27,9 @@ from .schemas import (
     AlertListResponse,
     AlertSummaryResponse,
     AuditLogOut,
+    BatchExportItem,
+    BatchExportRequest,
+    BatchExportResponse,
     DashboardDistributionResponse,
     DashboardOverviewResponse,
     DashboardTrendResponse,
@@ -550,6 +553,7 @@ def create_app() -> FastAPI:
                 include_video=body.include_video,
                 include_snapshot=body.include_snapshot,
                 include_report=body.include_report,
+                force=body.force,
             )
         except (KeyError, ValueError):
             raise HTTPException(status_code=404, detail="event not found")
@@ -570,13 +574,47 @@ def create_app() -> FastAPI:
             action="event.export",
             target_type="event",
             target_id=event_id,
-            message=f"export_id={result['export_id']} type={body.export_type}",
+            message=f"export_id={result['export_id']} type={body.export_type} "
+                    f"reused={result.get('reused', False)}",
         )
         return ExportResponse(
             event_id=result["event_id"],
             export_id=result["export_id"],
             status=result["status"],
             export_path=result["export_path"],
+            reused=result.get("reused", False),
+        )
+
+    @app.post("/api/exports/batch", response_model=BatchExportResponse)
+    def export_batch(body: BatchExportRequest, request: Request,
+                     ctx: auth_service.AuthContext = Depends(auth_service.require_auth)
+                     ) -> BatchExportResponse:
+        """Controlled batch export (FR-05): export multiple events at once."""
+        try:
+            result = exporter_service.export_batch(
+                event_ids=body.event_ids,
+                operator_id=ctx.user_id,
+                include_video=body.include_video,
+                include_snapshot=body.include_snapshot,
+                include_report=body.include_report,
+                force=body.force,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="event.export.batch",
+            target_type="event",
+            target_id=",".join(body.event_ids[:5]),
+            message=f"total={result['total']} ok={result['succeeded']} "
+                    f"fail={result['failed']}",
+        )
+        return BatchExportResponse(
+            total=result["total"],
+            succeeded=result["succeeded"],
+            failed=result["failed"],
+            items=[BatchExportItem(**item) for item in result["items"]],
         )
 
     @app.get("/api/exports", response_model=ExportListResponse)

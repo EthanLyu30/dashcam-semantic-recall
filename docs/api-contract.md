@@ -712,7 +712,7 @@ Response:
 
 ### POST `/api/events/{event_id}/export`
 
-当前实现为同步创建证据导出包。
+当前实现为同步创建证据导出包。**24h 去重（FR-05）**：同一事件在 24 小时内已成功导出且包文件仍在磁盘上时，直接复用既有包（`reused=true`），不再重复跑 ffmpeg；传 `force=true` 可强制重新生成。
 
 Request:
 
@@ -722,8 +722,7 @@ Request:
   "include_video": true,
   "include_snapshot": true,
   "include_report": true,
-  "pre_buffer_sec": 3,
-  "post_buffer_sec": 3
+  "force": false
 }
 ```
 
@@ -734,7 +733,38 @@ Response:
   "event_id": "evt-scratch-001",
   "export_id": "exp-evt-scratch-001",
   "status": "success",
-  "export_path": "D:/.../var/media/exports/evt-scratch-001/package.zip"
+  "export_path": "D:/.../var/media/exports/evt-scratch-001/package.zip",
+  "reused": false
+}
+```
+
+### POST `/api/exports/batch`
+
+受控批量导出（FR-05 "single **or controlled-batch** export"）。单次最多 50 个事件；逐个独立导出（沿用 24h 去重），单个失败不影响其余，失败项在 `items` 中以 `status="failed"` + `fail_reason` 标注。空列表或超量返回 400。
+
+Request:
+
+```json
+{
+  "event_ids": ["evt-scratch-001", "evt-obstacle-003"],
+  "include_video": true,
+  "include_snapshot": true,
+  "include_report": true,
+  "force": false
+}
+```
+
+Response:
+
+```json
+{
+  "total": 2,
+  "succeeded": 2,
+  "failed": 0,
+  "items": [
+    { "event_id": "evt-scratch-001", "export_id": "exp-aaa", "status": "success", "export_path": ".../package.zip", "reused": false, "fail_reason": "" },
+    { "event_id": "evt-obstacle-003", "export_id": "exp-bbb", "status": "success", "export_path": ".../package.zip", "reused": false, "fail_reason": "" }
+  ]
 }
 ```
 
@@ -981,7 +1011,7 @@ Response:
 
 `main` 当前 final-stage 版本已实现以下接口组：
 
-1. 主链路：`auth`、`videos`、`process/analyze`、`search`、`events`、`export`、`audit`。
+1. 主链路：`auth`、`videos`、`process/analyze`、`search`、`events`、`export`（单事件 + 24h 去重 + `POST /api/exports/batch` 批量）、`audit`。
 2. 复核链路：`GET /api/review/tasks`、`POST /api/review/tasks/{event_id}/decision`。
 3. 管理面：`dashboard`、`alerts`、`accidents`、`reports`、`settings`、`users`、`roles`、`permissions`。
 4. 媒体资源：`/media/**` 静态挂载和 `GET /api/videos/{video_id}/stream`。

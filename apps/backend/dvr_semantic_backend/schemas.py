@@ -91,6 +91,7 @@ class ExportRequest(BaseModel):
     include_video: bool = True
     include_snapshot: bool = True
     include_report: bool = True
+    force: bool = False
 
 
 class ExportResponse(BaseModel):
@@ -98,6 +99,31 @@ class ExportResponse(BaseModel):
     export_id: str
     status: str
     export_path: str
+    reused: bool = False
+
+
+class BatchExportRequest(BaseModel):
+    event_ids: list[str]
+    include_video: bool = True
+    include_snapshot: bool = True
+    include_report: bool = True
+    force: bool = False
+
+
+class BatchExportItem(BaseModel):
+    event_id: str
+    export_id: str = ""
+    status: str
+    export_path: str = ""
+    reused: bool = False
+    fail_reason: str = ""
+
+
+class BatchExportResponse(BaseModel):
+    total: int
+    succeeded: int
+    failed: int
+    items: list[BatchExportItem]
 
 
 class ExportListItem(BaseModel):
