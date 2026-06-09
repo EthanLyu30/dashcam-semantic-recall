@@ -96,6 +96,11 @@ class VideoPlayerPanel(QFrame):
         self._vlc_module: Any = self._probe_vlc()
         self._vlc_available = self._vlc_module is not None
         self._timeline_slot: QVBoxLayout | None = None
+        # VLC binding is deferred until the panel is actually shown — see
+        # showEvent. Binding before the window exists leaves the native video
+        # window unparented from the card, so it overpaints the controls below.
+        self._pending_url: tuple[str, str] | None = None
+        self._native_realized = False
 
         # --- 视频画面承载（VLC 把 surface 绑到原生子窗口）---------------------
         self.video_frame = QFrame()
@@ -326,6 +331,36 @@ class VideoPlayerPanel(QFrame):
             self._sync_time()
             return
 
+        # Defer the actual VLC bind until the panel is shown, so the native
+        # video window is created as a real child of the (already realized)
+        # video card and gets clipped to it — never overpainting the controls.
+        self._pending_url = (url, title)
+        if self.isVisible():
+            self._bind_pending_media()
+        else:
+            self.surface_label.setText(self._placeholder_text("loaded-vlc", title))
+            self._surface_stack.setCurrentWidget(self.surface_label)
+            self.status.setText(f"准备播放：{title}")
+        self._sync_time()
+
+    def showEvent(self, event) -> None:  # type: ignore[override]
+        super().showEvent(event)
+        if self._vlc_available and not self._native_realized:
+            try:
+                # Realize the CARD's native window first, then the surface, so
+                # the surface HWND is parented to (and clipped by) the card.
+                self.video_card.winId()
+                self.video_frame.winId()
+            except Exception:
+                pass
+            self._native_realized = True
+        if self._pending_url is not None:
+            self._bind_pending_media()
+
+    def _bind_pending_media(self) -> None:
+        if self._pending_url is None or not self._vlc_player:
+            return
+        url, title = self._pending_url
         try:
             media = self._vlc_instance.media_new(url)
             self._vlc_player.set_media(media)
@@ -336,7 +371,7 @@ class VideoPlayerPanel(QFrame):
             self.status.setText(f"VLC 加载视频失败：{exc}")
             self.surface_label.setText(self._placeholder_text("stream-failed", title))
             self._surface_stack.setCurrentWidget(self.surface_label)
-        self._sync_time()
+        self._pending_url = None
 
     def toggle_playback(self) -> None:
         if self._vlc_available and self._vlc_player and self._vlc_player.get_media():
