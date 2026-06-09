@@ -38,7 +38,8 @@ from dvr_semantic_backend.services import (  # noqa: E402
 )
 
 
-def ingest(path: Path, title: str, owner_id: str | None) -> dict:
+def ingest(path: Path, title: str, owner_id: str | None,
+           interval_sec: int | None = None) -> dict:
     if not path.exists():
         raise SystemExit(f"file not found: {path}")
 
@@ -51,8 +52,11 @@ def ingest(path: Path, title: str, owner_id: str | None) -> dict:
     )
     print(f"      video_id = {video_id}")
 
-    print("[2/3] 预处理（探测 → 切片 → 抽帧 → 缩略图）…")
-    pre = media_pipeline.run_preprocess(video_id)
+    if interval_sec:
+        print(f"[2/3] 预处理（探测 → 切片 → 每 {interval_sec}s 抽帧 → 缩略图）…")
+    else:
+        print("[2/3] 预处理（探测 → 切片 → 抽帧 → 缩略图）…")
+    pre = media_pipeline.run_preprocess(video_id, frame_interval_sec=interval_sec)
     print(f"      segments={pre.get('segments')} frames={pre.get('frames')} "
           f"duration={pre.get('duration_sec')}s")
 
@@ -89,9 +93,14 @@ def main() -> None:
     parser.add_argument("path", type=Path, help="path to the video file")
     parser.add_argument("--title", default="", help="display title")
     parser.add_argument("--owner", default=None, help="owner user id (optional)")
+    parser.add_argument(
+        "--interval", type=int, default=None,
+        help="frame sampling interval in seconds (wider = fewer model calls; "
+             "good for multi-hour clips). Defaults to FRAME_INTERVAL_SEC env.",
+    )
     args = parser.parse_args()
 
-    result = ingest(args.path, args.title, args.owner)
+    result = ingest(args.path, args.title, args.owner, interval_sec=args.interval)
     print("\n=== 事件汇总 ===")
     print(json.dumps(result["events"], ensure_ascii=False, indent=2))
     print(f"\nvideo_id={result['video_id']} "
