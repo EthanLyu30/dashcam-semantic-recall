@@ -125,7 +125,11 @@ class VideoPlayerPanel(QFrame):
             "#videoCard { background: #020617; border-radius: 18px; "
             "border: 1px solid #1E293B; }"
         )
-        self.video_card.setMinimumHeight(260)
+        # FIXED height (no vertical stretch). A stretchy video_card tried to
+        # resize on maximize, and its native surface desynced from the layout —
+        # shoving the controls up into the picture. A fixed height keeps the
+        # surface geometry stable so the controls always stay below it.
+        self.video_card.setFixedHeight(330)
         self._surface_stack = QStackedLayout(self.video_card)
         # 内缩几像素，让卡片的圆角描边在原生视频四周露出来
         self._surface_stack.setContentsMargins(5, 5, 5, 5)
@@ -135,11 +139,15 @@ class VideoPlayerPanel(QFrame):
         self.surface = self.surface_label  # 兼容旧引用
 
         if self._vlc_available:
-            # 关键：把卡片与内嵌画面都设为原生窗口。Windows 会把子原生窗口
-            # （VLC 画面）裁剪到父原生窗口（video_card）内，画面边界正好止于
-            # 卡片底边，永远不会盖到下方独立的控制条。
-            self.video_card.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
+            # The VLC surface must be a native window (for set_hwnd). But a
+            # native child normally PROMOTES its ancestors to native too, and a
+            # native video_card desyncs from the layout on maximize — shoving
+            # the controls up into the video. WA_DontCreateNativeAncestors keeps
+            # the card (and the rest) as ordinary Qt widgets that track the
+            # layout; only the surface is native, and its geometry follows the
+            # card's layout slot, so the controls always stay below it.
             self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
+            self.video_frame.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
 
         # --- 标题行 -----------------------------------------------------------
         self.title = QLabel("视频回放")
@@ -228,9 +236,13 @@ class VideoPlayerPanel(QFrame):
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(12)
         layout.addLayout(header)
-        layout.addWidget(self.video_card, 1)   # 画面区伸展占主空间
+        layout.addWidget(self.video_card)       # 固定高度，画面区
         layout.addWidget(self.control_bar)      # 控制条独立在画面下方
         layout.addWidget(self._timeline_host)
+        # No trailing stretch: the panel is content-sized in the right column
+        # (see main_window), so its internal vertical layout is fully fixed and
+        # never redistributes on window resize — which is what corrupted the
+        # native video's sibling positions on maximize.
 
         self.timer = QTimer(self)
         self.timer.setInterval(500 if self._vlc_available else 1000)
@@ -347,9 +359,9 @@ class VideoPlayerPanel(QFrame):
         super().showEvent(event)
         if self._vlc_available and not self._native_realized:
             try:
-                # Realize the CARD's native window first, then the surface, so
-                # the surface HWND is parented to (and clipped by) the card.
-                self.video_card.winId()
+                # Realize the surface's native window now that the panel is in
+                # the shown widget tree, so set_hwnd binds to a correctly-placed
+                # window that tracks later layout resizes (e.g. maximize).
                 self.video_frame.winId()
             except Exception:
                 pass

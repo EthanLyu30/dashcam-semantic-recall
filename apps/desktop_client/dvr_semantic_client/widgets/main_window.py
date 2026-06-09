@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSplitter,
     QStackedWidget,
     QStatusBar,
@@ -234,12 +235,23 @@ class MainWindow(QMainWindow):
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(24, 24, 24, 24)
         right_layout.setSpacing(18)
-        right_layout.addWidget(self.player, 3)
-        # Tall enough that the three metric values (置信度/相关度/复核状态),
-        # summary and tags are never clipped — 200px cut them off before.
-        self.detail.setMinimumHeight(280)
-        self.detail.setMaximumHeight(340)
-        right_layout.addWidget(self.detail, 1)
+        # Give the player enough height for its full (fixed) content — header +
+        # video + controls + timeline — so the column can never squeeze it and
+        # shove the native video over the controls. It does NOT stretch.
+        self.player.setMinimumHeight(610)
+        right_layout.addWidget(self.player)
+        # Detail panel lives in a scroll area: it takes the remaining space and
+        # scrolls when the window is short (the vertical scrollbar the user
+        # asked for) instead of competing with the player for height. No min
+        # height here, so the scroll area is free to shrink.
+        detail_scroll = QScrollArea()
+        detail_scroll.setWidget(self.detail)
+        detail_scroll.setWidgetResizable(True)
+        detail_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        detail_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        detail_scroll.viewport().setStyleSheet("background: transparent;")
+        right_layout.addWidget(detail_scroll, 1)
 
         splitter.addWidget(right_panel)
         splitter.setStretchFactor(0, 2)
