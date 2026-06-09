@@ -235,7 +235,10 @@ class MainWindow(QMainWindow):
         right_layout.setContentsMargins(24, 24, 24, 24)
         right_layout.setSpacing(18)
         right_layout.addWidget(self.player, 3)
-        self.detail.setMaximumHeight(200)
+        # Tall enough that the three metric values (置信度/相关度/复核状态),
+        # summary and tags are never clipped — 200px cut them off before.
+        self.detail.setMinimumHeight(280)
+        self.detail.setMaximumHeight(340)
         right_layout.addWidget(self.detail, 1)
 
         splitter.addWidget(right_panel)
@@ -273,16 +276,21 @@ class MainWindow(QMainWindow):
 
     def _load_initial_state(self) -> None:
         try:
-            self.videos = self.api_client.list_videos()
+            videos = self.api_client.list_videos()
         except Exception as exc:  # pragma: no cover - manual UI recovery
             QMessageBox.warning(self, "API error", f"Failed to load videos:\n{exc}")
-            self.videos = ()
+            videos = ()
 
+        # Feature the richest recording first (longest = most analysed frames /
+        # events), so the search page opens on a real, well-populated clip.
+        self.videos = tuple(
+            sorted(videos, key=lambda v: getattr(v, "duration_sec", 0) or 0, reverse=True)
+        )
         self.search_panel.set_videos(self.videos)
         if self.videos:
             self._load_video_into_player(self.videos[0])
             self.timeline.set_video(self.videos[0])
-            self.run_search(self.videos[0].id, "帮我找出疑似剐蹭的时间段")
+            self.run_search(self.videos[0].id, "违停、剐蹭、异常停车等风险事件")
 
     def run_search(self, video_id: str, query: str) -> None:
         try:

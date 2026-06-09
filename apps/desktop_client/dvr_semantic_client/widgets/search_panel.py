@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QFrame,
@@ -37,13 +37,29 @@ class SearchPanel(QFrame):
             "letter-spacing: 1px; background: transparent; border: none;"
         )
 
+        def _field_label(text: str) -> QLabel:
+            lbl = QLabel(text)
+            lbl.setStyleSheet(
+                "color: #475569; font-size: 11px; font-weight: 800; "
+                "letter-spacing: 0.5px; background: transparent; border: none;"
+            )
+            return lbl
+
+        self.video_label = _field_label("① 选择视频")
         self.video_select = QComboBox()
+        self.video_select.setMinimumHeight(34)
+
+        self.query_label = _field_label("② 用自然语言描述要找的画面")
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText("例如：查找3月27日下午14点左右，路口发生白色SUV剐蹭的画面")
+        self.query_input.setMinimumHeight(36)
+        self.query_input.setClearButtonEnabled(True)
+        self.query_input.setPlaceholderText("例如：路口处一辆车突然加塞别车 / 行人鬼探头横穿 / 追尾碰撞")
         self.query_input.returnPressed.connect(self._emit_search)
 
         search_button = QPushButton("检索")
         search_button.setProperty("variant", "primary")
+        search_button.setMinimumHeight(36)
+        search_button.setCursor(Qt.CursorShape.PointingHandCursor)
         search_button.clicked.connect(self._emit_search)
 
         query_row = QHBoxLayout()
@@ -112,10 +128,20 @@ class SearchPanel(QFrame):
         search_layout = QVBoxLayout(search_box)
         search_layout.setContentsMargins(24, 22, 24, 22)
         search_layout.setSpacing(12)
+        suggest_label = QLabel("③ 或点选推荐查询")
+        suggest_label.setStyleSheet(
+            "color: #475569; font-size: 11px; font-weight: 800; "
+            "letter-spacing: 0.5px; background: transparent; border: none;"
+        )
+
         search_layout.addWidget(title)
         search_layout.addWidget(subtitle)
+        search_layout.addSpacing(4)
+        search_layout.addWidget(self.video_label)
         search_layout.addWidget(self.video_select)
+        search_layout.addWidget(self.query_label)
         search_layout.addLayout(query_row)
+        search_layout.addWidget(suggest_label)
         search_layout.addLayout(self.suggested_layout)
         layout.addWidget(search_box)
         layout.addWidget(self.status)
@@ -138,6 +164,16 @@ class SearchPanel(QFrame):
         self.status.setText(
             f"命中片段 {len(response.results)} 条 · 耗时 {elapsed} · 置信度降序"
         )
+        if not response.results:
+            empty = QLabel("未命中相关片段。\n换个说法，或点选下方推荐查询标签再试。")
+            empty.setWordWrap(True)
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setStyleSheet(
+                "color:#94A3B8; font-size:13px; padding:32px 18px; "
+                "background:transparent; border:none;"
+            )
+            self.result_layout.insertWidget(self.result_layout.count() - 1, empty)
+            return
         for event in response.results:
             card = ResultCard(event)
             card.selected.connect(self.event_selected.emit)
@@ -150,8 +186,14 @@ class SearchPanel(QFrame):
 
     def _emit_search(self) -> None:
         query = self.query_input.text().strip()
-        if query and self.selected_video_id:
-            self.search_requested.emit(self.selected_video_id, query)
+        if not self.selected_video_id:
+            self.status.setText("请先在上方「① 选择视频」中选择一个视频")
+            return
+        if not query:
+            self.status.setText("请输入检索描述，或点选下方推荐查询标签")
+            return
+        self.status.setText("检索中…")
+        self.search_requested.emit(self.selected_video_id, query)
 
     def _use_suggestion(self, text: str) -> None:
         self.query_input.setText(text)

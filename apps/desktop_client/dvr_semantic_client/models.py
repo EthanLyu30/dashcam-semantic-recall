@@ -21,6 +21,7 @@ class VideoRecord:
     thumbnail_url: str = ""
     source_path: str = ""
     fail_reason: str = ""
+    created_at: str = ""
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "VideoRecord":
@@ -32,6 +33,7 @@ class VideoRecord:
             thumbnail_url=str(data.get("thumbnail_url", "")),
             source_path=str(data.get("source_path", "")),
             fail_reason=str(data.get("fail_reason", "")),
+            created_at=str(data.get("created_at", "")),
         )
 
 

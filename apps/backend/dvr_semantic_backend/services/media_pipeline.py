@@ -40,6 +40,19 @@ def _ffprobe_bin() -> str:
     return os.getenv("FFPROBE_BIN", "").strip() or "ffprobe"
 
 
+def _default_frame_interval() -> int:
+    """Frame-sampling cadence in seconds (honours FRAME_INTERVAL_SEC env).
+
+    Lets operators trade vision-model cost against temporal granularity without
+    a code change: longer videos use a wider interval to keep the analysed
+    frame count (and thus model calls) bounded. Defaults to 3s.
+    """
+    try:
+        return max(1, int(os.getenv("FRAME_INTERVAL_SEC", "3")))
+    except (TypeError, ValueError):
+        return 3
+
+
 # ---------------------------------------------------------------------------
 # Path helpers
 # ---------------------------------------------------------------------------
@@ -443,7 +456,7 @@ def generate_thumbnail(video_id: str, at_sec: int = 5) -> str:
 def run_preprocess(
     video_id: str,
     segment_sec: int = 30,
-    frame_interval_sec: int = 3,
+    frame_interval_sec: int | None = None,
 ) -> dict:
     """End-to-end ingest: probe -> slice -> sample frames -> thumbnail.
 
@@ -452,7 +465,12 @@ def run_preprocess(
     vision model" — not a failure). Any exception flips the row to
     ``failed`` with the error string captured in ``fail_reason`` before the
     error propagates to the caller.
+
+    ``frame_interval_sec`` defaults to the ``FRAME_INTERVAL_SEC`` env setting
+    (3s) so the same /process endpoint adapts to long recordings via config.
     """
+    if frame_interval_sec is None:
+        frame_interval_sec = _default_frame_interval()
     try:
         with session_scope() as session:
             video = session.get(Video, video_id)

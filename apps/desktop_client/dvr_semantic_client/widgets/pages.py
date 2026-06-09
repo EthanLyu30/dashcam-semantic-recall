@@ -322,15 +322,32 @@ def overview_page(api_client: Any | None = None) -> QWidget:
     trend_header.addWidget(muted("点击柱体可查看明细"))
     trend_layout.addLayout(trend_header)
     bar_chart = TrendBarChart()
-    bar_chart.set_points([
-        BarPoint("03-21", 28, 120, 42),
-        BarPoint("03-22", 34, 146, 58),
-        BarPoint("03-23", 31, 132, 51),
-        BarPoint("03-24", 39, 158, 66),
-        BarPoint("03-25", 42, 167, 71),
-        BarPoint("03-26", 37, 152, 63),
-        BarPoint("03-27", 48, 184, 82),
-    ])
+    # 真实后端 7 日趋势（dashboard_trends）；离线 / Mock 或全空时回退到示例曲线
+    trends = _safe_call(api_client, "dashboard_trends", {}) or {}
+    t_days = trends.get("days") or []
+    t_events = trends.get("event_counts") or []
+    t_queries = trends.get("query_counts") or []
+    t_load = trends.get("worker_load") or []
+    if t_days and (any(t_events) or any(t_queries)):
+        bar_chart.set_points([
+            BarPoint(
+                t_days[i],
+                int(t_events[i]) if i < len(t_events) else 0,
+                int(t_queries[i]) if i < len(t_queries) else 0,
+                int(float(t_load[i]) * 100) if i < len(t_load) else 0,
+            )
+            for i in range(len(t_days))
+        ])
+    else:
+        bar_chart.set_points([
+            BarPoint("03-21", 28, 120, 42),
+            BarPoint("03-22", 34, 146, 58),
+            BarPoint("03-23", 31, 132, 51),
+            BarPoint("03-24", 39, 158, 66),
+            BarPoint("03-25", 42, 167, 71),
+            BarPoint("03-26", 37, 152, 63),
+            BarPoint("03-27", 48, 184, 82),
+        ])
     trend_layout.addWidget(bar_chart, 1)
     lower.addWidget(trend, 3)
 
@@ -341,13 +358,26 @@ def overview_page(api_client: Any | None = None) -> QWidget:
     dist_layout.addWidget(title("多模态分类分布"))
     dist_layout.addWidget(muted("近 7 天识别到的事件类型占比"))
     pie = CategoryPieChart()
-    pie.set_slices([
-        PieSlice("剐蹭", 86, "#2563EB"),
-        PieSlice("违停", 74, "#F59E0B"),
-        PieSlice("道路障碍", 58, "#EF4444"),
-        PieSlice("异常停车", 41, "#22C55E"),
-        PieSlice("其它", 23, "#A855F7"),
-    ])
+    # 真实后端分类分布（event_distribution）；离线 / Mock 或全空时回退示例
+    _pie_palette = ["#2563EB", "#F59E0B", "#EF4444", "#22C55E", "#A855F7", "#0EA5E9", "#64748B"]
+    dist_items = (_safe_call(api_client, "event_distribution", {}) or {}).get("items") or []
+    if dist_items and any(int(it.get("count", 0) or 0) for it in dist_items):
+        pie.set_slices([
+            PieSlice(
+                str(it.get("label", "未知")),
+                int(it.get("count", 0) or 0),
+                _pie_palette[i % len(_pie_palette)],
+            )
+            for i, it in enumerate(dist_items[:7])
+        ])
+    else:
+        pie.set_slices([
+            PieSlice("剐蹭", 86, "#2563EB"),
+            PieSlice("违停", 74, "#F59E0B"),
+            PieSlice("道路障碍", 58, "#EF4444"),
+            PieSlice("异常停车", 41, "#22C55E"),
+            PieSlice("其它", 23, "#A855F7"),
+        ])
     dist_layout.addWidget(pie, 1)
     lower.addWidget(distribution, 2)
     root.addLayout(lower, 1)
@@ -382,9 +412,21 @@ def overview_page(api_client: Any | None = None) -> QWidget:
     review = panel()
     review_layout = QVBoxLayout(review)
     review_layout.setContentsMargins(22, 20, 22, 20)
-    review_layout.addLayout(section_header("待复核实时动态", "12 待处理"))
-    review_layout.addWidget(compact_card("检测到车辆侧面剐蹭事件", "VID_20260327_1422 · 置信度 68% · 等待复核", "#EF4444"))
-    review_layout.addWidget(compact_card("禁停区域异常停留检测", "VID_20260327_1310 · 置信度 72% · 普通", "#F59E0B"))
+    # 真实后端待复核队列（review_feed）；离线 / Mock 或空时回退示例
+    feed_items = (_safe_call(api_client, "review_feed", {}) or {}).get("items") or []
+    review_layout.addLayout(section_header("待复核实时动态", f"{len(feed_items)} 待处理" if feed_items else "12 待处理"))
+    if feed_items:
+        for it in feed_items[:4]:
+            conf = int(float(it.get("confidence", 0) or 0) * 100)
+            accent = "#EF4444" if conf < 75 else "#F59E0B"
+            review_layout.addWidget(compact_card(
+                str(it.get("title", "待复核事件")),
+                f"{it.get('event_id', '')} · 置信度 {conf}% · {str(it.get('created_at', ''))[:16].replace('T', ' ')}",
+                accent,
+            ))
+    else:
+        review_layout.addWidget(compact_card("检测到车辆侧面剐蹭事件", "VID_20260327_1422 · 置信度 68% · 等待复核", "#EF4444"))
+        review_layout.addWidget(compact_card("禁停区域异常停留检测", "VID_20260327_1310 · 置信度 72% · 普通", "#F59E0B"))
     bottom.addWidget(review, 2)
     root.addLayout(bottom, 1)
     return page
@@ -421,15 +463,46 @@ class VideoLibraryPage(QWidget):
         header_layout.addWidget(self.refresh_button)
         root.addWidget(header)
 
+        # 真实统计：视频总数来自 list_videos，其余来自后端 dashboard_overview。
+        # 离线 / Mock 取不到时回退到示例数字。
+        _ov: dict[str, Any] = {}
+        try:
+            if hasattr(self._api_client, "dashboard_overview"):
+                _ov = self._api_client.dashboard_overview() or {}
+        except Exception:
+            _ov = {}
+        try:
+            _total_videos = len(self._api_client.list_videos())
+        except Exception:
+            _total_videos = 0
+
+        def _ovn(key: str, default: int) -> str:
+            v = _ov.get(key, default)
+            try:
+                return f"{int(v):,}"
+            except (TypeError, ValueError):
+                return str(v)
+
+        if _ov or _total_videos:
+            stat_cards = [
+                ("全部视频", f"{_total_videos:,}", "库内视频总数", "#2563EB"),
+                ("已完成结构化", _ovn("processed_video_count", 0), "可检索", "#22C55E"),
+                ("识别关键事件", _ovn("identified_event_count", 0), "多模态聚合", "#F59E0B"),
+                ("待人工复核", _ovn("pending_review_count", 0), "低置信片段", "#EF4444"),
+                ("语义检索次数", _ovn("semantic_query_count", 0), "累计查询", "#4F46E5"),
+            ]
+        else:
+            stat_cards = [
+                ("全部视频", "3,482", "车队库总量", "#2563EB"),
+                ("正在处理中", "18", "识别队列 65%", "#2563EB"),
+                ("待人工复核", "24", "低置信片段", "#F59E0B"),
+                ("处理失败", "3", "等待重试", "#EF4444"),
+                ("已完成结构化", "3,421", "可检索", "#22C55E"),
+            ]
+
         stats = QHBoxLayout()
         stats.setSpacing(10)
-        for label, value, note, accent in [
-            ("全部视频", "3,482", "车队库总量", "#2563EB"),
-            ("正在处理中", "18", "识别队列 65%", "#2563EB"),
-            ("待人工复核", "24", "低置信片段", "#F59E0B"),
-            ("处理失败", "3", "等待重试", "#EF4444"),
-            ("已完成结构化", "3,421", "可检索", "#22C55E"),
-        ]:
+        for label, value, note, accent in stat_cards:
             sc = QFrame()
             sc.setProperty("role", "panel")
             sc.setStyleSheet(
@@ -484,7 +557,7 @@ class VideoLibraryPage(QWidget):
 
         self.video_table = QTableWidget(0, 6)
         self.video_table.setHorizontalHeaderLabels(
-            ["Video ID / 文件名", "上传时间", "处理状态", "关键事件", "负责人", "操作"]
+            ["Video ID / 文件名", "上传时间", "处理状态", "时长", "负责人", "操作"]
         )
         self.video_table.verticalHeader().setVisible(False)
         self.video_table.setAlternatingRowColors(True)
@@ -514,9 +587,10 @@ class VideoLibraryPage(QWidget):
         for row, video in enumerate(videos):
             mm, ss = divmod(int(getattr(video, "duration_sec", 0) or 0), 60)
             duration = f"{mm:02d}:{ss:02d}"
+            uploaded = str(getattr(video, "created_at", "") or "")[:16].replace("T", " ") or "—"
             cells = [
                 f"{getattr(video, 'id', '')}\n{getattr(video, 'title', '')}",
-                "2026-03-27 14:00",
+                uploaded,
                 str(getattr(video, "status", "")),
                 duration,
                 "system",
@@ -626,7 +700,8 @@ def review_page(api_client: Any | None = None) -> QWidget:
     queue_layout.addLayout(queue_header)
     queue_layout.addWidget(muted("低置信事件自动入队，点击「复核」选中后在右侧提交结论"))
     tasks_widget = QWidget()
-    tasks_widget.setStyleSheet("background: transparent;")
+    tasks_widget.setObjectName("reviewTasksHost")
+    tasks_widget.setStyleSheet("#reviewTasksHost { background: transparent; }")
     tasks_inner = QVBoxLayout(tasks_widget)
     tasks_inner.setContentsMargins(0, 0, 0, 0)
     tasks_inner.setSpacing(6)
@@ -660,6 +735,9 @@ def review_page(api_client: Any | None = None) -> QWidget:
     tasks_scroll.setWidget(tasks_widget)
     tasks_scroll.setWidgetResizable(True)
     tasks_scroll.setFrameShape(QFrame.Shape.NoFrame)
+    # No horizontal scrollbar: let the row compress so the 复核 button stays
+    # visible instead of being pushed off behind a sideways scroll.
+    tasks_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
     queue_layout.addWidget(tasks_scroll, 1)
     body.addWidget(queue, 2)
 
@@ -782,7 +860,10 @@ def alerts_page(api_client: Any | None = None) -> QWidget:
     list_layout.addLayout(list_header)
 
     rows_host = QWidget()
-    rows_host.setStyleSheet("background: transparent;")
+    # Scope to this widget — a bare ``background: transparent`` cascades onto
+    # descendant buttons and clobbers the primary 处置 button's blue fill.
+    rows_host.setObjectName("alertsRowsHost")
+    rows_host.setStyleSheet("#alertsRowsHost { background: transparent; }")
     rows_layout = QVBoxLayout(rows_host)
     rows_layout.setContentsMargins(0, 0, 0, 0)
     rows_layout.setSpacing(8)
@@ -900,7 +981,10 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
     body.setSpacing(14)
 
     feed_host = QWidget()
-    feed_host.setStyleSheet("background: transparent;")
+    # Scope so the transparent host doesn't cascade onto the primary
+    # 重新生成摘要 button (would turn its blue fill transparent).
+    feed_host.setObjectName("accidentsFeedHost")
+    feed_host.setStyleSheet("#accidentsFeedHost { background: transparent; }")
     feed = QVBoxLayout(feed_host)
     feed.setContentsMargins(0, 0, 0, 0)
     feed.setSpacing(14)
@@ -1065,15 +1149,31 @@ def daily_report_page(api_client: Any | None = None) -> QWidget:
     trend_layout.setContentsMargins(22, 20, 22, 20)
     trend_layout.addLayout(section_header("事件识别趋势 (7日)", "报告生成时间: 23:59"))
     chart = TrendBarChart()
-    chart.set_points([
-        BarPoint("03-21", 120, 28, 0),
-        BarPoint("03-22", 138, 31, 0),
-        BarPoint("03-23", 146, 34, 0),
-        BarPoint("03-24", 160, 37, 0),
-        BarPoint("03-25", 174, 41, 0),
-        BarPoint("03-26", 188, 45, 0),
-        BarPoint("03-27", 204, 52, 0),
-    ])
+    _tr = _safe_call(api_client, "dashboard_trends", {}) or {}
+    _td = _tr.get("days") or []
+    _tev = _tr.get("event_counts") or []
+    _tq = _tr.get("query_counts") or []
+    _tl = _tr.get("worker_load") or []
+    if _td and (any(_tev) or any(_tq)):
+        chart.set_points([
+            BarPoint(
+                _td[i],
+                int(_tev[i]) if i < len(_tev) else 0,
+                int(_tq[i]) if i < len(_tq) else 0,
+                int(float(_tl[i]) * 100) if i < len(_tl) else 0,
+            )
+            for i in range(len(_td))
+        ])
+    else:
+        chart.set_points([
+            BarPoint("03-21", 120, 28, 0),
+            BarPoint("03-22", 138, 31, 0),
+            BarPoint("03-23", 146, 34, 0),
+            BarPoint("03-24", 160, 37, 0),
+            BarPoint("03-25", 174, 41, 0),
+            BarPoint("03-26", 188, 45, 0),
+            BarPoint("03-27", 204, 52, 0),
+        ])
     trend_layout.addWidget(chart, 1)
     left.addWidget(trend, 2)
 
@@ -1081,12 +1181,24 @@ def daily_report_page(api_client: Any | None = None) -> QWidget:
     dist_layout = QVBoxLayout(dist)
     dist_layout.setContentsMargins(22, 20, 22, 20)
     dist_layout.addWidget(title("事件类型分布"))
-    for name, pct_int, color in [
-        ("侧向碰撞", 45, "#EF4444"),
-        ("行人鬼探头", 30, "#F59E0B"),
-        ("违停", 15, "#2563EB"),
-        ("其他", 10, "#64748B"),
-    ]:
+    _dpal = ["#EF4444", "#F59E0B", "#2563EB", "#22C55E", "#A855F7", "#64748B"]
+    _ditems = (_safe_call(api_client, "event_distribution", {}) or {}).get("items") or []
+    _dtotal = sum(int(it.get("count", 0) or 0) for it in _ditems)
+    if _ditems and _dtotal > 0:
+        dist_rows = [
+            (str(it.get("label", "未知")),
+             round(int(it.get("count", 0) or 0) * 100 / _dtotal),
+             _dpal[i % len(_dpal)])
+            for i, it in enumerate(_ditems[:5])
+        ]
+    else:
+        dist_rows = [
+            ("侧向碰撞", 45, "#EF4444"),
+            ("行人鬼探头", 30, "#F59E0B"),
+            ("违停", 15, "#2563EB"),
+            ("其他", 10, "#64748B"),
+        ]
+    for name, pct_int, color in dist_rows:
         row = QHBoxLayout()
         name_lbl = muted(name)
         pct_lbl = QLabel(f"{pct_int}%")

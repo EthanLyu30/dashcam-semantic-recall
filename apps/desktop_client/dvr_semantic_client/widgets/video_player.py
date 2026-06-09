@@ -45,7 +45,7 @@ class _PrototypeSurface(QLabel):
         grad.setColorAt(1.0, QColor("#020617"))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(QBrush(grad))
-        painter.drawRoundedRect(target, 18, 18)
+        painter.drawRoundedRect(target, 14, 14)
 
         center = target.center()
         painter.setBrush(QColor(255, 255, 255, 22))
@@ -63,12 +63,19 @@ class _PrototypeSurface(QLabel):
         caption = target.adjusted(24, center.y() + 56 - target.top(), -24, -20)
         painter.drawText(caption, Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop, self.text())
 
+
 class VideoPlayerPanel(QFrame):
     """视频回放面板。
 
-    安装了 ``python-vlc`` 与系统级 VLC 时，将 ``vlc.MediaPlayer`` 嵌入到一个
-    原生 ``QFrame`` 上并真实播放视频；否则降级为静态占位提示，方便仍能演示
-    选中事件后的 seek 联动行为。
+    布局自上而下是三块**互不重叠**的独立区域：
+
+    1. ``video_card`` —— 纯视频显示区。装了 ``python-vlc`` 时把
+       ``vlc.MediaPlayer`` 嵌进卡片内的原生子窗口真实播放；否则降级为占位提示。
+       卡片本身也被标记为原生窗口，于是内嵌的 VLC 原生子窗口会被父卡片裁剪，
+       **绝不会溢出到下方的控制条上**（这正是早期「按钮跑进画面里」的根因）。
+    2. ``control_bar`` —— 独立控制条卡片，有自己的深色背景，承载
+       播放 / -5s / +5s / 进度滑块 / 时间码。视觉上与视频区明显分离。
+    3. 时间轴 + 状态行。
     """
 
     seek_requested = Signal(int)
@@ -90,55 +97,49 @@ class VideoPlayerPanel(QFrame):
         self._vlc_available = self._vlc_module is not None
         self._timeline_slot: QVBoxLayout | None = None
 
-        # 视频画面承载面板（VLC 可以将 surface 直接绑到原生窗口）
+        # --- 视频画面承载（VLC 把 surface 绑到原生子窗口）---------------------
         self.video_frame = QFrame()
         self.video_frame.setObjectName("videoSurface")
-        self.video_frame.setMinimumHeight(200)
         self.video_frame.setStyleSheet(
-            "#videoSurface { background: #020617; border-radius: 18px; "
-            "border: 1px solid #1E293B; }"
+            "#videoSurface { background: #020617; border-radius: 12px; border: none; }"
         )
-        if self._vlc_available:
-            # Only mark the surface itself native. Previously we also set
-            # WA_DontCreateNativeAncestors, which left the embedded VLC window
-            # unclipped by its Qt ancestors so it overpainted the controls below.
-            self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
 
         # 占位 Label，未加载视频或 VLC 不可用时显示
         self.surface_label = _PrototypeSurface(self._placeholder_text("idle"))
         self.surface_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.surface_label.setWordWrap(True)
         self.surface_label.setStyleSheet(
-            "QLabel { background: #020617; border-radius: 18px; "
-            "border: 1px solid #1E293B; color: #CBD5E1; "
-            "font-size: 16px; padding: 28px; line-height: 1.6; }"
+            "QLabel { background: #020617; border-radius: 12px; border: none; "
+            "color: #CBD5E1; font-size: 15px; padding: 24px; line-height: 1.6; }"
         )
-        # 用 QStackedLayout 在 video_frame 和占位 Label 之间切换
-        self.surface_container = QWidget()
-        # Transparent so the dark right-panel shows through the surface's rounded
-        # corners (otherwise the global light background leaks as white corners).
-        self.surface_container.setStyleSheet("background: transparent;")
-        # Bounded band: tall enough to read the video, capped so the controls
-        # always sit clearly below it instead of being overpainted.
-        self.surface_container.setMinimumHeight(200)
-        self.surface_container.setMaximumHeight(460)
-        self._surface_stack = QStackedLayout(self.surface_container)
-        self._surface_stack.setContentsMargins(0, 0, 0, 0)
+
+        # 视频卡片：纯画面区，可自由伸展占满可用高度
+        self.video_card = QFrame()
+        self.video_card.setObjectName("videoCard")
+        self.video_card.setStyleSheet(
+            "#videoCard { background: #020617; border-radius: 18px; "
+            "border: 1px solid #1E293B; }"
+        )
+        self.video_card.setMinimumHeight(260)
+        self._surface_stack = QStackedLayout(self.video_card)
+        # 内缩几像素，让卡片的圆角描边在原生视频四周露出来
+        self._surface_stack.setContentsMargins(5, 5, 5, 5)
         self._surface_stack.addWidget(self.video_frame)
         self._surface_stack.addWidget(self.surface_label)
         self._surface_stack.setCurrentWidget(self.surface_label)
         self.surface = self.surface_label  # 兼容旧引用
 
+        if self._vlc_available:
+            # 关键：把卡片与内嵌画面都设为原生窗口。Windows 会把子原生窗口
+            # （VLC 画面）裁剪到父原生窗口（video_card）内，画面边界正好止于
+            # 卡片底边，永远不会盖到下方独立的控制条。
+            self.video_card.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
+            self.video_frame.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
+
+        # --- 标题行 -----------------------------------------------------------
         self.title = QLabel("视频回放")
         self.title.setStyleSheet(
             "QLabel { color: #F8FAFC; font-size: 16px; font-weight: 800; "
-            "background: transparent; }"
-        )
-        self.timecode = QLabel("00:00")
-        self.timecode.setStyleSheet(
-            "QLabel { color: #60A5FA; "
-            "font-family: 'Cascadia Mono', 'Consolas', monospace; "
-            "font-size: 18px; font-weight: 700; letter-spacing: 1px; "
             "background: transparent; }"
         )
         status_text = "VLC 已就绪 · 等待视频流" if self._vlc_available else "占位模式 · 点击检索结果可同步跳转"
@@ -147,25 +148,39 @@ class VideoPlayerPanel(QFrame):
             "QLabel { color: #94A3B8; font-size: 12px; background: transparent; }"
         )
 
+        self.timecode = QLabel("00:00 / 00:00")
+        self.timecode.setStyleSheet(
+            "QLabel { color: #60A5FA; "
+            "font-family: 'Cascadia Mono', 'Consolas', monospace; "
+            "font-size: 14px; font-weight: 700; letter-spacing: 1px; "
+            "background: transparent; }"
+        )
+
+        # --- 控制条（独立卡片，自带背景，与视频区明显分离）-------------------
         dark_button_qss = (
             "QPushButton { background: #1E293B; border: 1px solid #334155; "
-            "color: #E2E8F0; border-radius: 10px; padding: 6px 14px; }"
+            "color: #E2E8F0; border-radius: 10px; padding: 7px 16px; "
+            "font-size: 13px; font-weight: 700; }"
             "QPushButton:hover { background: #2563EB; border-color: #2563EB; "
             "color: #FFFFFF; }"
             "QPushButton:pressed { background: #1D4ED8; }"
         )
-        self.play_button = QPushButton("播放")
+        self.play_button = QPushButton("▶  播放")
         self.play_button.setStyleSheet(dark_button_qss)
+        self.play_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.play_button.clicked.connect(self.toggle_playback)
-        self.back_button = QPushButton("-5 秒")
+        self.back_button = QPushButton("« 5 秒")
         self.back_button.setStyleSheet(dark_button_qss)
+        self.back_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.back_button.clicked.connect(lambda: self.seek(max(0, self._current_sec - 5)))
-        self.forward_button = QPushButton("+5 秒")
+        self.forward_button = QPushButton("5 秒 »")
         self.forward_button.setStyleSheet(dark_button_qss)
+        self.forward_button.setCursor(Qt.CursorShape.PointingHandCursor)
         self.forward_button.clicked.connect(lambda: self.seek(self._current_sec + 5))
 
         self.slider = QSlider(Qt.Orientation.Horizontal)
         self.slider.setRange(0, 1)
+        self.slider.setCursor(Qt.CursorShape.PointingHandCursor)
         self.slider.sliderMoved.connect(self.seek)
         self.slider.setStyleSheet(
             "QSlider::groove:horizontal { background: #1E293B; height: 6px; "
@@ -173,35 +188,44 @@ class VideoPlayerPanel(QFrame):
             "QSlider::sub-page:horizontal { background: #2563EB; height: 6px; "
             "border-radius: 3px; }"
             "QSlider::handle:horizontal { background: #60A5FA; width: 14px; "
-            "margin: -4px 0; border-radius: 7px; }"
+            "margin: -5px 0; border-radius: 7px; }"
+            "QSlider::handle:horizontal:hover { background: #93C5FD; }"
         )
+
+        self.control_bar = QFrame()
+        self.control_bar.setObjectName("controlBar")
+        self.control_bar.setStyleSheet(
+            "#controlBar { background: #0F172A; border: 1px solid #1E293B; "
+            "border-radius: 14px; }"
+        )
+        control_layout = QHBoxLayout(self.control_bar)
+        control_layout.setContentsMargins(14, 10, 16, 10)
+        control_layout.setSpacing(10)
+        control_layout.addWidget(self.play_button)
+        control_layout.addWidget(self.back_button)
+        control_layout.addWidget(self.forward_button)
+        control_layout.addWidget(self.slider, 1)
+        control_layout.addWidget(self.timecode)
 
         header = QHBoxLayout()
         header.addWidget(self.title)
         header.addStretch()
-        header.addWidget(self.timecode)
-
-        controls = QHBoxLayout()
-        controls.addWidget(self.play_button)
-        controls.addWidget(self.back_button)
-        controls.addWidget(self.forward_button)
-        controls.addWidget(self.slider, 1)
+        header.addWidget(self.status)
 
         # 时间轴 slot：默认空，主窗口可调用 attach_timeline 注入
         self._timeline_host = QWidget()
         self._timeline_host.setStyleSheet("background: transparent;")
         self._timeline_slot = QVBoxLayout(self._timeline_host)
-        self._timeline_slot.setContentsMargins(0, 6, 0, 0)
+        self._timeline_slot.setContentsMargins(0, 2, 0, 0)
         self._timeline_slot.setSpacing(4)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(22, 20, 22, 20)
         layout.setSpacing(12)
         layout.addLayout(header)
-        layout.addWidget(self.surface_container, 1)
-        layout.addLayout(controls)
+        layout.addWidget(self.video_card, 1)   # 画面区伸展占主空间
+        layout.addWidget(self.control_bar)      # 控制条独立在画面下方
         layout.addWidget(self._timeline_host)
-        layout.addWidget(self.status)
 
         self.timer = QTimer(self)
         self.timer.setInterval(500 if self._vlc_available else 1000)
@@ -322,7 +346,7 @@ class VideoPlayerPanel(QFrame):
                 except Exception:
                     pass
                 self._playing = False
-                self.play_button.setText("播放")
+                self.play_button.setText("▶  播放")
                 self.timer.stop()
             else:
                 try:
@@ -331,13 +355,13 @@ class VideoPlayerPanel(QFrame):
                     self.status.setText(f"VLC 播放失败：{exc}")
                     return
                 self._playing = True
-                self.play_button.setText("暂停")
+                self.play_button.setText("⏸  暂停")
                 self.timer.start()
             return
 
         # 占位模式：虚拟进度条
         self._playing = not self._playing
-        self.play_button.setText("暂停" if self._playing else "播放")
+        self.play_button.setText("⏸  暂停" if self._playing else "▶  播放")
         if self._playing:
             self.timer.start()
         else:

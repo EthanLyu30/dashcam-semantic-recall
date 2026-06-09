@@ -104,10 +104,23 @@ class EventDetailPanel(QFrame):
         self.export_button.setEnabled(False)
         self.export_button.clicked.connect(self._emit_export)
 
-        # 三个 metric 色块——只创建一次，后续调 set_state 更新
+        # 三个 metric 色块——只创建一次，后续调 set_state 更新。
+        # 每个都挂 tooltip 解释含义（解决「这仨框有啥用 / 看不懂」）。
         self._metric_confidence = _MetricBlock("置信度")
+        self._metric_confidence.setToolTip(
+            "置信度：多模态大模型判定该帧属于此事件类型的概率。\n"
+            "越高代表模型越确定，低于阈值的会自动进入人工复核队列。"
+        )
         self._metric_relevance = _MetricBlock("相关度")
+        self._metric_relevance.setToolTip(
+            "相关度：当前事件与你输入的检索语句的语义匹配分数。\n"
+            "命中片段按它降序排列；直接点开事件（非检索）时显示「—」。"
+        )
         self._metric_review = _MetricBlock("复核状态")
+        self._metric_review.setToolTip(
+            "复核状态：人工复核进度——待复核 / 复核中 / 已确认 / 已驳回。\n"
+            "在「复核」页提交结论后会回写到这里。"
+        )
         self._metrics_container = QWidget()
         # Transparent so the dark panel shows in the gaps/rounded corners between
         # the three metric blocks (otherwise the global light bg leaks as white).

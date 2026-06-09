@@ -120,6 +120,7 @@ def _video_to_out(v: Video) -> VideoOut:
         thumbnail_url=thumb,
         source_path=v.source_path or "",
         fail_reason=v.fail_reason or "",
+        created_at=v.created_at.isoformat() if v.created_at else "",
     )
 
 

@@ -26,6 +26,7 @@ class VideoOut(BaseModel):
     thumbnail_url: str = ""
     source_path: str = ""
     fail_reason: str = ""
+    created_at: str = ""
 
 
 class VideoListResponse(BaseModel):
