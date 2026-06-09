@@ -84,6 +84,7 @@ class EventDetailPanel(QFrame):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
+        self.setObjectName("eventDetailCard")
         self.setProperty("role", "panel")
         self._event: SemanticEvent | None = None
         self._dark = False
@@ -162,9 +163,13 @@ class EventDetailPanel(QFrame):
 
     def _apply_palette(self) -> None:
         if self._dark:
+            # Solid dark CARD (scoped by id so it doesn't cascade onto the metric
+            # blocks / labels) — gives the detail a visible framed container so
+            # its text reads as contained content, not floating over the panel.
             self.setStyleSheet(
-                "QFrame { background: transparent; border: none; }"
-                "QLabel { background: transparent; border: none; }"
+                "#eventDetailCard { background: #0B1220; border: 1px solid #1E293B; "
+                "border-radius: 16px; }"
+                "#eventDetailCard > QLabel { background: transparent; border: none; }"
             )
             self.title.setStyleSheet(
                 "color: #E2E8F0; font-size: 16px; font-weight: 800;"

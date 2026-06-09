@@ -234,24 +234,53 @@ class MainWindow(QMainWindow):
         right_panel.setProperty("role", "searchRight")
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(24, 24, 24, 24)
-        right_layout.setSpacing(18)
-        # Give the player enough height for its full (fixed) content — header +
-        # video + controls + timeline — so the column can never squeeze it and
-        # shove the native video over the controls. It does NOT stretch.
-        self.player.setMinimumHeight(610)
-        right_layout.addWidget(self.player)
-        # Detail panel lives in a scroll area: it takes the remaining space and
-        # scrolls when the window is short (the vertical scrollbar the user
-        # asked for) instead of competing with the player for height. No min
-        # height here, so the scroll area is free to shrink.
-        detail_scroll = QScrollArea()
-        detail_scroll.setWidget(self.detail)
-        detail_scroll.setWidgetResizable(True)
-        detail_scroll.setFrameShape(QFrame.Shape.NoFrame)
-        detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        detail_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        detail_scroll.viewport().setStyleSheet("background: transparent;")
-        right_layout.addWidget(detail_scroll, 1)
+        right_layout.setSpacing(0)
+
+        # The whole right column (player + detail card) lives in ONE vertical
+        # scroll area. This is the key fix for short screens: when the window is
+        # maximized on a laptop the right column has less height than the player
+        # + detail need, and a plain layout resolves the deficit by SQUEEZING the
+        # player below its content — which collapses the control bar up into the
+        # fixed-height video (the "buttons over the picture" bug that kept coming
+        # back). With a scroll area the player always keeps its full height (so
+        # the controls stay below the video) and the detail keeps its full height
+        # (so it is never cramped); the column simply scrolls — the vertical
+        # scrollbar, behaving like the results list on the left.
+        right_scroll = QScrollArea()
+        right_scroll.setObjectName("rightScroll")
+        right_scroll.setWidgetResizable(True)
+        right_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        right_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        right_scroll.setStyleSheet(
+            "#rightScroll { background: transparent; border: none; }"
+            "QScrollBar:vertical { background: transparent; width: 10px; "
+            "margin: 2px 0 2px 0; }"
+            "QScrollBar::handle:vertical { background: #334155; border-radius: 5px; "
+            "min-height: 36px; }"
+            "QScrollBar::handle:vertical:hover { background: #475569; }"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+            "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { "
+            "background: transparent; }"
+        )
+        right_scroll.viewport().setStyleSheet("background: transparent;")
+
+        right_content = QWidget()
+        right_content.setStyleSheet("background: transparent;")
+        col = QVBoxLayout(right_content)
+        col.setContentsMargins(0, 0, 0, 0)
+        col.setSpacing(18)
+        # Hard floor at the player's content height so it can never be squeezed
+        # (which is what shoved the controls into the video). Inside the scroll
+        # area the player simply keeps this height and the column scrolls.
+        self.player.setMinimumHeight(540)
+        col.addWidget(self.player)
+        # Detail is its own solid dark card (no longer transparent text floating
+        # on the panel). It stretches to fill any spare height on tall screens
+        # and keeps its natural height on short ones (the scroll handles the
+        # overflow).
+        col.addWidget(self.detail, 1)
+        right_scroll.setWidget(right_content)
+        right_layout.addWidget(right_scroll)
 
         splitter.addWidget(right_panel)
         splitter.setStretchFactor(0, 2)

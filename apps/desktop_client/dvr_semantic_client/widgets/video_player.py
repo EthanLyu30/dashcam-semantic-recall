@@ -128,8 +128,9 @@ class VideoPlayerPanel(QFrame):
         # FIXED height (no vertical stretch). A stretchy video_card tried to
         # resize on maximize, and its native surface desynced from the layout —
         # shoving the controls up into the picture. A fixed height keeps the
-        # surface geometry stable so the controls always stay below it.
-        self.video_card.setFixedHeight(330)
+        # surface geometry stable so the controls always stay below it. Kept
+        # compact (source is 360p) so the detail card below it gets real room.
+        self.video_card.setFixedHeight(280)
         self._surface_stack = QStackedLayout(self.video_card)
         # 内缩几像素，让卡片的圆角描边在原生视频四周露出来
         self._surface_stack.setContentsMargins(5, 5, 5, 5)
