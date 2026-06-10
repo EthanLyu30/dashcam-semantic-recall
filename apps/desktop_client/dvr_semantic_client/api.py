@@ -387,6 +387,9 @@ class RestApiClient:
     def list_exports(self) -> dict[str, Any]:
         return self._get_json("/api/exports")
 
+    def list_audit_logs(self, limit: int = 100) -> dict[str, Any]:
+        return self._get_json(f"/api/audit/logs?limit={int(limit)}")
+
     def daily_report(self) -> dict[str, Any]:
         return self._get_json("/api/reports/daily")
 

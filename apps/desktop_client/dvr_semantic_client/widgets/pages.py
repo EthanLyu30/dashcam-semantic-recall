@@ -384,12 +384,30 @@ def overview_page(api_client: Any | None = None) -> QWidget:
 
     bottom = QHBoxLayout()
     bottom.setSpacing(14)
+    # 真实流水线状态：来自 list_videos 的库内视频与结构化进度（原型里这块是
+    # 模拟 GPS 轨迹，系统没有定位数据，改为展示真实的处理链路状态）。
     route = panel()
     route_layout = QVBoxLayout(route)
     route_layout.setContentsMargins(22, 20, 22, 20)
-    route_layout.addLayout(section_header("实时车辆轨迹状态", "实时速度 45 km/h"))
-    route_layout.addWidget(muted("当前位置: 深南大道科苑段 · 起始: 14:15:00 科技园站 · 预达: 14:25:30 车公庙站 · 里程: 4.2 km"))
-    route_info = QLabel("📍 深南大道科苑段  →  车公庙站  |  45 km/h  |  行程 48%")
+    _videos = list(_safe_call(api_client, "list_videos", ()) or ())
+    _total_v = len(_videos)
+    _indexed_v = sum(1 for v in _videos if str(getattr(v, "status", "")) == "indexed")
+    _latest = max(_videos, key=lambda v: str(getattr(v, "created_at", "") or ""), default=None)
+    route_layout.addLayout(section_header("视频处理流水线", f"已结构化 {_indexed_v}/{_total_v}"))
+    if _latest is not None:
+        _mm, _ss = divmod(int(getattr(_latest, "duration_sec", 0) or 0), 60)
+        _up = str(getattr(_latest, "created_at", "") or "")[:16].replace("T", " ") or "—"
+        route_layout.addWidget(muted(
+            f"最新入库: {getattr(_latest, 'title', '—')} · 状态 {getattr(_latest, 'status', '—')} · "
+            f"时长 {_mm:02d}:{_ss:02d} · 上传 {_up}"
+        ))
+        route_info = QLabel(
+            f"📼 {getattr(_latest, 'title', '—')}  |  {_indexed_v}/{_total_v} 可检索  |  "
+            f"上传→转码→抽帧→模型分析→事件聚合"
+        )
+    else:
+        route_layout.addWidget(muted("视频库为空：到「视频流」页上传一段 mp4，流水线状态会实时显示在这里。"))
+        route_info = QLabel("📼 暂无视频  |  上传→转码→抽帧→模型分析→事件聚合")
     route_info.setStyleSheet(
         "color:#2563EB;font-size:13px;font-weight:700;"
         "background:#EFF6FF;border:1px solid #BFDBFE;"
@@ -398,7 +416,7 @@ def overview_page(api_client: Any | None = None) -> QWidget:
     route_layout.addWidget(route_info)
     route_bar = QProgressBar()
     route_bar.setRange(0, 100)
-    route_bar.setValue(48)
+    route_bar.setValue(int(_indexed_v * 100 / _total_v) if _total_v else 0)
     route_bar.setTextVisible(False)
     route_bar.setFixedHeight(8)
     route_bar.setStyleSheet(
@@ -529,19 +547,25 @@ class VideoLibraryPage(QWidget):
         filter_layout = QHBoxLayout(filters)
         filter_layout.setContentsMargins(18, 14, 18, 14)
         filter_layout.setSpacing(10)
-        filename = QLineEdit()
-        filename.setPlaceholderText("文件名 / VideoID，例如 VID_2026...")
-        status = QComboBox()
-        status.addItems(["全部状态", "已完成识别", "正在识别", "待人工复核", "处理失败"])
-        vehicle = QLineEdit()
-        vehicle.setPlaceholderText("车队 / 车辆编号")
-        date_start = QLineEdit()
-        date_start.setPlaceholderText("开始日期 2026-03-01")
-        filter_layout.addWidget(filename, 2)
-        filter_layout.addWidget(status, 1)
-        filter_layout.addWidget(vehicle, 1)
-        filter_layout.addWidget(date_start, 1)
-        filter_layout.addWidget(_wip_button("查询", "primary"))
+        self.filter_name = QLineEdit()
+        self.filter_name.setPlaceholderText("文件名 / VideoID，例如 vid-…")
+        self.filter_status = QComboBox()
+        self.filter_status.addItems(["全部状态", "已完成识别", "正在识别", "处理失败"])
+        self.filter_keyword = QLineEdit()
+        self.filter_keyword.setPlaceholderText("标题关键词，例如 重庆 / Dashcam")
+        self.filter_date = QLineEdit()
+        self.filter_date.setPlaceholderText("起始日期 2026-06-01")
+        filter_layout.addWidget(self.filter_name, 2)
+        filter_layout.addWidget(self.filter_status, 1)
+        filter_layout.addWidget(self.filter_keyword, 1)
+        filter_layout.addWidget(self.filter_date, 1)
+        query_btn = action_button("查询", "primary")
+        query_btn.clicked.connect(self._apply_filters)
+        self.filter_name.returnPressed.connect(self._apply_filters)
+        self.filter_keyword.returnPressed.connect(self._apply_filters)
+        self.filter_date.returnPressed.connect(self._apply_filters)
+        self.filter_status.currentIndexChanged.connect(lambda _i: self._apply_filters())
+        filter_layout.addWidget(query_btn)
         root.addWidget(filters)
 
         progress = panel()
@@ -576,13 +600,53 @@ class VideoLibraryPage(QWidget):
         self.upload_button.setDisabled(busy)
         self.refresh_button.setDisabled(busy)
 
+    _STATUS_GROUPS = {
+        "已完成识别": ("indexed",),
+        "正在识别": ("uploaded", "preprocessing", "preprocessed", "analyzing"),
+        "处理失败": ("failed",),
+    }
+
     def refresh(self) -> None:
         try:
-            videos = self._api_client.list_videos()
+            self._all_videos = tuple(self._api_client.list_videos())
         except Exception as exc:
             QMessageBox.warning(self, "加载失败", f"无法读取视频列表：\n{exc}")
             return
+        self._apply_filters()
 
+    def _apply_filters(self) -> None:
+        videos = list(getattr(self, "_all_videos", ()) or ())
+        name_q = self.filter_name.text().strip().lower()
+        keyword_q = self.filter_keyword.text().strip().lower()
+        date_q = self.filter_date.text().strip()
+        status_label = self.filter_status.currentText()
+        allowed = self._STATUS_GROUPS.get(status_label)
+
+        def _keep(video) -> bool:
+            vid = str(getattr(video, "id", "")).lower()
+            vtitle = str(getattr(video, "title", "")).lower()
+            if name_q and name_q not in vid and name_q not in vtitle:
+                return False
+            if keyword_q and keyword_q not in vtitle:
+                return False
+            if allowed is not None:
+                vstatus = str(getattr(video, "status", "")).lower()
+                if not any(vstatus.startswith(s) for s in allowed):
+                    return False
+            if date_q:
+                created = str(getattr(video, "created_at", "") or "")[:10]
+                if created and created < date_q:
+                    return False
+            return True
+
+        filtered = [v for v in videos if _keep(v)]
+        self._render_rows(filtered)
+        self.progress_label.setText(
+            f"筛选结果：{len(filtered)}/{len(videos)} 条"
+            if len(filtered) != len(videos) else "空闲"
+        )
+
+    def _render_rows(self, videos) -> None:
         self.video_table.setRowCount(len(videos))
         for row, video in enumerate(videos):
             mm, ss = divmod(int(getattr(video, "duration_sec", 0) or 0), 60)
@@ -665,10 +729,16 @@ def video_library_page(api_client: Any | None = None) -> QWidget:
 
 
 def review_page(api_client: Any | None = None) -> QWidget:
-    tasks_data = (_safe_call(api_client, "review_tasks", {}) or {}).get("items", [])
     page, root = page_shell("人工复核中心", "低置信事件人工确认（实时后端队列）")
     _state = {"event_id": "", "title": ""}
     _refs: dict = {}
+
+    _REVIEW_CN = {
+        "pending": "待复核",
+        "reviewing": "复核中",
+        "confirmed": "已确认",
+        "rejected": "已驳回",
+    }
 
     def _conf_pct(value) -> int:
         try:
@@ -676,15 +746,61 @@ def review_page(api_client: Any | None = None) -> QWidget:
         except (TypeError, ValueError):
             return 0
 
+    def _load_thumbnail(task: dict) -> bool:
+        """Fetch the selected event's real keyframe into the workbench surface."""
+        url = str(task.get("thumbnail_url", "") or "")
+        base = str(getattr(api_client, "base_url", "") or "")
+        surface = _refs.get("surface")
+        if not url or not base or surface is None:
+            return False
+        try:
+            from PySide6.QtGui import QPixmap
+
+            from ..api import requests as _http
+
+            resp = _http.get(f"{base}{url}" if url.startswith("/") else url, timeout=6)
+            resp.raise_for_status()
+            pixmap = QPixmap()
+            if not pixmap.loadFromData(resp.content):
+                return False
+            surface.setPixmap(pixmap.scaled(
+                max(surface.width(), 480),
+                max(surface.height(), 300),
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            ))
+            return True
+        except Exception:
+            return False
+
     def _select(task: dict) -> None:
         _state["event_id"] = task.get("event_id", "")
         _state["title"] = task.get("title", "")
-        if _refs.get("surface") is not None:
-            _refs["surface"].setText(
-                f"{task.get('title','事件')}\n\n置信度 {_conf_pct(task.get('confidence'))}% · {task.get('event_type','')}"
+        conf = _conf_pct(task.get("confidence"))
+        surface = _refs.get("surface")
+        if surface is not None and not _load_thumbnail(task):
+            surface.setText(
+                f"{task.get('title','事件')}\n\n置信度 {conf}% · {task.get('event_type','')}\n"
+                "（该事件没有可加载的关键帧）"
             )
         if _refs.get("chip") is not None:
             _refs["chip"].setText(f"当前: {task.get('title','—')}")
+        # 工作台下方三个 chip 显示该事件的真实元数据
+        for key, text in (
+            ("meta_type", f"类型 {task.get('event_type','—')}"),
+            ("meta_conf", f"AI 置信度 {conf}%"),
+            ("meta_time", f"入库 {str(task.get('created_at',''))[:16].replace('T', ' ') or '—'}"),
+        ):
+            if _refs.get(key) is not None:
+                _refs[key].setText(text)
+        history = _refs.get("history")
+        if history is not None:
+            history.clear()
+            history.addItems([
+                f"{str(task.get('created_at',''))[:19].replace('T', ' ')} · AI 识别入库 · 置信度 {conf}%",
+                f"当前状态 · {_REVIEW_CN.get(task.get('review_status', ''), task.get('review_status', '待复核'))}"
+                f" · 事件 {task.get('event_id','')}",
+            ])
 
     body = QHBoxLayout()
     body.setSpacing(14)
@@ -696,7 +812,10 @@ def review_page(api_client: Any | None = None) -> QWidget:
     queue_header = QHBoxLayout()
     queue_header.addWidget(title("任务队列"))
     queue_header.addStretch()
-    queue_header.addWidget(status_chip(f"剩余 {len(tasks_data)}", "high" if tasks_data else "low"))
+    remaining_chip = status_chip("剩余 0", "low")
+    queue_header.addWidget(remaining_chip)
+    refresh_queue_btn = action_button("刷新")
+    queue_header.addWidget(refresh_queue_btn)
     queue_layout.addLayout(queue_header)
     queue_layout.addWidget(muted("低置信事件自动入队，点击「复核」选中后在右侧提交结论"))
     tasks_widget = QWidget()
@@ -705,32 +824,54 @@ def review_page(api_client: Any | None = None) -> QWidget:
     tasks_inner = QVBoxLayout(tasks_widget)
     tasks_inner.setContentsMargins(0, 0, 0, 0)
     tasks_inner.setSpacing(6)
-    if not tasks_data:
-        tasks_inner.addWidget(muted("队列为空（或离线 / Mock 模式，连接真实后端后显示）。"))
-    for task in tasks_data:
-        item_frame = QFrame()
-        item_frame.setStyleSheet(
-            "QFrame { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; }"
-            "QLabel { background:transparent; border:none; }"
+
+    def _reload_queue() -> None:
+        while tasks_inner.count():
+            item = tasks_inner.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        payload = _safe_call(api_client, "review_tasks", {}) or {}
+        tasks_data = payload.get("items", [])
+        try:
+            total = int(payload.get("total", len(tasks_data)) or 0)
+        except (TypeError, ValueError):
+            total = len(tasks_data)
+        remaining_chip.setText(f"剩余 {total}")
+        bg, fg = _STATUS_PALETTE["high" if total else "low"]
+        remaining_chip.setStyleSheet(
+            f"QLabel {{ background: {bg}; color: {fg}; border-radius: 999px; "
+            f"padding: 4px 12px; font-size: 11px; font-weight: 700; }}"
         )
-        item_lay = QHBoxLayout(item_frame)
-        item_lay.setContentsMargins(10, 8, 10, 8)
-        item_lay.setSpacing(8)
-        conf = _conf_pct(task.get("confidence"))
-        item_lay.addWidget(status_chip(f"{conf}%", "high" if conf < 75 else "mid"))
-        info = QVBoxLayout()
-        top_lbl = QLabel(task.get("title", "事件"))
-        top_lbl.setStyleSheet("color:#0F172A;font-size:12px;font-weight:700;")
-        bot_lbl = QLabel(f"{task.get('event_type','')} · {str(task.get('created_at',''))[:16].replace('T',' ')}")
-        bot_lbl.setStyleSheet("color:#64748B;font-size:11px;")
-        info.addWidget(top_lbl)
-        info.addWidget(bot_lbl)
-        item_lay.addLayout(info, 1)
-        pick = action_button("复核")
-        pick.clicked.connect(lambda _c=False, t=task: _select(t))
-        item_lay.addWidget(pick)
-        tasks_inner.addWidget(item_frame)
-    tasks_inner.addStretch()
+        if not tasks_data:
+            tasks_inner.addWidget(muted("队列为空（或离线 / Mock 模式，连接真实后端后显示）。"))
+        for task in tasks_data:
+            item_frame = QFrame()
+            item_frame.setStyleSheet(
+                "QFrame { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; }"
+                "QLabel { background:transparent; border:none; }"
+            )
+            item_lay = QHBoxLayout(item_frame)
+            item_lay.setContentsMargins(10, 8, 10, 8)
+            item_lay.setSpacing(8)
+            conf = _conf_pct(task.get("confidence"))
+            item_lay.addWidget(status_chip(f"{conf}%", "high" if conf < 75 else "mid"))
+            info = QVBoxLayout()
+            top_lbl = QLabel(task.get("title", "事件"))
+            top_lbl.setStyleSheet("color:#0F172A;font-size:12px;font-weight:700;")
+            bot_lbl = QLabel(f"{task.get('event_type','')} · {str(task.get('created_at',''))[:16].replace('T',' ')}")
+            bot_lbl.setStyleSheet("color:#64748B;font-size:11px;")
+            info.addWidget(top_lbl)
+            info.addWidget(bot_lbl)
+            item_lay.addLayout(info, 1)
+            pick = action_button("复核")
+            pick.clicked.connect(lambda _c=False, t=task: _select(t))
+            item_lay.addWidget(pick)
+            tasks_inner.addWidget(item_frame)
+        tasks_inner.addStretch()
+
+    refresh_queue_btn.clicked.connect(_reload_queue)
+    _reload_queue()
     tasks_scroll = QScrollArea()
     tasks_scroll.setWidget(tasks_widget)
     tasks_scroll.setWidgetResizable(True)
@@ -748,9 +889,10 @@ def review_page(api_client: Any | None = None) -> QWidget:
     wb_title = QLabel("复核视频工作台")
     wb_title.setStyleSheet("color:#E2E8F0;font-size:16px;font-weight:800;")
     workbench_layout.addWidget(wb_title)
-    surface = QLabel("点击左侧「复核」选择一条待确认事件")
+    surface = QLabel("点击左侧「复核」选择一条待确认事件\n选中后这里加载该事件的真实关键帧")
     surface.setAlignment(Qt.AlignmentFlag.AlignCenter)
     surface.setMinimumHeight(300)
+    surface.setWordWrap(True)
     surface.setStyleSheet(
         "QLabel { background:#020617; color:#CBD5E1; border-radius:18px; "
         "border:1px solid #334155; font-size:18px; font-weight:700; }"
@@ -758,15 +900,20 @@ def review_page(api_client: Any | None = None) -> QWidget:
     _refs["surface"] = surface
     workbench_layout.addWidget(surface, 1)
     frame_row = QHBoxLayout()
-    for text in ["关键帧 02:14", "遮挡帧 02:18", "远景帧 02:25"]:
-        thumb = QLabel(text)
-        thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        thumb.setMinimumHeight(72)
-        thumb.setStyleSheet(
+    for key, placeholder in (
+        ("meta_type", "类型 —"),
+        ("meta_conf", "AI 置信度 —"),
+        ("meta_time", "入库 —"),
+    ):
+        chip = QLabel(placeholder)
+        chip.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        chip.setMinimumHeight(56)
+        chip.setStyleSheet(
             "QLabel { background:#1E293B; color:#93C5FD; border-radius:12px; "
             "border:1px solid #334155; font-size:12px; font-weight:800; }"
         )
-        frame_row.addWidget(thumb)
+        _refs[key] = chip
+        frame_row.addWidget(chip)
     workbench_layout.addLayout(frame_row)
     body.addWidget(workbench, 4)
 
@@ -796,10 +943,12 @@ def review_page(api_client: Any | None = None) -> QWidget:
         row.addWidget(status_chip(chip, "low" if "通过" in option else "mid"))
         form_layout.addLayout(row)
     radio_buttons[0].setChecked(True)
-    note = QTextEdit("AI未识别出侧方变道的遮挡车辆，建议追加人工标注并保留关键帧。")
+    note = QTextEdit()
+    note.setPlaceholderText("复核备注（可选）：记录误判原因、补充人工标注……")
     form_layout.addWidget(note, 1)
     history = QListWidget()
-    history.addItems(["10:22:15 · AI 系统识别 · 置信度 68%", "进行中 · 等待人工复核"])
+    history.addItem("选中左侧任务后，这里显示该事件的真实流转记录")
+    _refs["history"] = history
     form_layout.addWidget(history, 1)
     action_row = QHBoxLayout()
     action_row.addWidget(_wip_button("保存草稿"))
@@ -821,9 +970,18 @@ def review_page(api_client: Any | None = None) -> QWidget:
             decision = "confirmed"
         try:
             api_client.submit_review(_state["event_id"], decision, note.toPlainText())
-            QMessageBox.information(page.window(), "提交成功", f"已写入复核结论「{decision}」：{_state['title']}")
         except Exception as exc:  # pragma: no cover - UI path
             QMessageBox.warning(page.window(), "提交失败", str(exc))
+            return
+        history.addItem(f"刚刚 · 人工复核提交 · {decision} · {_state['event_id']}")
+        QMessageBox.information(
+            page.window(), "提交成功", f"已写入复核结论「{decision}」：{_state['title']}"
+        )
+        _state["event_id"] = ""
+        if _refs.get("chip") is not None:
+            _refs["chip"].setText("当前: 未选择")
+        note.clear()
+        _reload_queue()
 
     submit_btn.clicked.connect(_submit)
     action_row.addWidget(submit_btn)
@@ -928,16 +1086,18 @@ def alerts_page(api_client: Any | None = None) -> QWidget:
 
     lower = QHBoxLayout()
     lower.setSpacing(14)
+    # 告警分级规则：展示后端 final_stage._severity 的真实判定逻辑，
+    # 与上方告警列表里看到的严重度完全一致（不是虚构的「配置项」）。
     rules = panel()
     rules_layout = QVBoxLayout(rules)
     rules_layout.setContentsMargins(22, 20, 22, 20)
-    rules_layout.addLayout(section_header("告警规则配置", "3 条启用"))
-    for rule in [
-        "剧烈碰撞 (重型) · 阈值 90% · 通知 全平台",
-        "车辆刮擦 (多模态) · 阈值 75% · 通知 网页端",
-        "违章停车检测 · 阈值 60% · 通知 关闭",
+    rules_layout.addLayout(section_header("告警分级规则", "引擎内置 3 条"))
+    for rule, desc in [
+        ("高危 · 剐蹭 / 行人风险，或置信度 ≥ 85%", "命中后立即入告警队列，列表中标红"),
+        ("普通 · 置信度 ≥ 70% 的其它风险事件", "入队列等待确认，列表中标黄"),
+        ("低危 · 其余识别事件", "记录备查，复核确认后归档"),
     ]:
-        rules_layout.addWidget(compact_card(rule, "规则命中后自动推送告警队列并记录审计日志"))
+        rules_layout.addWidget(compact_card(rule, desc))
     rules_layout.addWidget(_wip_button("编辑告警规则", "primary"))
     lower.addWidget(rules, 2)
 
@@ -946,29 +1106,65 @@ def alerts_page(api_client: Any | None = None) -> QWidget:
     type_layout.setContentsMargins(22, 20, 22, 20)
     type_layout.addWidget(title("事件类型分布"))
     pie2 = CategoryPieChart()
-    pie2.set_slices([
-        PieSlice("剧烈碰撞", 38, "#EF4444"),
-        PieSlice("违规停靠", 29, "#F59E0B"),
-        PieSlice("逆行行为", 21, "#4F46E5"),
-        PieSlice("物体掉落", 12, "#22C55E"),
-    ])
+    # 真实后端事件类型分布；离线 / Mock 或全空时回退示例
+    _apal = ["#EF4444", "#F59E0B", "#4F46E5", "#22C55E", "#A855F7", "#0EA5E9", "#64748B"]
+    _aitems = (_safe_call(api_client, "event_distribution", {}) or {}).get("items") or []
+    if _aitems and any(int(it.get("count", 0) or 0) for it in _aitems):
+        pie2.set_slices([
+            PieSlice(
+                str(it.get("label", "未知")),
+                int(it.get("count", 0) or 0),
+                _apal[i % len(_apal)],
+            )
+            for i, it in enumerate(_aitems[:7])
+        ])
+    else:
+        pie2.set_slices([
+            PieSlice("剧烈碰撞", 38, "#EF4444"),
+            PieSlice("违规停靠", 29, "#F59E0B"),
+            PieSlice("逆行行为", 21, "#4F46E5"),
+            PieSlice("物体掉落", 12, "#22C55E"),
+        ])
     type_layout.addWidget(pie2, 1)
     lower.addWidget(type_dist, 2)
 
     trend = panel()
     trend_layout = QVBoxLayout(trend)
     trend_layout.setContentsMargins(22, 20, 22, 20)
-    trend_layout.addWidget(title("告警分级趋势"))
+    trend_layout.addWidget(title("告警分级趋势 (近7日)"))
     chart = TrendBarChart()
-    chart.set_points([
-        BarPoint("03-21", 4, 14, 0),
-        BarPoint("03-22", 6, 18, 0),
-        BarPoint("03-23", 5, 16, 0),
-        BarPoint("03-24", 9, 22, 0),
-        BarPoint("03-25", 7, 20, 0),
-        BarPoint("03-26", 10, 24, 0),
-        BarPoint("03-27", 12, 45, 0),
-    ])
+    # 真实趋势：把告警列表按创建日期分桶，统计 高危数 / 当日总数。
+    _alerts_all = (_safe_call(api_client, "list_alerts", {}) or {}).get("items", [])
+    if _alerts_all:
+        from datetime import date as _date, timedelta as _timedelta
+
+        _buckets: dict[str, list[int]] = {}
+        _order: list[str] = []
+        for _off in range(6, -1, -1):
+            _label = (_date.today() - _timedelta(days=_off)).strftime("%m-%d")
+            _buckets[_label] = [0, 0]
+            _order.append(_label)
+        for _a in _alerts_all:
+            _created = str(_a.get("created_at", ""))
+            _label = f"{_created[5:7]}-{_created[8:10]}" if len(_created) >= 10 else ""
+            if _label in _buckets:
+                _buckets[_label][1] += 1
+                if _a.get("severity") == "high":
+                    _buckets[_label][0] += 1
+        chart.set_points([
+            BarPoint(_label, _buckets[_label][0], _buckets[_label][1], 0)
+            for _label in _order
+        ])
+    else:
+        chart.set_points([
+            BarPoint("03-21", 4, 14, 0),
+            BarPoint("03-22", 6, 18, 0),
+            BarPoint("03-23", 5, 16, 0),
+            BarPoint("03-24", 9, 22, 0),
+            BarPoint("03-25", 7, 20, 0),
+            BarPoint("03-26", 10, 24, 0),
+            BarPoint("03-27", 12, 45, 0),
+        ])
     trend_layout.addWidget(chart, 1)
     lower.addWidget(trend, 3)
     root.addLayout(lower, 2)
@@ -1051,13 +1247,28 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
     side_layout = QVBoxLayout(side)
     side_layout.setContentsMargins(22, 20, 22, 20)
     side_layout.setSpacing(14)
-    heat_title = QLabel("事件热力空间分布")
+    heat_title = QLabel("风险等级分布（实时）")
     heat_title.setStyleSheet("color:#CBD5E1;font-size:12px;font-weight:800;letter-spacing:1px;")
     side_layout.addWidget(heat_title)
-    heat = QLabel("南山区段       12起\n福田区段        5起\n罗湖区段        4起\n宝安区段        3起")
+    # 由真实事故列表统计风险等级占比（系统没有 GPS 数据，不展示虚构的区域热力）。
+    _risk_counts = {"high": 0, "medium": 0, "low": 0}
+    for _a in items:
+        _risk_counts[_a.get("risk_level", "medium")] = (
+            _risk_counts.get(_a.get("risk_level", "medium"), 0) + 1
+        )
+    heat = QLabel(
+        f"高危事故     {_risk_counts['high']:>4} 起\n"
+        f"中危事故     {_risk_counts['medium']:>4} 起\n"
+        f"低危事故     {_risk_counts['low']:>4} 起\n"
+        f"累计风险事件 {len(items):>4} 起"
+    )
     heat.setStyleSheet("color:#E2E8F0;font-size:14px;line-height:1.6;")
     side_layout.addWidget(heat)
-    side_layout.addWidget(compact_card("全局风险指征", "侧向碰撞与行人横穿为今日主要风险类型，建议导出日报并同步车队培训库。", "#F59E0B"))
+    _rep = _safe_call(api_client, "daily_report", {}) or {}
+    _risk_text = _rep.get("risk_summary") or (
+        "连接真实后端后，这里显示由当日事件聚合生成的风险总结。"
+    )
+    side_layout.addWidget(compact_card("全局风险指征（当日实时）", _risk_text, "#F59E0B"))
     side_layout.addStretch()
     side_layout.addWidget(_wip_button("查看全天业务报告", "primary"))
     body.addWidget(side, 2)
@@ -1065,14 +1276,17 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
     return page
 
 
-def evidence_page() -> QWidget:
-    page, root = page_shell("证据与日志归档", "统一管理系统流转日志与涉案证据包")
+def evidence_page(api_client: Any | None = None) -> QWidget:
+    page, root = page_shell("证据与日志归档", "真实导出记录与操作审计日志（实时后端数据）")
+
+    exports_data = (_safe_call(api_client, "list_exports", {}) or {}).get("items", [])
+    logs_data = (_safe_call(api_client, "list_audit_logs", {}) or {}).get("items", [])
 
     controls = panel()
     controls_layout = QHBoxLayout(controls)
     controls_layout.setContentsMargins(22, 16, 22, 16)
     search = QLineEdit()
-    search.setPlaceholderText("搜索案件编号、日志凭点...")
+    search.setPlaceholderText("按导出ID / 事件ID / 文件路径过滤……")
     controls_layout.addWidget(search, 1)
     controls_layout.addWidget(_wip_button("打包备份归档", "primary"))
     root.addWidget(controls)
@@ -1080,41 +1294,105 @@ def evidence_page() -> QWidget:
     body = QHBoxLayout()
     body.setSpacing(14)
     left = QVBoxLayout()
+
+    from datetime import date as _date
+
+    _today = _date.today().isoformat()
+    _today_count = sum(
+        1 for it in exports_data if str(it.get("created_at", ""))[:10] == _today
+    )
+    _ok_count = sum(1 for it in exports_data if it.get("status") in ("success", "completed"))
     stats = QGridLayout()
     stats.setSpacing(14)
-    stats.addWidget(metric_card("今日新增证据", "42 卷", "签名队列 3"), 0, 0)
-    stats.addWidget(metric_card("累计固证", "128 卷", "近 7 日"), 0, 1)
-    stats.addWidget(metric_card("归档存储空间", "64%", "已用 12TB", "#4F46E5"), 0, 2)
+    stats.addWidget(metric_card("今日新增证据", f"{_today_count} 卷", "ffmpeg 切片+截图+摘要"), 0, 0)
+    stats.addWidget(metric_card("累计固证", f"{len(exports_data)} 卷", "media/exports 下可解压"), 0, 1)
+    stats.addWidget(metric_card("导出成功", f"{_ok_count} 卷", "24h 内重复导出自动复用", "#4F46E5"), 0, 2)
     left.addLayout(stats)
 
     queue = panel()
     queue_layout = QVBoxLayout(queue)
     queue_layout.setContentsMargins(22, 18, 22, 18)
-    queue_layout.addLayout(section_header("近期证据保全队列", "队列 14"))
-    for item, desc, status in [
-        ("EVT-0822-完整证据包.zip", "14:30 生成 · 包含视频源、抽帧截图、文本总结", "正在签名审计"),
-        ("EVT-0810-快速摘要.pdf", "11:20 生成 · 包含 AI 文本描述分析、时间线", "已固证"),
-        ("SYS-ERR-001-排错录像.zip", "09:12 生成 · 包含原始接入异常视频", "已固证"),
-    ]:
-        row = QHBoxLayout()
-        row.addWidget(compact_card(item, desc))
-        row.addWidget(status_chip(status, "mid" if "签名" in status else "low"))
-        queue_layout.addLayout(row)
+    queue_layout.addLayout(section_header("证据导出记录", f"共 {len(exports_data)} 卷"))
+    rows_host = QWidget()
+    rows_host.setObjectName("evidenceRowsHost")
+    rows_host.setStyleSheet("#evidenceRowsHost { background: transparent; }")
+    rows_layout = QVBoxLayout(rows_host)
+    rows_layout.setContentsMargins(0, 0, 0, 0)
+    rows_layout.setSpacing(8)
+
+    def _render_exports(keyword: str = "") -> None:
+        while rows_layout.count():
+            item = rows_layout.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
+        kw = keyword.strip().lower()
+        shown = [
+            it for it in exports_data
+            if not kw or kw in " ".join(
+                str(it.get(k, "")) for k in ("id", "event_id", "export_path")
+            ).lower()
+        ]
+        if not shown:
+            rows_layout.addWidget(muted(
+                "暂无匹配的导出记录。在「检索」页选中事件点「导出证据包」后，"
+                "记录会实时出现在这里（离线 / Mock 模式不展示）。"
+            ))
+        for it in shown:
+            created = str(it.get("created_at", ""))[:19].replace("T", " ")
+            row = QHBoxLayout()
+            row.addWidget(compact_card(
+                f"{it.get('event_id', '')} · {it.get('export_type', 'package')}",
+                f"{created} 生成 · {it.get('export_path', '')}",
+            ), 1)
+            ok = it.get("status") in ("success", "completed")
+            row.addWidget(status_chip("已固证" if ok else str(it.get("status", "—")),
+                                      "low" if ok else "mid"))
+            row_w = QWidget()
+            row_w.setStyleSheet("background: transparent;")
+            row_w.setLayout(row)
+            rows_layout.addWidget(row_w)
+        rows_layout.addStretch()
+
+    _render_exports()
+    search.textChanged.connect(_render_exports)
+
+    rows_scroll = QScrollArea()
+    rows_scroll.setWidget(rows_host)
+    rows_scroll.setWidgetResizable(True)
+    rows_scroll.setFrameShape(QFrame.Shape.NoFrame)
+    rows_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    queue_layout.addWidget(rows_scroll, 1)
     left.addWidget(queue, 1)
     body.addLayout(left, 3)
 
     log_panel = panel()
     log_layout = QVBoxLayout(log_panel)
     log_layout.setContentsMargins(22, 18, 22, 18)
-    log_layout.addLayout(section_header("系统交互日志", "审计"))
+    log_layout.addLayout(section_header("系统审计日志", f"最近 {len(logs_data)} 条"))
     logs = QListWidget()
-    logs.addItems([
-        "14:30:11 · 证据导出 · EVT-0822 生成完整证据包",
-        "14:00:00 · 鉴权日志 · admin 刷新 Bearer Token",
-        "11:20:03 · 摘要导出 · EVT-0810 生成快速摘要",
-        "09:12:45 · 系统日志 · 原始接入异常录像已归档",
-        "08:44:29 · 检索日志 · 创建查询 QRY-20260327-009",
-    ])
+    if logs_data:
+        _action_cn = {
+            "auth.login": "登录鉴权",
+            "video.upload": "视频上传",
+            "video.process": "视频处理",
+            "search.query": "语义检索",
+            "event.export": "证据导出",
+            "review.decision": "复核结论",
+            "report.export": "日报导出",
+            "alert.ack": "告警确认",
+            "alert.resolve": "告警处置",
+        }
+        for entry in logs_data:
+            created = str(entry.get("created_at", ""))[:19].replace("T", " ")
+            action = str(entry.get("action", ""))
+            target = f"{entry.get('target_type', '')}:{entry.get('target_id', '')}".strip(":")
+            message = str(entry.get("message", ""))[:60]
+            logs.addItem(
+                f"{created} · {_action_cn.get(action, action)} · {target} · {message}"
+            )
+    else:
+        logs.addItem("暂无可见日志（需要 admin / reviewer 权限，或处于离线 / Mock 模式）")
     log_layout.addWidget(logs, 1)
     body.addWidget(log_panel, 2)
     root.addLayout(body, 1)
@@ -1221,13 +1499,29 @@ def daily_report_page(api_client: Any | None = None) -> QWidget:
     body.addLayout(left, 3)
 
     right = QVBoxLayout()
+    # 真实视频源统计（系统没有 GPS 区域数据，不展示虚构的区域分布）。
     region = dark_panel()
     region_layout = QVBoxLayout(region)
     region_layout.setContentsMargins(22, 20, 22, 20)
-    region_title = QLabel("区域事件统计")
+    region_title = QLabel("视频源统计（实时）")
     region_title.setStyleSheet("color:#CBD5E1;font-size:12px;font-weight:800;letter-spacing:1px;")
     region_layout.addWidget(region_title)
-    region_stats = QLabel("南山区段     127起\n福田区段      89起\n罗湖区段      56起\n宝安区段      34起")
+    _vids = sorted(
+        list(_safe_call(api_client, "list_videos", ()) or ()),
+        key=lambda v: getattr(v, "duration_sec", 0) or 0,
+        reverse=True,
+    )
+    if _vids:
+        _v_lines = []
+        for _v in _vids[:4]:
+            _vm = int((getattr(_v, "duration_sec", 0) or 0) / 60)
+            _vt = str(getattr(_v, "title", "未命名"))
+            _vt = _vt if len(_vt) <= 14 else _vt[:13] + "…"
+            _vs = "可检索" if str(getattr(_v, "status", "")) == "indexed" else str(getattr(_v, "status", "—"))
+            _v_lines.append(f"{_vt}    {_vm} 分钟 · {_vs}")
+        region_stats = QLabel("\n".join(_v_lines))
+    else:
+        region_stats = QLabel("视频库为空，上传后这里显示真实视频源。")
     region_stats.setStyleSheet("color:#E2E8F0;font-size:14px;line-height:1.6;")
     region_layout.addWidget(region_stats)
     right.addWidget(region, 1)
@@ -1433,17 +1727,56 @@ def roles_page(api_client: Any | None = None) -> QWidget:
     header.addWidget(_wip_button("导出记录"))
     matrix_layout.addLayout(header)
 
-    # Color-coded permission table
-    tbl = table(
-        ["功能模块 / 权限点", "车主", "车队管理员", "交通巡查员", "风险等级"],
-        [
-            ["语义检索 (Natural Language Query)", "✓ 允许", "✓ 允许", "✓ 允许", "LOW"],
-            ["原始视频文件下载 (H.264/265)", "✗ 禁止", "✓ 允许", "✓ 允许", "MED"],
-            ["证据链多模态摘要导出", "✓ 允许", "✓ 允许", "✓ 允许", "LOW"],
-            ["系统审计日志 (Audit Log) 查看", "✗ 禁止", "✗ 禁止", "✓ 允许", "HIGH"],
-            ["多模态模型 API 参数微调", "✗ 禁止", "✗ 禁止", "✗ 禁止", "CRITICAL"],
-        ],
-    )
+    # 真实权限矩阵：行 = 后端权限目录（/api/permissions），列 = 真实角色，
+    # 单元格按各角色的 permissions 列表逐项判定。离线 / Mock 回退示例表。
+    _PERM_CN = {
+        "audit:read": "审计日志查看",
+        "event:export": "证据导出",
+        "event:read": "事件查看",
+        "event:review": "事件复核",
+        "export:read": "导出记录查看",
+        "search:create": "语义检索",
+        "settings:read": "系统配置查看",
+        "user:read": "用户查看",
+        "video:process": "视频处理",
+        "video:read": "视频查看",
+        "video:upload": "视频上传",
+    }
+    _PERM_RISK = {
+        "audit:read": "HIGH",
+        "event:review": "MED",
+        "video:process": "MED",
+        "user:read": "MED",
+        "settings:read": "MED",
+        "event:export": "MED",
+    }
+    perm_catalog = (_safe_call(api_client, "list_permissions", {}) or {}).get("permissions", [])
+    if perm_catalog and roles_data:
+        headers = (
+            ["功能模块 / 权限点"]
+            + [str(r.get("name", r.get("id", "?"))) for r in roles_data]
+            + ["风险等级"]
+        )
+        matrix_rows = []
+        for perm in perm_catalog:
+            row_cells = [f"{_PERM_CN.get(perm, perm)} ({perm})"]
+            for r in roles_data:
+                perms = r.get("permissions", [])
+                allowed = "*" in perms or perm in perms
+                row_cells.append("✓ 允许" if allowed else "✗ 禁止")
+            row_cells.append(_PERM_RISK.get(perm, "LOW"))
+            matrix_rows.append(row_cells)
+        tbl = table(headers, matrix_rows)
+    else:
+        tbl = table(
+            ["功能模块 / 权限点", "管理员", "审核人员", "普通用户", "风险等级"],
+            [
+                ["语义检索 (search:create)", "✓ 允许", "✗ 禁止", "✓ 允许", "LOW"],
+                ["事件复核 (event:review)", "✓ 允许", "✓ 允许", "✗ 禁止", "MED"],
+                ["证据导出 (event:export)", "✓ 允许", "✗ 禁止", "✓ 允许", "MED"],
+                ["审计日志查看 (audit:read)", "✓ 允许", "✓ 允许", "✗ 禁止", "HIGH"],
+            ],
+        )
     # Color cells
     _perm_colors = {"✓ 允许": "#15803D", "✗ 禁止": "#9CA3AF"}
     _risk_colors = {"LOW": "#15803D", "MED": "#B45309", "HIGH": "#B91C1C", "CRITICAL": "#7C3AED"}

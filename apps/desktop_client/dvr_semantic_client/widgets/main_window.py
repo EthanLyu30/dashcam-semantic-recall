@@ -188,13 +188,29 @@ class MainWindow(QMainWindow):
         return frame
 
     def _build_pages(self) -> None:
+        # Data-driven pages are rebuilt every time they are shown (see
+        # show_page) so the numbers always reflect the live backend state —
+        # e.g. upload a video, switch to 概览, and the counters move. The
+        # search workspace (index 1) keeps its instance because it owns the
+        # VLC player.
+        self._page_factories = {
+            0: lambda: overview_page(self.api_client),
+            2: lambda: video_library_page(self.api_client),
+            3: lambda: review_page(self.api_client),
+            4: lambda: alerts_page(self.api_client),
+            5: lambda: accidents_page(self.api_client),
+            6: lambda: evidence_page(self.api_client),
+            7: lambda: daily_report_page(self.api_client),
+            8: lambda: settings_page(self.api_client),
+            9: lambda: roles_page(self.api_client),
+        }
         self.stack.addWidget(overview_page(self.api_client))
         self.stack.addWidget(self._build_search_workspace())
         self.stack.addWidget(video_library_page(self.api_client))
         self.stack.addWidget(review_page(self.api_client))
         self.stack.addWidget(alerts_page(self.api_client))
         self.stack.addWidget(accidents_page(self.api_client))
-        self.stack.addWidget(evidence_page())
+        self.stack.addWidget(evidence_page(self.api_client))
         self.stack.addWidget(daily_report_page(self.api_client))
         self.stack.addWidget(settings_page(self.api_client))
         self.stack.addWidget(roles_page(self.api_client))
@@ -289,6 +305,18 @@ class MainWindow(QMainWindow):
         return page
 
     def show_page(self, index: int) -> None:
+        # Rebuild data pages on entry so they always show live backend data.
+        factory = getattr(self, "_page_factories", {}).get(index)
+        old = self.stack.widget(index)
+        if factory is not None and old is not None:
+            try:
+                fresh = factory()
+            except Exception:
+                fresh = None
+            if fresh is not None:
+                self.stack.insertWidget(index, fresh)
+                self.stack.removeWidget(old)
+                old.deleteLater()
         self.stack.setCurrentIndex(index)
         for button_index, button in enumerate(self.nav_buttons):
             variant = "nav-active" if button_index == index else "nav"

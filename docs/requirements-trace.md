@@ -11,8 +11,8 @@
 | FR-05 搜索结果展示 + 时间轴 | 已实现 | `widgets/search_panel.py` + `widgets/timeline.py` + `EventOut.rank_no/similarity_score/answer_text` | 吕霄阳 |
 | FR-06 证据导出（单事件 + 24h 去重 + 受控批量） | 已实现 | `services/exporter.py` 真 ffmpeg 切片 + zip 打包；`POST /api/events/{id}/export`（`reused`/`force`，24h 去重）；`POST /api/exports/batch`（受控批量，≤50，失败隔离）；`GET /api/exports` 契约列表 | 吕霄阳（批量导出 + 路由） / 倪羽辰（24h 去重） |
 | FR-07 操作日志 / 查询留痕 | 已实现 | `services/audit.py`、`audit_logs` 表、`X-Request-Id` 中间件、`GET /api/audit/logs` | 吕霄阳 |
-| FR-08 看板 / 告警 / 事故 / 日报 | 后端已实现 / 桌面端未联调 | `services/final_stage.py`、dashboard / alerts / accidents / reports API（真实库派生，已测）；桌面端对应页面仍为静态原型布局 | 吕霄阳（框架） / 倪羽辰（数据口径） |
-| FR-09 模型配置 / 用户角色权限 | 后端已实现 / 桌面端未联调 | settings / users / roles / permissions API；密钥只读配置状态，不返回明文 | 吕霄阳 |
+| FR-08 看板 / 告警 / 事故 / 日报 | ✅ 前后端已联调 | `services/final_stage.py`、dashboard / alerts / accidents / reports API（真实库派生，已测）；桌面端概览/告警/事故/证据/日报页全部实时拉取后端数据并在切页时自动刷新；复核工作台加载真实关键帧、提交结论写库留痕 | 吕霄阳（框架） / 倪羽辰（数据口径） |
+| FR-09 模型配置 / 用户角色权限 | ✅ 前后端已联调 | settings / users / roles / permissions API；密钥只读配置状态，不返回明文；桌面端模型配置页与权限矩阵（按真实权限目录 × 角色推导）实时展示 | 吕霄阳 |
 | NFR 鉴权 + 角色 | 已实现 | `services/auth.py` bcrypt + PyJWT；`require_auth` / `require_role` | 吕霄阳 |
 | NFR-05 输入校验 / 资源保护 | 已加固（HTTPS 部署期提供） | `/stream` 鉴权 + 短时效签名 ticket；`/media` 仅公开 `frames`/`thumbnails`；上传 ≤10GB（`DVR_SEMANTIC_MAX_UPLOAD_BYTES`，超限 413）；生产强制非默认 `DVR_SEMANTIC_JWT_SECRET`；HTTPS 由反代终止（代码内未内建） | 吕霄阳 |
 | NFR-04 性能指标 | 单请求达标 / 50 并发不达标 | 单请求检索 <4s（`test_perf_benchmark.py`，300 条事件）；`tools/load_test.py` 实测 50 并发 500 请求：p50≈2.5s、**p95≈6.9s 超 4s 预算**、错误率 0.2%，瓶颈为单 uvicorn worker + SQLite 写串行（每次检索写 SearchQuery/Result）。改善方向：多 worker（`--workers`）+ PostgreSQL + 异步化。跳转≤1s/导出≤30s/2h 预处理≤8min 仍需真机压测 | 倪羽辰 |

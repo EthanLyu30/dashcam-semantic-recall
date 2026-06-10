@@ -533,7 +533,7 @@ Response:
 Query:
 
 ```text
-status?: EventReviewStatus
+status?: string   # 复核状态过滤，支持逗号分隔多值；默认 "pending,reviewing"（即全部开放中的复核任务）
 event_type?: string
 page?: int
 page_size?: int

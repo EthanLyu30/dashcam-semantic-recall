@@ -596,7 +596,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/review/tasks", response_model=ReviewTaskListResponse)
     def list_review_tasks(
-        status: str = "reviewing",
+        status: str = "pending,reviewing",
         event_type: str | None = None,
         page: int = 1,
         page_size: int = 20,
@@ -604,8 +604,13 @@ def create_app() -> FastAPI:
             auth_service.require_role("reviewer", "admin")
         ),
     ) -> ReviewTaskListResponse:
+        # ``status`` accepts a comma-separated list. The aggregator marks events
+        # either "pending" or "reviewing"; both are open review work, so the
+        # default queue covers them together (a bare status="reviewing" default
+        # left the review center nearly empty against real data).
+        statuses = [s.strip() for s in status.split(",") if s.strip()] or ["pending", "reviewing"]
         with session_scope() as session:
-            q = session.query(SemanticEvent).filter(SemanticEvent.review_status == status)
+            q = session.query(SemanticEvent).filter(SemanticEvent.review_status.in_(statuses))
             if event_type:
                 q = q.filter(SemanticEvent.event_type == event_type)
             total = q.count()

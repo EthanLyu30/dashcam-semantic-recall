@@ -66,22 +66,25 @@ class SearchPanel(QFrame):
         query_row.addWidget(self.query_input, 1)
         query_row.addWidget(search_button)
 
-        # 推荐查询芯片：用短标签 + tooltip 显示完整文本，避免横向截断
+        # 推荐查询芯片：短标签对齐系统真实可识别的事件类型（点击即可在真实
+        # 语料中命中），tooltip 显示完整查询文本，避免横向截断
         suggestion_shortcuts: tuple[tuple[str, str, str, str], ...] = (
-            ("# 白色SUV", SUGGESTED_QUERIES[0] if len(SUGGESTED_QUERIES) > 0 else "剐蹭", "#EFF6FF", "#2563EB"),
-            ("# 剐蹭事故", SUGGESTED_QUERIES[0] if len(SUGGESTED_QUERIES) > 0 else "剐蹭", "#FEF2F2", "#DC2626"),
-            ("# 十字路口", "十字路口发生碰撞或侧切的片段", "#F1F5F9", "#475569"),
-            ("# 晴天", "晴天白天道路场景中的异常事件", "#F0FDF4", "#16A34A"),
+            ("# 违停", SUGGESTED_QUERIES[1] if len(SUGGESTED_QUERIES) > 1 else "检索违停车辆片段", "#FEF2F2", "#DC2626"),
+            ("# 剐蹭", SUGGESTED_QUERIES[0] if len(SUGGESTED_QUERIES) > 0 else "疑似剐蹭的时间段", "#EFF6FF", "#2563EB"),
+            ("# 道路障碍", SUGGESTED_QUERIES[2] if len(SUGGESTED_QUERIES) > 2 else "道路障碍物和施工围挡", "#F1F5F9", "#475569"),
+            ("# 异常停车", SUGGESTED_QUERIES[3] if len(SUGGESTED_QUERIES) > 3 else "异常停车或急刹", "#F0FDF4", "#16A34A"),
         )
         self.suggested_layout = QHBoxLayout()
         self.suggested_layout.setSpacing(8)
         for short, full, bg, fg in suggestion_shortcuts:
             button = QPushButton(short)
             button.setToolTip(full)
+            # NOTE: 所有片段都要用 f-string——此前最后一段不是 f-string，
+            # "}}" 未被还原成 "}"，整条样式解析失败导致芯片样式丢失。
             button.setStyleSheet(
                 f"QPushButton {{ background: {bg}; color: {fg}; border: none; "
-                "border-radius: 4px; padding: 5px 9px; font-size: 11px; "
-                "font-weight: 800; }}"
+                f"border-radius: 4px; padding: 5px 9px; font-size: 11px; "
+                f"font-weight: 800; }}"
                 "QPushButton:hover { background: #DBEAFE; color: #1D4ED8; }"
             )
             button.clicked.connect(
