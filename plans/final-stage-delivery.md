@@ -4,7 +4,7 @@
 
 ## 交付范围
 
-- [x] Qt6 桌面端：11 个原型页面、语义检索工作台、视频库上传处理、VLC 精准回放、证据导出入口。
+- [x] Qt6 桌面端：11 个原型页面**全部与真实后端联调**（切页实时刷新）、语义检索工作台、视频库上传处理与筛选、复核工作台（真实关键帧 + 结论写库）、VLC 精准回放、证据导出入口、真实审计日志展示。最终演示截图：`docs/final-demo-shots/`。
 - [x] FastAPI 主链路：登录、视频上传、预处理、帧分析、事件聚合、混合检索、事件详情、证据导出、审计日志。
 - [x] 数据库：SQLite / PostgreSQL 双引擎，9 张核心业务表，PG `REAL[]` 向量列 + `cosine_similarity()` 存储函数。
 - [x] AI 模型：确定性 mock 适配器 + OpenAI-compatible DeepSeek / Qwen-VL 适配器；真实 key 通过本机环境变量注入，不提交。
@@ -20,7 +20,7 @@ python -m compileall apps tests
 python -m pytest -q
 ```
 
-当前本机验证口径：`45 passed, 6 skipped`（共 51 个用例）。跳过项与可选桌面/媒体环境及 ffmpeg 相关，不影响后端主链路和 final-stage API 验收。
+当前本机验证口径：完整环境（PySide6 + ffmpeg + VLC）`84 passed`（共 84 个用例）；最小环境为 `78 passed, 6 skipped`，跳过项与可选桌面/媒体环境及 ffmpeg 相关，不影响后端主链路和 final-stage API 验收。
 
 后端启动后可运行 REST smoke：
 

@@ -3,6 +3,8 @@
 > **背景说明**：final-stage 已把后端主链路和管理面 API 收口到可交付状态。本文档保留倪羽辰侧数据库、检索、复核、真实模型联调责任口径，不再作为未完成 TODO 清单。
 >
 > **2026-05-16 更新**：leonore 分支已合入 main。任务 2（PostgreSQL 双引擎）和任务 3（复核 API）✅ 已完成；后端技术说明文档和 ffmpeg 安装脚本也已提交。
+>
+> **2026-06-10 更新**：桌面端 11 个页面已全部与真实接口联调完成（含复核页任务列表 + 真实关键帧工作台）；`/api/review/tasks` 默认改为 `pending,reviewing` 全量队列；真实视频（4 段，含约 3 小时重庆路况）已入库，最终演示截图留档在 `docs/final-demo-shots/`。
 
 ---
 
@@ -16,7 +18,7 @@
 - [x] 网络或模型失败时自动回退 mock，保证现场演示不崩。
 - [x] Qt 客户端可通过 `DVR_SEMANTIC_API_BASE` 切换真实后端。
 - [x] 证据导出、审计日志、复核 API、管理面 API 已完成。
-- [ ] 答辩前本机准备 1-3 段真实行车记录仪视频并截图留档。
+- [x] 答辩前本机准备 1-3 段真实行车记录仪视频并截图留档。（已入库 4 段真实视频：约 3 小时重庆复杂路况、2 分钟 UK 城市道路等，经 Qwen-VL 真实分析出 21 个语义事件；真实数据演示截图存于 `docs/final-demo-shots/`）
 
 ### 2. ✅ 替换数据库为 PostgreSQL 双引擎（已完成）
 
@@ -31,7 +33,7 @@
 - [x] `GET /api/review/tasks`：按 `review_status` 过滤，支持 `event_type` 筛选与分页（`page` + `page_size`），返回 `ReviewTaskListResponse`。
 - [x] `POST /api/review/tasks/{event_id}/decision`：接收 `decision`（confirmed/rejected/pending）+ 可选的修正 `event_type`/`title`/`tags` + `note`，更新 `semantic_events` 并记录 `review.decision` 审计日志。
 - [x] 新增 Pydantic schema：`ReviewDecisionRequest`、`ReviewTaskItem`、`ReviewTaskListResponse`、`ReviewDecisionResponse`。
-- [ ] Qt 复核页任务列表接入真实接口（待与吕霄阳联调）。
+- [x] Qt 复核页任务列表接入真实接口（已联调：队列实时拉取 pending+reviewing 全量，选中任务加载真实关键帧，提交结论写库 + 审计留痕 + 队列即时刷新）。
 
 ---
 
