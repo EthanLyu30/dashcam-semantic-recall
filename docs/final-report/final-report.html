@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>最终阶段汇报 · DVR-Semantic</title>
+<style>
+  :root {
+    --blue:#2563EB; --red:#EF4444; --yellow:#F59E0B; --green:#22C55E;
+    --indigo:#4F46E5; --cyan:#06B6D4;
+    --bg:#F8FAFC; --panel:#FFFFFF; --soft:#F1F5F9;
+    --text:#1E293B; --muted:#64748B; --border:#E2E8F0;
+    --dark:#0F172A; --darker:#020617;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;}
+  body{background:#E2E8F0;padding:32px 16px;color:var(--text);}
+  .slide{
+    position:relative;width:1280px;height:720px;margin:0 auto 32px auto;
+    background:var(--bg);border-radius:18px;overflow:hidden;
+    box-shadow:0 10px 30px rgba(15,23,42,.12);
+    padding:44px 56px 52px 56px;
+    display:flex;flex-direction:column;
+  }
+  .slide::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:8px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+  }
+  .slide::after{
+    content:"";position:absolute;bottom:0;left:0;right:0;height:6px;
+    background:linear-gradient(90deg,var(--blue) 0 25%,var(--red) 25% 50%,var(--yellow) 50% 75%,var(--green) 75% 100%);
+    opacity:.85;
+  }
+  .pagenum{position:absolute;right:24px;bottom:18px;color:var(--muted);font-size:13px;font-weight:600;}
+  h1{font-size:40px;font-weight:800;color:var(--text);line-height:1.18;}
+  h1 .accent{color:var(--blue);}
+  h2{font-size:28px;font-weight:800;color:var(--blue);margin-bottom:12px;}
+  h3{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;}
+  .badge{display:inline-block;padding:8px 14px;border-radius:14px;background:#EFF6FF;color:var(--blue);font-weight:600;font-size:13px;border:1px solid #BFDBFE;}
+  .subtitle{background:#EEF2FF;color:var(--indigo);border:1px solid #C7D2FE;padding:9px 14px;border-radius:14px;font-size:14px;line-height:1.55;}
+  .cards{display:grid;gap:14px;}
+  .cards.four{grid-template-columns:repeat(4,1fr);}
+  .cards.three{grid-template-columns:repeat(3,1fr);}
+  .cards.two{grid-template-columns:repeat(2,1fr);}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:16px 18px;}
+  .card .label{color:var(--muted);font-size:12.5px;}
+  .card .value{font-size:30px;font-weight:800;line-height:1.1;margin-top:6px;}
+  .card .pill{display:inline-block;margin-top:8px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:600;}
+  .pill{display:inline-block;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;}
+  .pill.b{background:#DBEAFE;color:#1D4ED8;}
+  .pill.r{background:#FEE2E2;color:#B91C1C;}
+  .pill.y{background:#FEF3C7;color:#B45309;}
+  .pill.g{background:#DCFCE7;color:#15803D;}
+  .pill.i{background:#E0E7FF;color:#4338CA;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:16px 18px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px;flex:1 1 auto;min-height:0;}
+  .row.three{grid-template-columns:1fr 1fr 1fr;}
+  .row.left-heavy{grid-template-columns:1.4fr 1fr;}
+  .row .panel{height:100%;display:flex;flex-direction:column;}
+  ul{list-style:none;}
+  li{position:relative;padding-left:16px;font-size:13.5px;line-height:1.74;color:#0f172a;}
+  li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:var(--blue);}
+  li.r::before{background:var(--red);} li.y::before{background:var(--yellow);} li.g::before{background:var(--green);} li.i::before{background:var(--indigo);}
+  .muted{color:var(--muted);font-size:12.5px;line-height:1.6;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:6px;gap:18px;}
+  .center-card{
+    background:var(--panel);border-radius:28px;padding:48px 56px;
+    box-shadow:0 18px 44px rgba(37,99,235,.08);
+    max-width:920px;margin:auto;
+    border:1px solid var(--border);
+  }
+  table.req{width:100%;border-collapse:collapse;background:var(--panel);border-radius:14px;overflow:hidden;font-size:12.8px;}
+  table.req th{background:var(--dark);color:#E2E8F0;text-align:left;padding:9px 12px;font-size:12.5px;letter-spacing:.5px;}
+  table.req td{padding:8px 12px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.55;}
+  table.req tr:last-child td{border-bottom:none;}
+  table.req td.req-name{font-weight:700;width:218px;}
+  table.req td.status{width:118px;white-space:nowrap;}
+  .shot{
+    background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    overflow:hidden;box-shadow:0 8px 22px rgba(15,23,42,.08);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .shot img{width:100%;height:100%;object-fit:cover;object-position:top;flex:1 1 auto;min-height:0;}
+  .shot .cap{padding:8px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--border);background:var(--soft);}
+  .flow{display:flex;align-items:stretch;gap:8px;margin-top:12px;}
+  .flow .step{
+    flex:1;background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:12px 10px;text-align:center;
+  }
+  .flow .step b{display:block;font-size:13.5px;margin-bottom:4px;}
+  .flow .step span{font-size:11.5px;color:var(--muted);line-height:1.45;display:block;}
+  .flow .arrow{align-self:center;color:#94A3B8;font-weight:800;}
+</style>
+</head>
+<body>
+
+<!-- ============ 1 封面 ============ -->
+<section class="slide">
+  <div class="center-card" style="text-align:center;">
+    <div class="badge" style="margin-bottom:22px;">综合项目实践 · 最终阶段汇报</div>
+    <h1 style="margin-bottom:16px;">基于多模态大模型的<br/>行车记录仪视频<span class="accent">语义检索与精准回放</span>系统</h1>
+    <p class="muted" style="font-size:15px;margin-bottom:26px;">
+      一句"找一下违停的片段"，从数小时行车录像直接跳到对应画面，并导出证据包
+    </p>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;">
+      <span class="pill b">汇报人：吕霄阳 · 倪羽辰</span>
+      <span class="pill i">苏州大学 · 2026 年 6 月</span>
+      <span class="pill g">仓库：github.com/EthanLyu30/dashcam-semantic-recall</span>
+    </div>
+  </div>
+  <div class="pagenum">01</div>
+</section>
+
+<!-- ============ 2 汇报主线 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>本次汇报的主线：需求 ↔ 交付 逐条对照</h2>
+    <span class="badge">实事求是：完成的给证据，没完成的说清楚</span>
+  </div>
+  <div class="cards four">
+    <div class="card"><div class="label">自动化测试</div><div class="value">86 个</div><span class="pill g">完整环境 86 passed</span></div>
+    <div class="card"><div class="label">桌面端页面</div><div class="value">11 页</div><span class="pill b">全部接真实后端</span></div>
+    <div class="card"><div class="label">真实语料</div><div class="value">4 段视频</div><span class="pill y">含约 3 小时真实路况</span></div>
+    <div class="card"><div class="label">真实事件</div><div class="value">21 个</div><span class="pill i">Qwen-VL 视觉识别</span></div>
+  </div>
+  <div class="row left-heavy">
+    <div class="panel">
+      <h3>我们最终交付了什么（一句话版）</h3>
+      <ul>
+        <li class="g">完整主链路真实跑通：上传 → ffmpeg 切片抽帧 → 通义千问 Qwen-VL 逐帧视觉理解 → 语义事件聚合 → 自然语言检索 → VLC 精准回放 → 证据包导出 → 全程审计留痕。</li>
+        <li class="b">管理面（概览 / 复核 / 告警 / 事故 / 证据 / 日报 / 配置 / 权限）全部由真实数据库驱动，切页实时刷新；演示中上传一段视频，看板数字当场变化。</li>
+        <li class="i">所有操作按钮都接真实写接口：批量导入、编辑告警规则、新增用户、批量归档证据……界面上不存在"摆设按钮"。</li>
+        <li class="y">没完成的也明确列出：50 并发下 p95 超性能预算、部分性能指标未真机压测、Docker compose 未实跑（本机无 Docker）——见第 9 页缺口清单。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>与阶段二相比的增量</h3>
+      <ul>
+        <li>阶段二：框架 + 原型复刻 + mock 演示路径</li>
+        <li class="g">真实模型联调：DeepSeek 文本 → 换 Qwen-VL 真视觉</li>
+        <li class="g">真实长视频入库（约 3 小时重庆路况）</li>
+        <li class="g">管理面 API + 桌面端全量联调</li>
+        <li class="g">P0 安全加固 / 重试可靠性 / 第三方接口</li>
+        <li class="g">告警规则持久化、用户创建等真实写操作</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pagenum">02</div>
+</section>
+
+<!-- ============ 3 架构回顾 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>系统架构回顾</h2>
+    <span class="badge">Qt6 桌面端 + FastAPI 后端 + 双引擎数据库 + 多模态模型适配层</span>
+  </div>
+  <div class="flow">
+    <div class="step"><b>Qt6 桌面客户端</b><span>PySide6 · 11 页 · python-vlc 嵌入回放 · RestApiClient</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>FastAPI 后端</b><span>JWT 鉴权 · 全量审计 · 40+ REST 接口 · Swagger 自动文档</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>媒体流水线</b><span>ffmpeg 转码 · 30s 切片 · 抽帧 · 缩略图</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>模型适配层</b><span>OpenAI 兼容协议 · Qwen-VL / DeepSeek / mock 一键切换 · 失败自动回退</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>数据与检索</b><span>PostgreSQL REAL[] 向量 + cosine_similarity 存储函数 / SQLite 降级 · 混合检索</span></div>
+  </div>
+  <div class="row three">
+    <div class="panel">
+      <h3>关键设计 1 · 双引擎数据库</h3>
+      <ul>
+        <li>PostgreSQL：原生 <b>REAL[]</b> 向量列 + PL/pgSQL <b>cosine_similarity()</b>，库内排序</li>
+        <li>SQLite：JSON 向量 + numpy 余弦，零安装可演示</li>
+        <li>9 张业务表对齐《概要设计 V4.0》第 4 章</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>关键设计 2 · 模型可降级</h3>
+      <ul>
+        <li>默认 mock 确定性伪标签——离线演示不崩</li>
+        <li>本机环境变量配 key 即走真 Qwen-VL 视觉理解</li>
+        <li>调用失败指数退避重试，再失败回退 mock</li>
+        <li class="y">密钥只存本机环境变量，不入库、不进仓库</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>关键设计 3 · 事件聚合</h3>
+      <ul>
+        <li>1 帧 / 6 秒抽样（可配），控制模型调用成本</li>
+        <li>相邻 ≤10s 同类型帧合并为一个语义事件</li>
+        <li>低置信事件自动进人工复核队列</li>
+        <li>事件携带关键帧、标签、置信度、向量文本</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pagenum">03</div>
+</section>
+
+<!-- ============ 4 FR 对照（上） ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>需求对照 · 功能需求（上）</h2>
+    <span class="badge">SRS v3.0 FR-01 ~ FR-05</span>
+  </div>
+  <table class="req" style="margin-top:8px;">
+    <tr><th>需求</th><th>状态</th><th>实际交付与证据</th></tr>
+    <tr>
+      <td class="req-name">FR-01 视频接入与预处理</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>上传（≤10GB 校验，超限 413）→ ffprobe 探测 → 转码 → 30s 切片 → 抽帧 → 缩略图，全部真 ffmpeg；<b>单个 + 批量导入</b>均可用；处理进度可轮询（GET /status）。<span class="muted">同步处理模式，长视频需等待——异步队列列为产品化增强。</span></td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-02 关键帧分析与语义事件生成</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>Qwen-VL 真视觉理解已联调：约 3 小时真实路况 + 2 分钟 UK 路况共产出 <b>21 个真实语义事件</b>（违停 / 行人风险 / 道路障碍 / 异常停车 / 剐蹭）；滑窗聚合 + 置信度阈值分流复核。<span class="muted">默认 mock 演示路径保留，口径在 README 写明，不冒充真模型。</span></td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-03 自然语言语义检索</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>向量召回 + 关键词重排混合检索；PG 库内排序 / SQLite numpy 降级；召回质量有专项测试（自然语句不含类别名词的 top-1 断言 + 负样本）；每次查询写检索留痕。</td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-04 精准回放</td>
+      <td class="status"><span class="pill y">✅ 功能完成<br/>⚠ 指标未压测</span></td>
+      <td>python-vlc 真嵌入播放（D3D11VA 硬解），点击检索结果 seek 到事件起点；视频流接口已加鉴权（短时效签名 ticket 供 VLC 直连）。<span class="muted">"跳转≤1s / 启动≤2s"未做正式计时压测——演示中体感即时，但我们不拿体感冒充数据。</span></td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-05 结果展示与时间轴</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>结果卡片（置信度色块 / 相关度 / 摘要 / 标签）+ 事件时间轴高亮 + 详情面板三指标联动；选中事件四个组件同步跳转。</td>
+    </tr>
+  </table>
+  <div class="pagenum">04</div>
+</section>
+
+<!-- ============ 5 FR 对照（下） ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>需求对照 · 功能需求（下）</h2>
+    <span class="badge">SRS v3.0 FR-06 ~ FR-09 + 复核链路</span>
+  </div>
+  <table class="req" style="margin-top:8px;">
+    <tr><th>需求</th><th>状态</th><th>实际交付与证据</th></tr>
+    <tr>
+      <td class="req-name">FR-06 证据导出 + 第三方接口</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>真 ffmpeg 切片 + 关键帧截图 + JSON/Markdown 摘要打 zip；<b>24h 内同事件去重复用</b>；受控批量导出（≤50，失败隔离）；桌面端可一键"批量归档全部事件"。第三方只读接口走 X-Api-Key 鉴权，未配置密钥默认整组关闭（503）。</td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-07 操作日志与查询留痕</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>所有写操作落 audit_logs（登录 / 上传 / 检索 / 导出 / 复核 / 告警处置 / 规则修改 / 用户创建），X-Request-Id 全链路贯穿；桌面端证据页直接展示真实审计流水（库内已积累 <b>580+ 条</b>）。</td>
+    </tr>
+    <tr>
+      <td class="req-name">人工复核闭环</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>低置信事件自动入队；复核工作台加载<b>该事件的真实关键帧</b> + 元数据 + 流转记录；提交结论（通过/驳回/存疑）真实写库、可修正事件类型与标签、记审计、队列即时刷新；备注支持草稿暂存。</td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-08 看板 / 告警 / 事故 / 日报</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>全部由真实库实时派生：7 日趋势、事件类型分布、待复核动态、告警分级列表（确认 / 处置真实写库）、事故卡片（大模型摘要重新生成）、日报导出 Markdown/JSON。<b>告警分级规则可编辑并持久化，保存后列表立即按新规则重新分级</b>。</td>
+    </tr>
+    <tr>
+      <td class="req-name">FR-09 模型配置 / 角色权限</td>
+      <td class="status"><span class="pill y">✅ 主体完成<br/>⚠ 部分写操作未做</span></td>
+      <td>模型 / 存储 / 安全配置实时只读展示（密钥不回传明文）+ 模型连通性自检；权限矩阵由真实权限目录 × 角色推导，可导出 CSV；<b>新增用户真实入库（bcrypt，立即可登录）</b>。<span class="muted">未做：用户的修改 / 禁用（PATCH/DELETE）、自定义角色编辑——三角色（admin/reviewer/user）固化已覆盖课程场景。</span></td>
+    </tr>
+  </table>
+  <div class="pagenum">05</div>
+</section>
+
+<!-- ============ 6 NFR 对照 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>需求对照 · 非功能需求</h2>
+    <span class="badge">安全 / 可靠性 / 性能——性能这一条我们如实说没全达标</span>
+  </div>
+  <table class="req" style="margin-top:8px;">
+    <tr><th>需求</th><th>状态</th><th>实际交付与证据</th></tr>
+    <tr>
+      <td class="req-name">NFR-01 鉴权与访问控制</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>bcrypt 密码 + PyJWT Bearer Token；admin / reviewer / user 三角色 RBAC，敏感接口逐一限权（403 有测试覆盖）；生产环境强制非默认 JWT 密钥否则拒绝启动。</td>
+    </tr>
+    <tr>
+      <td class="req-name">NFR-05 输入校验与资源保护</td>
+      <td class="status"><span class="pill g">✅ 已加固</span></td>
+      <td>视频流接口由"裸公开"改为鉴权 + 短时效签名 ticket；静态目录收窄到仅 frames/thumbnails（原视频 / 证据包不再裸露）；上传 10GB 上限。<span class="muted">HTTPS 由部署期反向代理终止，代码内未内建。</span></td>
+    </tr>
+    <tr>
+      <td class="req-name">NFR-02 任务可靠性</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>模型调用失败指数退避自动重试，重试穷尽回退 mock 不崩演示；失败任务可幂等重投（POST /retry，reviewer/admin）；处理进度可轮询。</td>
+    </tr>
+    <tr>
+      <td class="req-name">NFR-04 性能指标</td>
+      <td class="status"><span class="pill r">⚠ 部分达标</span></td>
+      <td><b>达标</b>：单请求检索 &lt;4s（300 条事件基准测试通过）。<b>不达标</b>：50 并发 500 请求实测 p50≈2.5s、<b>p95≈6.9s 超 4s 预算</b>（错误率 0.2%）；瓶颈定位清楚——单 uvicorn worker + SQLite 检索写留痕串行。改进路径：多 worker + PostgreSQL + 写库异步化。<span class="muted">2h/4K 预处理≤8min、跳转≤1s 未做真机压测，不虚报。</span></td>
+    </tr>
+    <tr>
+      <td class="req-name">PostgreSQL 向量检索</td>
+      <td class="status"><span class="pill g">✅ 完成</span></td>
+      <td>PG REAL[] 原生向量列 + cosine_similarity() 存储函数库内排序；SQLite JSON+numpy 降级保证零依赖演示；pytest-env 隔离让 86 个测试不依赖本机装 PG。</td>
+    </tr>
+  </table>
+  <div class="pagenum">06</div>
+</section>
+
+<!-- ============ 7 真实数据证据 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>不是 mock 演示：真实数据截图为证</h2>
+    <span class="badge">以下截图全部来自连接真实后端的运行实况（docs/final-demo-shots/）</span>
+  </div>
+  <div class="row" style="grid-template-columns:1.5fr 1fr;">
+    <div class="shot">
+      <img src="../final-demo-shots/01-search-real-playback.png" alt="真实回放" />
+      <div class="cap"><b>语义检索 + VLC 真实回放</b>：约 3 小时重庆路况视频，检索命中 8 条违停/风险事件，点击即 seek 到 02:04:30，硬解播放，时间轴高亮事件分布</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;min-height:0;">
+      <div class="shot" style="flex:1;">
+        <img src="../final-demo-shots/03-review-real-keyframe.png" alt="复核真实关键帧" />
+        <div class="cap"><b>复核工作台</b>：选中任务加载 Qwen-VL 识别现场的真实关键帧（行人横穿，置信度 90%）</div>
+      </div>
+      <div class="shot" style="flex:1;">
+        <img src="../final-demo-shots/05-evidence-audit-live.png" alt="证据与审计" />
+        <div class="cap"><b>证据与日志</b>：真实导出记录（可解压验证）+ 580 余条真实审计流水</div>
+      </div>
+    </div>
+  </div>
+  <div class="pagenum">07</div>
+</section>
+
+<!-- ============ 8 演示主流程 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>现场演示主流程（10 步闭环）</h2>
+    <span class="badge">登录 admin → 一条链路走完增删查改与导出</span>
+  </div>
+  <div class="flow">
+    <div class="step"><b>① 上传</b><span>视频流页选 mp4（支持多选批量）</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>② 流水线</b><span>转码 / 切片 / 抽帧 / Qwen-VL 分析 / 聚合 → indexed</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>③ 检索</b><span>输入"找一下违停"或点推荐词</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>④ 回放</b><span>VLC seek 到事件起点，时间轴 / 详情联动</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>⑤ 导出</b><span>证据包 zip：片段 + 截图 + 摘要</span></div>
+  </div>
+  <div class="flow">
+    <div class="step"><b>⑥ 复核</b><span>队列选任务 → 看真实关键帧 → 提交结论写库</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>⑦ 告警</b><span>确认 / 处置；编辑分级规则立即生效</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>⑧ 看板</b><span>切回概览：处理数 / 事件数当场 +1</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>⑨ 审计</b><span>证据页查刚才每一步的留痕</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>⑩ 日报</b><span>一键导出当日 Markdown/JSON 报告</span></div>
+  </div>
+  <div class="row" style="grid-template-columns:1fr 1fr;">
+    <div class="shot">
+      <img src="../final-demo-shots/02-overview-live.png" alt="实时概览" />
+      <div class="cap"><b>系统概览（实时）</b>：4 视频 / 21 事件 / 542 次检索 / qwen 节点在线，趋势与分布图由库内数据实时聚合</div>
+    </div>
+    <div class="shot">
+      <img src="../final-demo-shots/04-alerts-live.png" alt="告警中心" />
+      <div class="cap"><b>告警中心（实时）</b>：分级列表 + 确认 / 处置真实写库；分级规则可编辑、持久化、立即重判全部告警</div>
+    </div>
+  </div>
+  <div class="pagenum">08</div>
+</section>
+
+<!-- ============ 9 缺口清单 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>实事求是：未完成与边界清单</h2>
+    <span class="badge">不藏丑——每一条都写了原因和改进路径</span>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3 style="color:var(--red);">⚠ 未达标 / 未验证（3 项）</h3>
+      <ul>
+        <li class="r"><b>50 并发性能不达标</b>：p95≈6.9s 超 4s 预算（实测数据，非估算）。瓶颈：单 worker + SQLite 写串行。改进：多 worker + PostgreSQL + 检索留痕异步化——属部署调优，非架构缺陷。</li>
+        <li class="y"><b>部分性能指标未真机压测</b>：2h/4K 预处理≤8min、回放跳转≤1s、启动≤2s。功能可用、体感流畅，但我们没有计时数据就不在表格里打勾。</li>
+        <li class="y"><b>Docker compose 未实跑验证</b>：compose 文件与 Dockerfile 已编写并提交，但开发机未装 Docker，无法给出"亲测可用"的结论。</li>
+      </ul>
+      <h3 style="margin-top:14px;color:var(--yellow);">⚠ 有意取舍（课程范围外）</h3>
+      <ul>
+        <li class="y">异步任务队列（Celery/Redis）：演示场景同步处理已够用</li>
+        <li class="y">用户修改/禁用、自定义角色编辑：三固定角色已覆盖场景</li>
+        <li class="y">HLS 流媒体、HTTPS 内建：部署期由反代提供</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--green);">✅ 容易被当成"没做完"、实际已闭环的点</h3>
+      <ul>
+        <li class="g">管理页不是静态原型：11 页全部实时拉取后端、切页自动刷新</li>
+        <li class="g">界面上没有摆设按钮：所有操作按钮都接真实写接口并留审计；离线 Mock 模式会明示"离线模式"，不假装写入成功</li>
+        <li class="g">mock 模型是<b>显式声明的降级路径</b>（README 有"真实跑通 vs mock"对照表），不是冒充真模型</li>
+      </ul>
+      <h3 style="margin-top:14px;">质量保障</h3>
+      <ul>
+        <li>86 个自动化测试全过：端到端、安全回归（流鉴权 / 上传上限 / JWT 策略 / RBAC 403）、召回质量、性能基准、24h 去重、批量失败隔离</li>
+        <li>真实后端逐页截图走查 + 离线 Mock 全页面冒烟</li>
+        <li>API 契约文档逐端点标注"已实现 / 🔵 仅规划"，文档与代码同步审计过</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pagenum">09</div>
+</section>
+
+<!-- ============ 10 分工 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>分工与产出</h2>
+    <span class="badge">按模块责任归属 · 详细任务清单见 docs/ 下两份分工文档</span>
+  </div>
+  <div class="row">
+    <div class="panel">
+      <h3>吕霄阳 · 约 60%</h3>
+      <ul>
+        <li>Qt6 桌面端 11 页全量落地与真实联调（检索工作台 / VLC 回放 / 管理面）</li>
+        <li>FastAPI 主链路框架与集成：auth / audit / 媒体流水线 / 模型适配 / 混合检索框架 / 导出</li>
+        <li>P0 安全加固（流鉴权 ticket / 静态目录收窄 / 上传上限 / JWT 策略）</li>
+        <li>批量导出、管理面写操作（告警规则 / 用户创建路由）、批量导入</li>
+        <li>README / API 契约 / 需求追踪 / 交付清单与演示闭环</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>倪羽辰 · 约 40%</h3>
+      <ul>
+        <li>PostgreSQL 双引擎：REAL[] 向量列 + cosine_similarity() 存储函数 + SQLite 降级</li>
+        <li>人工复核 API（任务队列分页 + 决策写库 + 修正字段）</li>
+        <li>真实模型 / 真实视频联调支撑（Qwen-VL 路径验证）</li>
+        <li>NFR-02 重试机制、FR-06 第三方 API-Key 接口、24h 导出去重</li>
+        <li>检索召回质量与性能基准测试、负载实测、后端技术说明文档（298 行）</li>
+      </ul>
+    </div>
+  </div>
+  <div class="cards three" style="margin-top:12px;">
+    <div class="card"><div class="label">代码与文档</div><div class="value">40+ 接口</div><span class="pill b">api-contract.md 1100+ 行</span></div>
+    <div class="card"><div class="label">测试</div><div class="value">86 用例</div><span class="pill g">pytest-env 隔离，不依赖本机环境</span></div>
+    <div class="card"><div class="label">可复现性</div><div class="value">3 条启动路径</div><span class="pill i">SQLite 零安装 / PG / Docker</span></div>
+  </div>
+  <div class="pagenum">10</div>
+</section>
+
+<!-- ============ 11 总结 ============ -->
+<section class="slide">
+  <div class="topbar">
+    <h2>总结与展望</h2>
+    <span class="badge">课程目标已达成 · 产品化路径已明确</span>
+  </div>
+  <div class="row left-heavy">
+    <div class="panel">
+      <h3>结论</h3>
+      <ul>
+        <li class="g">SRS 全部 9 项功能需求：<b>8 项完整闭环</b>，FR-09 主体完成（仅用户编辑/自定义角色未做）；复核、告警、报表等管理链路真实可用。</li>
+        <li class="g">非功能需求：鉴权 / 安全加固 / 可靠性全部落地；性能<b>单请求达标、50 并发未达标</b>——有实测数据、有定位、有改进方案。</li>
+        <li class="b">"真实"是这次最终交付的关键词：真视频、真模型、真数据库、真写操作、真审计；mock 只作为显式声明的离线兜底。</li>
+        <li class="i">全部结论可复验：86 个测试一条命令跑通，演示流程 10 步可现场重放，截图与库内数据一致。</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>若继续产品化（优先级排序）</h3>
+      <ul>
+        <li>① 多 worker + PG + 异步写：解决 50 并发 p95</li>
+        <li>② 异步任务队列：长视频后台处理 + 进度推送</li>
+        <li>③ 用户管理补全（修改 / 禁用 / 自定义角色）</li>
+        <li>④ HLS 流媒体 + HTTPS 端到端</li>
+        <li>⑤ 真机性能基准：2h/4K 预处理、跳转延迟</li>
+      </ul>
+      <h3 style="margin-top:14px;">致谢</h3>
+      <p class="muted" style="font-size:13px;">感谢老师全程指导。欢迎现场实操验证任意一条链路——系统经得起点。</p>
+    </div>
+  </div>
+  <div class="pagenum">11</div>
+</section>
+
+</body>
+</html>

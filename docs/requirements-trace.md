@@ -1,6 +1,6 @@
 # Requirements Trace
 
-最后更新：2026-06-08（final-stage 交付 + 导出去重/批量 + P0 安全加固 + FR-06 第三方接口 + NFR-02 重试 + 检索召回/性能基准）
+最后更新：2026-06-11（最终交付：管理面全量联调 + 真实写操作 + 真实数据验证；汇报 PPT 见 `docs/final-report/final-report.html`）
 
 | 需求 | 当前状态 | 主要落点 | 责任人 |
 | --- | --- | --- | --- |
@@ -23,4 +23,4 @@
 | NFR PostgreSQL 向量检索 | 已实现 | PG `REAL[]` + `cosine_similarity()` 存储函数；SQLite JSON + numpy 降级 | 倪羽辰 |
 | 真多模态模型接入 | 已实现配置路径 | OpenAI 兼容协议，DeepSeek/Qwen key 通过本机环境变量启用，失败自动回退 mock | 倪羽辰 |
 
-测试覆盖：84 个自动化测试；当前环境 `78 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`、`/api/exports/batch` 批量导出与 24h 去重复用；`test_exporter.py` 覆盖单事件导出、去重窗口、批量失败隔离；`test_security_hardening.py` 覆盖 `/stream` 鉴权 + 签名 ticket、`/media` 收窄、上传 413 上限、生产 JWT 密钥策略；`test_retry.py` 覆盖指数退避重试；`test_status_retry_routes.py` 覆盖进度轮询与重试 RBAC；`test_integration_api.py` 覆盖 FR-06 API-Key 接口；`test_search_recall.py` 覆盖自然语言召回与负样本；`test_perf_benchmark.py` 检索性能基准；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles；`test_client_api.py` 覆盖 final-stage REST client。
+测试覆盖：86 个自动化测试；完整环境 `86 passed`，最小环境 `80 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。端到端 `test_api_integration.py` 串通 login → upload → process → search → export；`test_export_routes.py` 覆盖 `/api/exports`、`/api/exports/batch` 批量导出与 24h 去重复用；`test_exporter.py` 覆盖单事件导出、去重窗口、批量失败隔离；`test_security_hardening.py` 覆盖 `/stream` 鉴权 + 签名 ticket、`/media` 收窄、上传 413 上限、生产 JWT 密钥策略；`test_retry.py` 覆盖指数退避重试；`test_status_retry_routes.py` 覆盖进度轮询与重试 RBAC；`test_integration_api.py` 覆盖 FR-06 API-Key 接口；`test_search_recall.py` 覆盖自然语言召回与负样本；`test_perf_benchmark.py` 检索性能基准；`test_final_stage_api.py` 覆盖 dashboard / alerts / accidents / reports / settings / users / roles；`test_client_api.py` 覆盖 final-stage REST client。
