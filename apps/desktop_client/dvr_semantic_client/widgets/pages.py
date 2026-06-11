@@ -187,6 +187,20 @@ def action_button(text: str, variant: str = "") -> QPushButton:
     return button
 
 
+class _ClickableFrame(QFrame):
+    """A QFrame that fires a callback on left-click (whole-row hit target)."""
+
+    def __init__(self, on_click, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._on_click = on_click
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event) -> None:  # type: ignore[override]
+        if event.button() == Qt.MouseButton.LeftButton and self._on_click is not None:
+            self._on_click()
+        super().mousePressEvent(event)
+
+
 def section_header(text: str, note: str = "") -> QHBoxLayout:
     layout = QHBoxLayout()
     layout.addWidget(title(text))
@@ -854,7 +868,7 @@ def review_page(api_client: Any | None = None) -> QWidget:
     refresh_queue_btn = action_button("刷新")
     queue_header.addWidget(refresh_queue_btn)
     queue_layout.addLayout(queue_header)
-    queue_layout.addWidget(muted("低置信事件自动入队，点击「复核」选中后在右侧提交结论"))
+    queue_layout.addWidget(muted("低置信事件自动入队，点击任务行（或「复核」按钮）选中后在右侧提交结论"))
     tasks_widget = QWidget()
     tasks_widget.setObjectName("reviewTasksHost")
     tasks_widget.setStyleSheet("#reviewTasksHost { background: transparent; }")
@@ -883,11 +897,14 @@ def review_page(api_client: Any | None = None) -> QWidget:
         if not tasks_data:
             tasks_inner.addWidget(muted("队列为空（或离线 / Mock 模式，连接真实后端后显示）。"))
         for task in tasks_data:
-            item_frame = QFrame()
+            # 整行可点击选中（不只右侧小按钮），hover 高亮提示可点。
+            item_frame = _ClickableFrame(lambda t=task: _select(t))
             item_frame.setStyleSheet(
                 "QFrame { background:#F8FAFC; border:1px solid #E2E8F0; border-radius:10px; }"
+                "QFrame:hover { background:#EFF6FF; border:1px solid #93C5FD; }"
                 "QLabel { background:transparent; border:none; }"
             )
+            item_frame.setToolTip("点击选中此任务进行复核")
             item_lay = QHBoxLayout(item_frame)
             item_lay.setContentsMargins(10, 8, 10, 8)
             item_lay.setSpacing(8)
@@ -926,7 +943,7 @@ def review_page(api_client: Any | None = None) -> QWidget:
     wb_title = QLabel("复核视频工作台")
     wb_title.setStyleSheet("color:#E2E8F0;font-size:16px;font-weight:800;")
     workbench_layout.addWidget(wb_title)
-    surface = QLabel("点击左侧「复核」选择一条待确认事件\n选中后这里加载该事件的真实关键帧")
+    surface = QLabel("点击左侧任务队列中的任意一行\n选中后这里加载该事件的真实关键帧")
     surface.setAlignment(Qt.AlignmentFlag.AlignCenter)
     surface.setMinimumHeight(300)
     surface.setWordWrap(True)

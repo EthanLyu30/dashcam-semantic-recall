@@ -101,6 +101,9 @@ class VideoPlayerPanel(QFrame):
         # window unparented from the card, so it overpaints the controls below.
         self._pending_url: tuple[str, str] | None = None
         self._native_realized = False
+        # First-frame priming state — see _show_frame_at.
+        self._priming = False
+        self._prime_target = 0
 
         # --- 视频画面承载（VLC 把 surface 绑到原生子窗口）---------------------
         self.video_frame = QFrame()
@@ -380,11 +383,71 @@ class VideoPlayerPanel(QFrame):
             self._attach_player_surface()
             self._surface_stack.setCurrentWidget(self.video_frame)
             self.status.setText(f"已连接视频流：{title}")
+            # VLC paints nothing until play() — a freshly bound stream reads as
+            # "video didn't load" (black card). Render a paused first frame.
+            self._show_frame_at(self._current_sec)
         except Exception as exc:  # pragma: no cover - runtime failure
             self.status.setText(f"VLC 加载视频失败：{exc}")
             self.surface_label.setText(self._placeholder_text("stream-failed", title))
             self._surface_stack.setCurrentWidget(self.surface_label)
         self._pending_url = None
+
+    def _show_frame_at(self, sec: int) -> None:
+        """Render a *paused* still frame at ``sec``.
+
+        Plays muted for a moment so libVLC actually decodes, seeks to the
+        target, then pauses and unmutes. ``_prime_target`` always holds the
+        latest requested position so overlapping calls (load → default-search
+        seek) settle on the most recent frame instead of racing.
+        """
+        if not (self._vlc_available and self._vlc_player and self._vlc_player.get_media()):
+            return
+        self._prime_target = max(0, int(sec))
+        if self._playing or self._priming:
+            return
+        try:
+            self._vlc_player.audio_set_mute(True)
+            self._vlc_player.play()
+        except Exception:
+            return
+        self._priming = True
+        state = {"tries": 0}
+
+        def _settle() -> None:
+            if self._playing:  # user hit 播放 mid-prime — hand over playback
+                self._priming = False
+                try:
+                    self._vlc_player.audio_set_mute(False)
+                except Exception:
+                    pass
+                return
+            try:
+                ready = bool(self._vlc_player.is_playing()) and self._vlc_player.get_time() >= 0
+            except Exception:
+                ready = False
+            state["tries"] += 1
+            if not ready and state["tries"] < 25:
+                QTimer.singleShot(100, _settle)
+                return
+            try:
+                self._vlc_player.set_time(self._prime_target * 1000)
+            except Exception:
+                pass
+            QTimer.singleShot(220, _freeze)
+
+        def _freeze() -> None:
+            self._priming = False
+            if not self._playing:
+                try:
+                    self._vlc_player.set_pause(1)
+                except Exception:
+                    pass
+            try:
+                self._vlc_player.audio_set_mute(False)
+            except Exception:
+                pass
+
+        QTimer.singleShot(120, _settle)
 
     def toggle_playback(self) -> None:
         if self._vlc_available and self._vlc_player and self._vlc_player.get_media():
@@ -399,6 +462,8 @@ class VideoPlayerPanel(QFrame):
             else:
                 try:
                     self._vlc_player.play()
+                    # In case a first-frame prime muted the stream just before.
+                    self._vlc_player.audio_set_mute(False)
                 except Exception as exc:  # pragma: no cover
                     self.status.setText(f"VLC 播放失败：{exc}")
                     return
@@ -425,6 +490,10 @@ class VideoPlayerPanel(QFrame):
                 self._vlc_player.set_time(target * 1000)
             except Exception:
                 pass
+            if not self._playing:
+                # Paused/never-started: render the frame at the new position so
+                # clicking a search result visibly jumps the picture too.
+                self._show_frame_at(target)
         self.seek_requested.emit(self._current_sec)
         self._sync_time()
 
