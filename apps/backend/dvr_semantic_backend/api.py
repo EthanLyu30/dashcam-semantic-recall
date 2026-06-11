@@ -27,6 +27,8 @@ from .schemas import (
     ActionStatusResponse,
     AnalysisReport,
     AlertListResponse,
+    AlertRulesResponse,
+    AlertRulesUpdateRequest,
     AlertSummaryResponse,
     AuditLogOut,
     BatchExportItem,
@@ -62,11 +64,14 @@ from .schemas import (
     SearchRequest,
     SearchResponse,
     UploadResponse,
+    UserCreateRequest,
     UserListResponse,
+    UserOut,
     VideoListResponse,
     VideoOut,
     VideoStatusResponse,
 )
+from .services import alert_rules as alert_rules_service
 from .services import audit as audit_service
 from .services import auth as auth_service
 from .services import event_aggregator
@@ -853,6 +858,40 @@ def create_app() -> FastAPI:
     ) -> dict[str, Any]:
         return final_stage.list_alerts(status=status, event_type=event_type)
 
+    @app.get("/api/alerts/rules", response_model=AlertRulesResponse)
+    def get_alert_rules(
+        ctx: auth_service.AuthContext = Depends(auth_service.require_auth),
+    ) -> dict[str, Any]:
+        return alert_rules_service.load_rules()
+
+    @app.put("/api/alerts/rules", response_model=AlertRulesResponse)
+    def update_alert_rules(
+        body: AlertRulesUpdateRequest,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
+    ) -> dict[str, Any]:
+        try:
+            rules = alert_rules_service.save_rules(
+                high_confidence=body.high_confidence,
+                medium_confidence=body.medium_confidence,
+                high_risk_types=body.high_risk_types,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="alert.rules.update",
+            target_type="settings",
+            target_id="alert_rules",
+            message=(
+                f"high>={rules['high_confidence']:.2f} "
+                f"medium>={rules['medium_confidence']:.2f} "
+                f"types={','.join(rules['high_risk_types'])}"
+            ),
+        )
+        return rules
+
     @app.post("/api/alerts/{alert_id}/ack", response_model=ActionStatusResponse)
     def ack_alert(
         alert_id: str,
@@ -990,6 +1029,37 @@ def create_app() -> FastAPI:
         ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
     ) -> UserListResponse:
         return UserListResponse(items=final_stage.list_users())
+
+    @app.post("/api/users", response_model=UserOut, status_code=201)
+    def create_user(
+        body: UserCreateRequest,
+        request: Request,
+        ctx: auth_service.AuthContext = Depends(auth_service.require_role("admin")),
+    ) -> UserOut:
+        try:
+            user_id = auth_service.create_user(
+                username=body.username,
+                password=body.password,
+                role=body.role,
+                display_name=body.display_name,
+            )
+        except ValueError as exc:
+            status = 409 if "already exists" in str(exc) else 400
+            raise HTTPException(status_code=status, detail=str(exc))
+        audit_service.log_action(
+            request_id=request.state.request_id,
+            user_id=ctx.user_id,
+            action="user.create",
+            target_type="user",
+            target_id=user_id,
+            message=f"username={body.username} role={body.role}",
+        )
+        row = next(
+            (u for u in final_stage.list_users() if u["id"] == user_id), None
+        )
+        if row is None:  # pragma: no cover - row was just inserted
+            raise HTTPException(status_code=500, detail="user not persisted")
+        return UserOut(**row)
 
     @app.get("/api/roles", response_model=RoleListResponse)
     def list_roles(

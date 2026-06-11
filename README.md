@@ -44,10 +44,10 @@
 | 任务可靠性 (NFR-02) | 模型调用失败自动重试（指数退避，可配 `DVR_SEMANTIC_RETRY_ATTEMPTS`）；`POST /api/videos/{id}/retry` 幂等重投失败任务（reviewer/admin）；`GET /api/videos/{id}/status` 进度轮询 | 倪羽辰 |
 | 第三方接口 (FR-06) | `GET /api/integration/events[/{id}]` 对外只读已确认事件，`X-Api-Key` 鉴权（`DVR_SEMANTIC_INTEGRATION_API_KEYS`，未配置默认关闭返回 503） | 倪羽辰 |
 | 真 VLC 播放 | `python-vlc` 嵌入 QFrame；未装 VLC 自动降级到占位提示 | 吕霄阳 |
-| 测试 | 84 个自动化用例；完整环境（含桌面/ffmpeg）`84 passed`，最小环境 `78 passed, 6 skipped`，含端到端、导出列表、24h 去重、批量导出、流鉴权/上传上限/JWT 策略安全回归、重试与第三方接口、自然语言检索召回与性能基准、final-stage 管理面 API 和客户端 REST 契约；pytest-env 隔离 | 吕霄阳 / 倪羽辰（测试隔离） |
+| 测试 | 86 个自动化用例；完整环境（含桌面/ffmpeg）`86 passed`，最小环境 `80 passed, 6 skipped`，含端到端、导出列表、24h 去重、批量导出、流鉴权/上传上限/JWT 策略安全回归、重试与第三方接口、自然语言检索召回与性能基准、final-stage 管理面 API（含告警规则读写与用户创建）和客户端 REST 契约；pytest-env 隔离 | 吕霄阳 / 倪羽辰（测试隔离） |
 | UI 滚动 | 所有内容页包裹 `QScrollArea`，窗口较小时可纵向滚动，内容不再被截断 | 吕霄阳 |
 | 登录流程规范化 | 登录已从顶部导航栏移除；⏻ 按钮改为退出确认 | 吕霄阳 |
-| 按钮响应 | 所有展示型按钮接入 final-stage 演示提示，区分主链路与后续产品化写入流程 | 吕霄阳 |
+| 管理面写操作（桌面端） | 所有操作按钮均接真实后端写接口：批量导入视频（多选上传+处理）、编辑告警分级规则（PUT `/api/alerts/rules`，持久化+审计）、新增用户（POST `/api/users`，bcrypt 入库可立即登录）、事故页一键建证据包、证据页批量归档全部事件（`/api/exports/batch`）、导出权限矩阵 CSV、模型连通性自检、复核草稿暂存；离线 Mock 模式下明示「离线模式」而非假装写入 | 吕霄阳 |
 | 后端技术说明 | `docs/backend-tech-notes.md`（298 行）涵盖架构/向量/Qwen/聚合/导出 | 倪羽辰 |
 | Final-stage 管理面 API | dashboard / alerts / accidents / reports / settings / users / roles / permissions 后端只读接口均有真实数据库派生响应，已被 `test_final_stage_api.py` 与 `final_demo_smoke` 覆盖；**桌面端 11 个页面已全部与真实接口联调**：概览/视频库/复核/告警/事故/证据日志/日报/模型配置/权限页的数字、列表、图表、审计日志均来自实时后端，且每次切页自动重新拉取（演示中上传视频后数字会真实变化） | 吕霄阳（框架）/ 倪羽辰（数据口径） |
 | 人工复核闭环（桌面端） | 复核队列实时拉取（pending+reviewing 全量）；选中任务后工作台加载**真实关键帧**与事件元数据；提交结论真实写库 + 审计留痕 + 队列即时刷新 | 吕霄阳 / 倪羽辰（API） |
@@ -214,7 +214,7 @@ uvicorn apps.backend.main:app --port 8000
 python -m pytest -q
 ```
 
-完整环境（装好 PySide6 + ffmpeg + VLC）验证输出：`84 passed`；最小环境为 `78 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。
+完整环境（装好 PySide6 + ffmpeg + VLC）验证输出：`86 passed`；最小环境为 `80 passed, 6 skipped`（跳过项为可选桌面/媒体环境与 ffmpeg 相关用例）。
 
 后端启动后，可额外运行 final-stage REST smoke：
 
@@ -258,6 +258,7 @@ python tools/final_demo_smoke.py --base-url http://127.0.0.1:8000
 | 多模态视觉理解（DeepSeek-VL / 通义千问 VL） | ⚠️ 默认 mock，配 API key 后真跑 | `MockAdapter` 基于文件名+SHA-256 给确定性伪标签；本机设置 `MODEL_PROVIDER=qwen/deepseek` + `MODEL_API_KEY` 后走真请求 |
 | VLC 视频回放 | ✅ 真跑 | 客户端用 `python-vlc` 真嵌入播放；未装 VLC 自动降级占位 |
 | 桌面端管理页（概览/复核/告警/事故/证据/日报/配置/权限） | ✅ 真跑（REST 模式） | 全部页面从后端实时拉取并在切页时自动刷新；复核工作台加载真实关键帧；证据页展示真实导出记录与审计日志；无 GPS 数据的「车辆轨迹/区域热力」装饰块已替换为真实的流水线状态 / 风险等级 / 视频源统计 |
+| 管理面写操作（批量导入/告警规则/新增用户/批量归档等） | ✅ 真跑（REST 模式） | 全部操作按钮接真实写接口并记审计日志；告警规则持久化在 `media/config/alert_rules.json` 且立即影响告警分级；新增用户 bcrypt 入库可立即登录；Mock 模式下按钮明示「离线模式」 |
 | 桌面客户端默认数据源 | mock | 未设置 `DVR_SEMANTIC_API_BASE` 时用 `apps/desktop_client/dvr_semantic_client/api.py` 的 `MockApiClient` 演示数据；管理页此时显示「离线 / Mock 模式」提示而非伪造的实时数字 |
 
 ### 想要"真后端 + 真视频 + 真视觉模型"全链路跑通，4 步：
@@ -329,7 +330,7 @@ dashcam-semantic-recall/
 │   ├── IMPL_PLAN.md                # 历史实施清单
 │   ├── final-stage-delivery.md     # 最终交付验收清单
 │   └── phase-2-roadmap.md
-├── tests/                          # 84 个自动化测试
+├── tests/                          # 86 个自动化测试
 ├── tools/
 │   └── capture_screenshots.py      # 自动抓取 Qt 客户端截图
 ├── var/                            # 运行时产物（git ignore）

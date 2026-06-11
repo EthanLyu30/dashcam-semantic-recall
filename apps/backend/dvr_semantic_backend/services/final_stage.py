@@ -23,6 +23,7 @@ from ..db import (
     Video,
     session_scope,
 )
+from .alert_rules import load_rules
 from .media_pipeline import media_root
 
 
@@ -206,10 +207,14 @@ def _alert_status(event: SemanticEvent) -> str:
 
 
 def _severity(event: SemanticEvent) -> str:
+    rules = load_rules()
     confidence = float(event.confidence or 0.0)
-    if event.event_type in {"scratch", "pedestrian_risk"} or confidence >= 0.85:
+    if (
+        event.event_type in set(rules["high_risk_types"])
+        or confidence >= float(rules["high_confidence"])
+    ):
         return "high"
-    if confidence >= 0.7:
+    if confidence >= float(rules["medium_confidence"]):
         return "medium"
     return "low"
 

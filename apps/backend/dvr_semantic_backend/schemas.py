@@ -253,6 +253,18 @@ class ActionStatusResponse(BaseModel):
     status: str
 
 
+class AlertRulesResponse(BaseModel):
+    high_risk_types: list[str]
+    high_confidence: float
+    medium_confidence: float
+
+
+class AlertRulesUpdateRequest(BaseModel):
+    high_confidence: float
+    medium_confidence: float
+    high_risk_types: list[str] | None = None
+
+
 class AccidentItem(BaseModel):
     id: str
     event_id: str
@@ -331,6 +343,13 @@ class UserOut(BaseModel):
 
 class UserListResponse(BaseModel):
     items: list[UserOut]
+
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+    display_name: str = ""
 
 
 class RoleOut(BaseModel):

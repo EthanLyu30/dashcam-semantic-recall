@@ -175,3 +175,105 @@ def test_final_stage_alerts_accidents_and_admin_catalogs(final_stage_client) -> 
     user_headers = _headers(client, "demo", "demo123")
     forbidden = client.get("/api/users", headers=user_headers)
     assert forbidden.status_code == 403
+
+
+def test_alert_rules_get_update_and_severity_effect(final_stage_client) -> None:
+    client, _ = final_stage_client
+    headers = _headers(client)
+
+    # Defaults come back when no rules file has been written yet.
+    rules = client.get("/api/alerts/rules", headers=headers)
+    assert rules.status_code == 200, rules.text
+    assert rules.json()["high_confidence"] == 0.85
+    assert rules.json()["medium_confidence"] == 0.7
+    assert "scratch" in rules.json()["high_risk_types"]
+
+    # Invalid thresholds are rejected.
+    bad = client.put(
+        "/api/alerts/rules",
+        json={"high_confidence": 0.6, "medium_confidence": 0.9},
+        headers=headers,
+    )
+    assert bad.status_code == 400
+
+    # Non-admin cannot edit rules.
+    user_headers = _headers(client, "demo", "demo123")
+    forbidden = client.put(
+        "/api/alerts/rules",
+        json={"high_confidence": 0.9, "medium_confidence": 0.5},
+        headers=user_headers,
+    )
+    assert forbidden.status_code == 403
+
+    # A valid update persists and immediately changes alert severity: the
+    # seeded scratch event (confidence 0.88) drops to "medium" once scratch is
+    # no longer a high-risk type and the high threshold rises above 0.88.
+    saved = client.put(
+        "/api/alerts/rules",
+        json={
+            "high_confidence": 0.95,
+            "medium_confidence": 0.5,
+            "high_risk_types": ["pedestrian_risk"],
+        },
+        headers=headers,
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["high_confidence"] == 0.95
+    assert saved.json()["high_risk_types"] == ["pedestrian_risk"]
+
+    again = client.get("/api/alerts/rules", headers=headers)
+    assert again.json()["high_confidence"] == 0.95
+
+    alerts = client.get("/api/alerts", headers=headers)
+    assert alerts.status_code == 200, alerts.text
+    assert alerts.json()["items"][0]["severity"] == "medium"
+
+
+def test_create_user_route(final_stage_client) -> None:
+    client, _ = final_stage_client
+    headers = _headers(client)
+
+    created = client.post(
+        "/api/users",
+        json={
+            "username": "patrol01",
+            "password": "patrol-pass-123",
+            "role": "reviewer",
+            "display_name": "巡查员一号",
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    assert created.json()["username"] == "patrol01"
+    assert created.json()["role"] == "reviewer"
+
+    # The new account can log in immediately.
+    login = client.post(
+        "/api/auth/login",
+        json={"username": "patrol01", "password": "patrol-pass-123"},
+    )
+    assert login.status_code == 200, login.text
+    assert login.json()["role"] == "reviewer"
+
+    # Duplicate username -> 409; unknown role -> 400; non-admin -> 403.
+    dup = client.post(
+        "/api/users",
+        json={"username": "patrol01", "password": "x", "role": "user"},
+        headers=headers,
+    )
+    assert dup.status_code == 409
+
+    bad_role = client.post(
+        "/api/users",
+        json={"username": "patrol02", "password": "x", "role": "superadmin"},
+        headers=headers,
+    )
+    assert bad_role.status_code == 400
+
+    user_headers = _headers(client, "demo", "demo123")
+    forbidden = client.post(
+        "/api/users",
+        json={"username": "patrol03", "password": "x", "role": "user"},
+        headers=user_headers,
+    )
+    assert forbidden.status_code == 403

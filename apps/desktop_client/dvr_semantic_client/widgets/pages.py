@@ -187,23 +187,6 @@ def action_button(text: str, variant: str = "") -> QPushButton:
     return button
 
 
-def _wip_button(text: str, variant: str = "") -> QPushButton:
-    """Button for management-面 write actions that are still UI-only prototypes."""
-    btn = action_button(text, variant)
-
-    def _notify() -> None:
-        QMessageBox.information(
-            btn.window(),
-            "原型功能（未接入写操作）",
-            f"「{text}」是管理面的写入/操作类功能，目前仍是界面原型，尚未接入后端写接口。\n\n"
-            "本版本已真实跑通的链路：登录鉴权、视频上传与预处理、Qwen-VL 语义分析、"
-            "自然语言检索、证据导出、操作审计，以及「概览」页的实时后端数据。",
-        )
-
-    btn.clicked.connect(_notify)
-    return btn
-
-
 def section_header(text: str, note: str = "") -> QHBoxLayout:
     layout = QHBoxLayout()
     layout.addWidget(title(text))
@@ -471,7 +454,8 @@ class VideoLibraryPage(QWidget):
         header_text.addWidget(muted("批量导入、单个视频处理、状态筛选和语义检索入口"))
         header_layout.addLayout(header_text)
         header_layout.addStretch()
-        batch_button = _wip_button("批量导入视频")
+        batch_button = action_button("批量导入视频")
+        batch_button.clicked.connect(self._on_batch_upload_clicked)
         self.upload_button = action_button("单个视频处理", "primary")
         self.upload_button.clicked.connect(self._on_upload_clicked)
         self.refresh_button = action_button("刷新列表")
@@ -664,6 +648,51 @@ class VideoLibraryPage(QWidget):
                 self.video_table.setItem(row, col, QTableWidgetItem(value))
         self.video_table.resizeColumnsToContents()
 
+    def _on_batch_upload_clicked(self) -> None:
+        paths, _ = QFileDialog.getOpenFileNames(
+            self,
+            "选择要批量导入的视频（可多选）",
+            "",
+            "Video files (*.mp4 *.mov *.mkv *.avi *.m4v);;All files (*.*)",
+        )
+        if not paths:
+            return
+        from PySide6.QtWidgets import QApplication
+
+        ok_count = 0
+        failures: list[str] = []
+        self._set_busy(True, f"批量导入 {len(paths)} 个文件…")
+        try:
+            for index, path_str in enumerate(paths, start=1):
+                path = Path(path_str)
+                self.progress_label.setText(
+                    f"({index}/{len(paths)}) 上传并处理：{path.name}"
+                )
+                QApplication.processEvents()
+                try:
+                    upload_result = self._api_client.upload_video(
+                        path, title=path.stem or path.name
+                    )
+                    video_id = ""
+                    if isinstance(upload_result, dict):
+                        video_id = str(upload_result.get("video_id", ""))
+                    if not video_id:
+                        failures.append(path.name)
+                        continue
+                    self._api_client.process_video(video_id)
+                    ok_count += 1
+                except Exception:
+                    failures.append(path.name)
+        finally:
+            self._set_busy(False)
+            self.refresh()
+        summary = f"成功导入并处理 {ok_count}/{len(paths)} 个视频。"
+        if failures:
+            summary += "\n失败：" + "、".join(failures)
+            QMessageBox.warning(self, "批量导入完成（部分失败）", summary)
+        else:
+            QMessageBox.information(self, "批量导入完成", summary)
+
     def _on_upload_clicked(self) -> None:
         path_str, _ = QFileDialog.getOpenFileName(
             self,
@@ -773,9 +802,17 @@ def review_page(api_client: Any | None = None) -> QWidget:
         except Exception:
             return False
 
+    _drafts: dict[str, str] = {}
+
     def _select(task: dict) -> None:
+        # 切换任务前自动暂存当前备注草稿；选中新任务后恢复它的草稿。
+        note_widget = _refs.get("note")
+        if note_widget is not None and _state["event_id"]:
+            _drafts[_state["event_id"]] = note_widget.toPlainText()
         _state["event_id"] = task.get("event_id", "")
         _state["title"] = task.get("title", "")
+        if note_widget is not None:
+            note_widget.setPlainText(_drafts.get(_state["event_id"], ""))
         conf = _conf_pct(task.get("confidence"))
         surface = _refs.get("surface")
         if surface is not None and not _load_thumbnail(task):
@@ -945,13 +982,30 @@ def review_page(api_client: Any | None = None) -> QWidget:
     radio_buttons[0].setChecked(True)
     note = QTextEdit()
     note.setPlaceholderText("复核备注（可选）：记录误判原因、补充人工标注……")
+    _refs["note"] = note
     form_layout.addWidget(note, 1)
     history = QListWidget()
     history.addItem("选中左侧任务后，这里显示该事件的真实流转记录")
     _refs["history"] = history
     form_layout.addWidget(history, 1)
     action_row = QHBoxLayout()
-    action_row.addWidget(_wip_button("保存草稿"))
+    draft_btn = action_button("保存草稿")
+
+    def _save_draft() -> None:
+        if not _state["event_id"]:
+            QMessageBox.information(
+                page.window(), "请选择任务", "请先在左侧任务队列选中一条事件再保存草稿。"
+            )
+            return
+        _drafts[_state["event_id"]] = note.toPlainText()
+        QMessageBox.information(
+            page.window(),
+            "草稿已保存",
+            f"已暂存「{_state['title']}」的复核备注；切换任务后再选回会自动恢复。",
+        )
+
+    draft_btn.clicked.connect(_save_draft)
+    action_row.addWidget(draft_btn)
     action_row.addStretch()
     submit_btn = action_button("提交复核结果", "primary")
 
@@ -977,6 +1031,7 @@ def review_page(api_client: Any | None = None) -> QWidget:
         QMessageBox.information(
             page.window(), "提交成功", f"已写入复核结论「{decision}」：{_state['title']}"
         )
+        _drafts.pop(_state["event_id"], None)
         _state["event_id"] = ""
         if _refs.get("chip") is not None:
             _refs["chip"].setText("当前: 未选择")
@@ -1086,19 +1141,101 @@ def alerts_page(api_client: Any | None = None) -> QWidget:
 
     lower = QHBoxLayout()
     lower.setSpacing(14)
-    # 告警分级规则：展示后端 final_stage._severity 的真实判定逻辑，
-    # 与上方告警列表里看到的严重度完全一致（不是虚构的「配置项」）。
+    # 告警分级规则：阈值来自后端 /api/alerts/rules（持久化在
+    # media/config/alert_rules.json），与上方列表的严重度判定完全一致；
+    # 管理员可通过「编辑告警规则」真实修改并写审计日志。
+    _ETYPE_CN = {
+        "scratch": "剐蹭",
+        "illegal_parking": "违停",
+        "road_obstacle": "道路障碍",
+        "abnormal_stop": "异常停车",
+        "pedestrian_risk": "行人风险",
+    }
+    _rules_cfg = _safe_call(api_client, "alert_rules", {}) or {}
+    try:
+        _hc_pct = int(round(float(_rules_cfg.get("high_confidence", 0.85)) * 100))
+        _mc_pct = int(round(float(_rules_cfg.get("medium_confidence", 0.70)) * 100))
+    except (TypeError, ValueError):
+        _hc_pct, _mc_pct = 85, 70
+    _hr_types = _rules_cfg.get("high_risk_types") or ["scratch", "pedestrian_risk"]
+    _hr_cn = " / ".join(_ETYPE_CN.get(t, t) for t in _hr_types)
+
     rules = panel()
     rules_layout = QVBoxLayout(rules)
     rules_layout.setContentsMargins(22, 20, 22, 20)
-    rules_layout.addLayout(section_header("告警分级规则", "引擎内置 3 条"))
+    rules_layout.addLayout(section_header("告警分级规则", "实时生效"))
     for rule, desc in [
-        ("高危 · 剐蹭 / 行人风险，或置信度 ≥ 85%", "命中后立即入告警队列，列表中标红"),
-        ("普通 · 置信度 ≥ 70% 的其它风险事件", "入队列等待确认，列表中标黄"),
+        (f"高危 · {_hr_cn}，或置信度 ≥ {_hc_pct}%", "命中后立即入告警队列，列表中标红"),
+        (f"普通 · 置信度 ≥ {_mc_pct}% 的其它风险事件", "入队列等待确认，列表中标黄"),
         ("低危 · 其余识别事件", "记录备查，复核确认后归档"),
     ]:
         rules_layout.addWidget(compact_card(rule, desc))
-    rules_layout.addWidget(_wip_button("编辑告警规则", "primary"))
+
+    edit_rules_btn = action_button("编辑告警规则", "primary")
+
+    def _edit_rules() -> None:
+        if not _has_action(api_client, "update_alert_rules"):
+            QMessageBox.information(
+                page.window(), "离线模式", "Mock 模式下不修改真实告警规则。"
+            )
+            return
+        from PySide6.QtWidgets import (
+            QDialog,
+            QDialogButtonBox,
+            QFormLayout,
+            QSpinBox,
+        )
+
+        dlg = QDialog(page.window())
+        dlg.setWindowTitle("编辑告警分级规则")
+        form = QFormLayout(dlg)
+        form.addRow(muted(
+            f"高危类型（{_hr_cn}）按事件类型直接判定；其余按置信度阈值分级。\n"
+            "保存后立即生效（admin 权限，写审计日志）。"
+        ))
+        high_spin = QSpinBox()
+        high_spin.setRange(50, 100)
+        high_spin.setSuffix(" %")
+        high_spin.setValue(_hc_pct)
+        medium_spin = QSpinBox()
+        medium_spin.setRange(1, 99)
+        medium_spin.setSuffix(" %")
+        medium_spin.setValue(_mc_pct)
+        form.addRow("高危置信度阈值 ≥", high_spin)
+        form.addRow("普通置信度阈值 ≥", medium_spin)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        if medium_spin.value() >= high_spin.value():
+            QMessageBox.warning(
+                page.window(), "阈值无效", "普通阈值必须小于高危阈值。"
+            )
+            return
+        try:
+            saved = api_client.update_alert_rules(
+                high_confidence=high_spin.value() / 100.0,
+                medium_confidence=medium_spin.value() / 100.0,
+                high_risk_types=list(_hr_types),
+            )
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "保存失败", str(exc))
+            return
+        QMessageBox.information(
+            page.window(),
+            "规则已保存",
+            f"高危 ≥ {int(round(float(saved.get('high_confidence', 0)) * 100))}% · "
+            f"普通 ≥ {int(round(float(saved.get('medium_confidence', 0)) * 100))}%\n"
+            "已写入审计日志；重新进入本页可看到列表按新规则分级。",
+        )
+
+    edit_rules_btn.clicked.connect(_edit_rules)
+    rules_layout.addWidget(edit_rules_btn)
     lower.addWidget(rules, 2)
 
     type_dist = panel()
@@ -1197,6 +1334,21 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
         except Exception as exc:  # pragma: no cover - UI path
             QMessageBox.warning(page.window(), "生成失败", str(exc))
 
+    def _export_evidence(event_id: str) -> None:
+        if not event_id:
+            return
+        try:
+            res = api_client.export_event(event_id)
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "导出失败", str(exc))
+            return
+        QMessageBox.information(
+            page.window(),
+            "证据包已归档",
+            f"状态：{getattr(res, 'status', '')}\n路径：{getattr(res, 'export_path', '')}\n"
+            "（24h 内同事件会复用已有证据包；记录可在「证据与日志」页查看）",
+        )
+
     items = (_safe_call(api_client, "list_accidents", {}) or {}).get("items", [])
     if not items:
         feed.addWidget(muted("暂无事故 / 风险记录（或处于离线 / Mock 模式，连接真实后端后显示）。"))
@@ -1236,7 +1388,12 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
             gen = action_button("重新生成摘要", "primary")
             gen.clicked.connect(lambda _c=False, i=a.get("id", ""), lbl=summary_lbl: _summarize(i, lbl))
             actions.addWidget(gen)
-        actions.addWidget(_wip_button("建立证据包并归档"))
+        if _has_action(api_client, "export_event"):
+            exp = action_button("建立证据包并归档")
+            exp.clicked.connect(
+                lambda _c=False, eid=a.get("event_id", ""): _export_evidence(eid)
+            )
+            actions.addWidget(exp)
         actions.addStretch()
         layout.addLayout(actions)
         feed.addWidget(card)
@@ -1270,7 +1427,15 @@ def accidents_page(api_client: Any | None = None) -> QWidget:
     )
     side_layout.addWidget(compact_card("全局风险指征（当日实时）", _risk_text, "#F59E0B"))
     side_layout.addStretch()
-    side_layout.addWidget(_wip_button("查看全天业务报告", "primary"))
+    goto_report_btn = action_button("查看全天业务报告", "primary")
+
+    def _goto_report() -> None:
+        win = page.window()
+        if hasattr(win, "show_page"):
+            win.show_page(7)
+
+    goto_report_btn.clicked.connect(_goto_report)
+    side_layout.addWidget(goto_report_btn)
     body.addWidget(side, 2)
     root.addLayout(body, 1)
     return page
@@ -1288,7 +1453,57 @@ def evidence_page(api_client: Any | None = None) -> QWidget:
     search = QLineEdit()
     search.setPlaceholderText("按导出ID / 事件ID / 文件路径过滤……")
     controls_layout.addWidget(search, 1)
-    controls_layout.addWidget(_wip_button("打包备份归档", "primary"))
+    backup_btn = action_button("批量归档全部事件", "primary")
+
+    def _batch_archive() -> None:
+        if not (
+            _has_action(api_client, "export_batch")
+            and _has_action(api_client, "list_events")
+        ):
+            QMessageBox.information(
+                page.window(), "离线模式", "Mock 模式下不执行真实批量导出。"
+            )
+            return
+        try:
+            events = (api_client.list_events() or {}).get("items", [])
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "读取事件失败", str(exc))
+            return
+        ids = [str(e.get("id", "")) for e in events if e.get("id")][:50]
+        if not ids:
+            QMessageBox.information(page.window(), "暂无事件", "库内没有可归档的事件。")
+            return
+        confirm = QMessageBox.question(
+            page.window(),
+            "批量归档",
+            f"将为 {len(ids)} 个事件生成证据包（ffmpeg 切片 + 截图 + 摘要 + zip）。\n"
+            "24h 内已导出过的事件会直接复用，不重复跑 ffmpeg。\n\n确定继续？",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            res = api_client.export_batch(ids)
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "批量归档失败", str(exc))
+            return
+        reused = sum(1 for it in res.get("items", []) if it.get("reused"))
+        QMessageBox.information(
+            page.window(),
+            "批量归档完成",
+            f"共 {res.get('total', len(ids))} 个事件：成功 {res.get('succeeded', 0)}"
+            f"（其中复用 {reused}），失败 {res.get('failed', 0)}。",
+        )
+        # 重新拉取导出记录并刷新列表
+        try:
+            exports_data[:] = (api_client.list_exports() or {}).get("items", [])
+        except Exception:
+            pass
+        _render_exports(search.text())
+
+    backup_btn.clicked.connect(_batch_archive)
+    controls_layout.addWidget(backup_btn)
     root.addWidget(controls)
 
     body = QHBoxLayout()
@@ -1548,7 +1763,13 @@ def daily_report_page(api_client: Any | None = None) -> QWidget:
         export_btn.clicked.connect(_export)
         summary_layout.addWidget(export_btn)
     else:
-        summary_layout.addWidget(_wip_button("导出PDF报告", "primary"))
+        offline_btn = action_button("导出日报", "primary")
+        offline_btn.clicked.connect(lambda: QMessageBox.information(
+            page.window(),
+            "离线模式",
+            "Mock 模式不生成日报文件；连接真实后端后可一键导出 Markdown/JSON 日报。",
+        ))
+        summary_layout.addWidget(offline_btn)
     right.addWidget(summary, 1)
     body.addLayout(right, 2)
     root.addLayout(body, 1)
@@ -1613,7 +1834,34 @@ def settings_page(api_client: Any | None = None) -> QWidget:
     sec_layout.addWidget(muted(f"令牌有效期：{sec_cfg.get('jwt_ttl_min', '—')} 分钟"))
     sec_layout.addWidget(muted(f"已配置角色：{', '.join(sec_cfg.get('roles', [])) or '—'}"))
     sec_layout.addStretch()
-    sec_layout.addWidget(_wip_button("保存所有全局设置", "primary"))
+    # 模型/存储/密钥配置经环境变量管理（密钥不入库、界面不回传明文），
+    # 本页为只读视图；提供真实的模型连通性自检。
+    sec_layout.addWidget(muted(
+        "配置项经环境变量管理（MODEL_PROVIDER / MODEL_API_KEY / DVR_SEMANTIC_*），"
+        "界面为只读视图，密钥不入库也不回传明文。"
+    ))
+    test_btn = action_button("测试模型连通性", "primary")
+
+    def _test_model() -> None:
+        if not _has_action(api_client, "model_test"):
+            QMessageBox.information(
+                page.window(), "离线模式", "Mock 模式下无后端可测试。"
+            )
+            return
+        try:
+            res = api_client.model_test() or {}
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "测试失败", str(exc))
+            return
+        QMessageBox.information(
+            page.window(),
+            "模型连通性检查",
+            f"提供方：{res.get('provider', '—')}\n状态：{res.get('status', '—')}\n"
+            f"{res.get('message', '')}",
+        )
+
+    test_btn.clicked.connect(_test_model)
+    sec_layout.addWidget(test_btn)
     body.addWidget(security)
     root.addLayout(body, 1)
     return page
@@ -1631,7 +1879,71 @@ def roles_page(api_client: Any | None = None) -> QWidget:
     hdr_row = QHBoxLayout()
     hdr_row.addWidget(muted(f"共 {len(roles_data) or '—'} 个角色 · {len(users_data)} 个用户"))
     hdr_row.addStretch()
-    hdr_row.addWidget(_wip_button("新增用户", "primary"))
+    add_user_btn = action_button("新增用户", "primary")
+
+    def _add_user() -> None:
+        if not _has_action(api_client, "create_user"):
+            QMessageBox.information(
+                page.window(), "离线模式", "Mock 模式下不创建真实用户。"
+            )
+            return
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout
+
+        dlg = QDialog(page.window())
+        dlg.setWindowTitle("新增用户（写入真实数据库）")
+        form = QFormLayout(dlg)
+        username_edit = QLineEdit()
+        username_edit.setPlaceholderText("登录用户名，例如 patrol01")
+        password_edit = QLineEdit()
+        password_edit.setEchoMode(QLineEdit.EchoMode.Password)
+        password_edit.setPlaceholderText("初始密码（bcrypt 加密入库）")
+        display_edit = QLineEdit()
+        display_edit.setPlaceholderText("显示名（可选）")
+        role_combo = QComboBox()
+        _role_ids = [str(r.get("id", "")) for r in roles_data if r.get("id")] or [
+            "user", "reviewer", "admin",
+        ]
+        role_combo.addItems(_role_ids)
+        form.addRow("用户名", username_edit)
+        form.addRow("密码", password_edit)
+        form.addRow("显示名", display_edit)
+        form.addRow("角色", role_combo)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Save
+            | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        username = username_edit.text().strip()
+        password = password_edit.text()
+        if not username or not password:
+            QMessageBox.warning(page.window(), "信息不完整", "用户名和密码不能为空。")
+            return
+        try:
+            created = api_client.create_user(
+                username=username,
+                password=password,
+                role=role_combo.currentText(),
+                display_name=display_edit.text().strip(),
+            )
+        except Exception as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "创建失败", str(exc))
+            return
+        QMessageBox.information(
+            page.window(),
+            "用户已创建",
+            f"{created.get('username', username)}（{created.get('role', '')}）已写入数据库，"
+            "可立即用该账号登录；操作已记入审计日志。",
+        )
+        win = page.window()
+        if hasattr(win, "show_page"):
+            win.show_page(9)  # 重建本页，让用户数与列表立即反映新增
+
+    add_user_btn.clicked.connect(_add_user)
+    hdr_row.addWidget(add_user_btn)
     root.addLayout(hdr_row)
 
     roles_layout = QHBoxLayout()
@@ -1714,7 +2026,24 @@ def roles_page(api_client: Any | None = None) -> QWidget:
             cl.addLayout(perm_row)
 
         cl.addStretch()
-        cl.addWidget(_wip_button(f"{users} ({count})"))
+        members_btn = action_button(f"{users} ({count})")
+
+        def _show_members(_c: bool = False, rid: str = code.lower(), rname: str = name) -> None:
+            members = [
+                f"{u.get('username', '?')}（{u.get('display_name', '') or u.get('username', '?')}）"
+                f" · 创建于 {str(u.get('created_at', ''))[:10] or '—'}"
+                for u in users_data
+                if u.get("role", "") == rid
+            ]
+            QMessageBox.information(
+                page.window(),
+                f"「{rname}」角色用户（{len(members)} 个）",
+                "\n".join(members) if members else
+                "该角色暂无用户（或处于离线 / Mock 模式，无真实用户数据）。",
+            )
+
+        members_btn.clicked.connect(_show_members)
+        cl.addWidget(members_btn)
         roles_layout.addWidget(card)
 
     root.addLayout(roles_layout)
@@ -1723,8 +2052,26 @@ def roles_page(api_client: Any | None = None) -> QWidget:
     matrix_layout = QVBoxLayout(matrix)
     matrix_layout.setContentsMargins(22, 20, 22, 20)
     header = section_header("功能模块权限矩阵 (Matrix)")
-    header.addWidget(_wip_button("批量同步", "primary"))
-    header.addWidget(_wip_button("导出记录"))
+    export_matrix_btn = action_button("导出记录")
+
+    def _export_matrix() -> None:
+        path_str, _ = QFileDialog.getSaveFileName(
+            page.window(), "导出权限矩阵", "permission-matrix.csv", "CSV (*.csv)"
+        )
+        if not path_str:
+            return
+        lines = [",".join(_matrix_headers)]
+        lines += [",".join(cells) for cells in _matrix_rows]
+        try:
+            # utf-8-sig 带 BOM，Excel 直接打开不乱码
+            Path(path_str).write_text("\n".join(lines) + "\n", encoding="utf-8-sig")
+        except OSError as exc:  # pragma: no cover - UI path
+            QMessageBox.warning(page.window(), "导出失败", str(exc))
+            return
+        QMessageBox.information(page.window(), "导出成功", f"权限矩阵已导出：\n{path_str}")
+
+    export_matrix_btn.clicked.connect(_export_matrix)
+    header.addWidget(export_matrix_btn)
     matrix_layout.addLayout(header)
 
     # 真实权限矩阵：行 = 后端权限目录（/api/permissions），列 = 真实角色，
@@ -1752,12 +2099,12 @@ def roles_page(api_client: Any | None = None) -> QWidget:
     }
     perm_catalog = (_safe_call(api_client, "list_permissions", {}) or {}).get("permissions", [])
     if perm_catalog and roles_data:
-        headers = (
+        _matrix_headers = (
             ["功能模块 / 权限点"]
             + [str(r.get("name", r.get("id", "?"))) for r in roles_data]
             + ["风险等级"]
         )
-        matrix_rows = []
+        _matrix_rows = []
         for perm in perm_catalog:
             row_cells = [f"{_PERM_CN.get(perm, perm)} ({perm})"]
             for r in roles_data:
@@ -1765,18 +2112,16 @@ def roles_page(api_client: Any | None = None) -> QWidget:
                 allowed = "*" in perms or perm in perms
                 row_cells.append("✓ 允许" if allowed else "✗ 禁止")
             row_cells.append(_PERM_RISK.get(perm, "LOW"))
-            matrix_rows.append(row_cells)
-        tbl = table(headers, matrix_rows)
+            _matrix_rows.append(row_cells)
     else:
-        tbl = table(
-            ["功能模块 / 权限点", "管理员", "审核人员", "普通用户", "风险等级"],
-            [
-                ["语义检索 (search:create)", "✓ 允许", "✗ 禁止", "✓ 允许", "LOW"],
-                ["事件复核 (event:review)", "✓ 允许", "✓ 允许", "✗ 禁止", "MED"],
-                ["证据导出 (event:export)", "✓ 允许", "✗ 禁止", "✓ 允许", "MED"],
-                ["审计日志查看 (audit:read)", "✓ 允许", "✓ 允许", "✗ 禁止", "HIGH"],
-            ],
-        )
+        _matrix_headers = ["功能模块 / 权限点", "管理员", "审核人员", "普通用户", "风险等级"]
+        _matrix_rows = [
+            ["语义检索 (search:create)", "✓ 允许", "✗ 禁止", "✓ 允许", "LOW"],
+            ["事件复核 (event:review)", "✓ 允许", "✓ 允许", "✗ 禁止", "MED"],
+            ["证据导出 (event:export)", "✓ 允许", "✗ 禁止", "✓ 允许", "MED"],
+            ["审计日志查看 (audit:read)", "✓ 允许", "✓ 允许", "✗ 禁止", "HIGH"],
+        ]
+    tbl = table(_matrix_headers, _matrix_rows)
     # Color cells
     _perm_colors = {"✓ 允许": "#15803D", "✗ 禁止": "#9CA3AF"}
     _risk_colors = {"LOW": "#15803D", "MED": "#B45309", "HIGH": "#B91C1C", "CRITICAL": "#7C3AED"}

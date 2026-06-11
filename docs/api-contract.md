@@ -669,6 +669,36 @@ Request:
 { "resolution_note": "已导出证据并归档" }
 ```
 
+### GET `/api/alerts/rules`
+
+告警分级规则（任意已登录用户可读）。规则持久化在 `media/config/alert_rules.json`，
+`_severity` 实时按它给所有告警分级。
+
+Response:
+
+```json
+{
+  "high_risk_types": ["scratch", "pedestrian_risk"],
+  "high_confidence": 0.85,
+  "medium_confidence": 0.70
+}
+```
+
+### PUT `/api/alerts/rules`
+
+更新告警分级规则（仅 admin；写 `alert.rules.update` 审计日志）。
+校验 `0 < medium_confidence < high_confidence <= 1`，否则 400。
+
+Request:
+
+```json
+{
+  "high_confidence": 0.9,
+  "medium_confidence": 0.6,
+  "high_risk_types": ["pedestrian_risk"]
+}
+```
+
 ## 9. 事故摘要预览
 
 ### GET `/api/accidents`
@@ -961,9 +991,10 @@ Response:
 
 用户列表。
 
-### POST `/api/users` 🔵 规划中(planned，后端未实现)
+### POST `/api/users`
 
-创建用户。
+创建用户（仅 admin；bcrypt 加密入库，写 `user.create` 审计日志）。
+用户名重复返回 409，非法角色返回 400。成功返回 201 + `UserOut`。
 
 Request:
 
@@ -971,7 +1002,7 @@ Request:
 {
   "username": "reviewer01",
   "password": "123456",
-  "real_name": "复核员",
+  "display_name": "复核员",
   "role": "reviewer"
 }
 ```
@@ -1042,10 +1073,10 @@ Response:
 
 1. 主链路：`auth`、`videos`、`process/analyze`、`status`、`retry`、`search`、`events`、`export`（单事件 + 24h 去重 + `POST /api/exports/batch` 批量）、`audit`。
 2. 复核链路：`GET /api/review/tasks`、`POST /api/review/tasks/{event_id}/decision`。
-3. 管理面：`dashboard`、`alerts`、`accidents`、`reports`、`settings`（只读 GET）、`users`/`roles`/`permissions`（只读 GET）。
+3. 管理面：`dashboard`、`alerts`（含 GET/PUT `/api/alerts/rules` 分级规则读写）、`accidents`、`reports`、`settings`（只读 GET + `POST /settings/model/test`）、`users`（GET + `POST /api/users` 创建）、`roles`/`permissions`（只读 GET）。
 4. 媒体与回放：`/media/frames`、`/media/thumbnails` 公开静态；`GET /api/videos/{id}/stream`（鉴权 + 签名 ticket）。
 5. 第三方集成：`GET /api/integration/events`、`/api/integration/events/{id}`（API-Key）。
 
-**仅契约、后端未实现（标注 🔵 规划中）**：`auth/logout`、`auth/me`、`videos` 的 PATCH/DELETE/segments/timeline、`search/history`、`events/{id}/labels`、`exports/{id}` 及 `/download`、`logs/system`、`settings` 的 PATCH、`users`/`roles` 的写操作。读者请以本节与各端点标记为准，不要把契约示例当作现状。
+**仅契约、后端未实现（标注 🔵 规划中）**：`auth/logout`、`auth/me`、`videos` 的 PATCH/DELETE/segments/timeline、`search/history`、`events/{id}/labels`、`exports/{id}` 及 `/download`、`logs/system`、`settings` 的 PATCH、`users` 的 PATCH/DELETE、`roles` 的写操作。读者请以本节与各端点标记为准，不要把契约示例当作现状。
 
 管理面接口由现有核心表实时派生，不额外引入迁移表；后续生产化可再把 alerts/settings/report jobs 独立成持久化模块。

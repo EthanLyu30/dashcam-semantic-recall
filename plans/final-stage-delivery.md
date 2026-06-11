@@ -20,7 +20,7 @@ python -m compileall apps tests
 python -m pytest -q
 ```
 
-当前本机验证口径：完整环境（PySide6 + ffmpeg + VLC）`84 passed`（共 84 个用例）；最小环境为 `78 passed, 6 skipped`，跳过项与可选桌面/媒体环境及 ffmpeg 相关，不影响后端主链路和 final-stage API 验收。
+当前本机验证口径：完整环境（PySide6 + ffmpeg + VLC）`86 passed`（共 86 个用例）；最小环境为 `80 passed, 6 skipped`，跳过项与可选桌面/媒体环境及 ffmpeg 相关，不影响后端主链路和 final-stage API 验收。
 
 后端启动后可运行 REST smoke：
 
@@ -80,4 +80,4 @@ $env:MODEL_API_KEY="<your-local-key>"
 
 - 批量上传和异步队列：当前为同步处理，短视频演示稳定；生产环境可加 Celery/Redis 或 FastAPI background task。
 - HLS 流媒体：当前用 `FileResponse` + VLC 播放，课程演示足够；生产环境可加 HLS 切片。
-- 管理面写操作：final stage 已补齐真实读接口和关键状态动作；复杂配置持久化可作为后续产品化增强。
+- ~~管理面写操作~~：已完成——批量导入视频、告警分级规则编辑（`PUT /api/alerts/rules`，持久化 + 审计 + 实时影响分级）、新增用户（`POST /api/users`，bcrypt 入库可立即登录）、事故页一键建证据包、证据页批量归档（`/api/exports/batch`）、权限矩阵 CSV 导出、模型连通性自检均接真实后端。剩余产品化空间：用户的 PATCH/DELETE、角色自定义编辑。

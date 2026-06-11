@@ -26,6 +26,9 @@ class _RequestsProxy:
     def post(self, *args: Any, **kwargs: Any) -> Any:
         return self._module().post(*args, **kwargs)
 
+    def put(self, *args: Any, **kwargs: Any) -> Any:
+        return self._module().put(*args, **kwargs)
+
 
 requests = _RequestsProxy()
 
@@ -246,6 +249,17 @@ class RestApiClient:
             return data
         return {"items": data}
 
+    def _put_json_response(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {"timeout": self.timeout_sec, "json": payload}
+        if self.token:
+            kwargs["headers"] = self._headers()
+        response = requests.put(f"{self.base_url}{path}", **kwargs)
+        response.raise_for_status()
+        data = response.json() or {}
+        if isinstance(data, dict):
+            return data
+        return {"items": data}
+
     # --- auth --------------------------------------------------------------
     def login(self, username: str, password: str) -> dict[str, Any]:
         response = requests.post(
@@ -381,6 +395,26 @@ class RestApiClient:
     def list_alerts(self) -> dict[str, Any]:
         return self._get_json("/api/alerts")
 
+    def alert_rules(self) -> dict[str, Any]:
+        return self._get_json("/api/alerts/rules")
+
+    def update_alert_rules(
+        self,
+        high_confidence: float,
+        medium_confidence: float,
+        high_risk_types: list[str] | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "high_confidence": high_confidence,
+            "medium_confidence": medium_confidence,
+        }
+        if high_risk_types is not None:
+            payload["high_risk_types"] = list(high_risk_types)
+        return self._put_json_response("/api/alerts/rules", payload)
+
+    def list_events(self) -> dict[str, Any]:
+        return self._get_json("/api/events")
+
     def list_accidents(self) -> dict[str, Any]:
         return self._get_json("/api/accidents")
 
@@ -407,6 +441,23 @@ class RestApiClient:
 
     def list_users(self) -> dict[str, Any]:
         return self._get_json("/api/users")
+
+    def create_user(
+        self,
+        username: str,
+        password: str,
+        role: str = "user",
+        display_name: str = "",
+    ) -> dict[str, Any]:
+        return self._post_json_response(
+            "/api/users",
+            {
+                "username": username,
+                "password": password,
+                "role": role,
+                "display_name": display_name,
+            },
+        )
 
     def list_roles(self) -> dict[str, Any]:
         return self._get_json("/api/roles")
